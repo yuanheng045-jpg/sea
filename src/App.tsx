@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Home } from './Home'
 import { ThemePanel } from './ThemePanel'
 import { IconSlot } from './IconSlot'
+import { RainSnow } from './RainSnow'
 
 export type Page = 'cc' | 'home' | 'page2' | 'api' | 'voice' | 'reading' | 'play'
 
@@ -16,6 +17,7 @@ export function App() {
         <div className="blob blob-3" />
         <div className="blob blob-4" />
       </div>
+      <RainSnow />
       <div className="content-scroll">
         {page === 'home'  && <Home onNavigate={setPage} />}
         {page === 'page2' && <ThemePanel />}

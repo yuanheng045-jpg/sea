@@ -1,5 +1,6 @@
 import type { Page } from './App'
 import { IconSlot } from './IconSlot'
+import { SnowPlayer } from './SnowPlayer'
 import type { IconKey } from './icons'
 
 const TILES: { key: Page; icon: string; label: string }[] = [
@@ -16,7 +17,6 @@ const CAL = [
   [28, 29, 30, 0, 0, 0, 0],
 ]
 
-const WAVE = [4,10,6,14,20,16,24,12,8,18,26,20,10,6,14,22,28,18,12,8,16,24,14,10,6,12,20,16,8,4,6,10]
 
 export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
   return (
@@ -36,26 +36,34 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
       <div className="glass main-card">
         <div className="card-inner">
           <div className="stats-side">
+            <div className="avatars">
+              <IconSlot iconKey="avatar-her" fallback={<span className="avatar-empty" />} className="avatar-slot" />
+              <IconSlot iconKey="avatar-his" fallback={<span className="avatar-empty" />} className="avatar-slot" />
+            </div>
             <div className="day-count">
               <span className="dc-prefix">第</span>
               <span className="dc-number">122</span>
               <span className="dc-suffix">天</span>
             </div>
-            <div className="day-sub">纪念日 · 2.18</div>
-            <div className="health">
-              <div className="h-row">
-                <span className="heart">❤️</span>
-                <span className="h-num">72</span>
-                <span className="h-unit">bpm · 心率</span>
+            <div className="day-sub">距离纪念日还有 XX 天</div>
+            <div className="status-mini">
+              <div className="heart-rate">
+                <svg viewBox="0 0 50 18" className="hr-wave" fill="none">
+                  <path d="M0 9 L9 9 L11 5 L13 13 L15 4 L17 14 L19 8 L22 9 L50 9"
+                    stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="hr-num">69</span>
               </div>
-              <div className="h-row">
-                <span>🚶</span>
-                <span className="h-num">1,694</span>
-                <span className="h-unit">步</span>
-              </div>
-              <div className="h-row">
-                <span className="period-dot" />
-                <span className="h-unit">经期跟踪</span>
+              <div className="status-grid">
+                <div className="sg-row">
+                  <span>悠闲</span>
+                  <span className="sg-sep">·</span>
+                  <span><span className="sg-num">1,694</span> 步</span>
+                </div>
+                <div className="sg-row">
+                  <span>月经第 <span className="sg-num">3</span> 天</span>
+                  <span className="period-blood" />
+                </div>
               </div>
             </div>
           </div>
@@ -87,27 +95,13 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
             </button>
           ))}
         </div>
-        <div className="music-float">
-          <div className="waveform">
-            {WAVE.map((h, i) => (
-              <div
-                key={i}
-                className="bar"
-                style={{ height: h, animationDelay: `${i * 60}ms` }}
-              />
-            ))}
-          </div>
-          <div className="controls">
-            <button>⏮</button>
-            <button className="play-btn">⏸</button>
-            <button>⏭</button>
+        <div className="snow-column">
+          <SnowPlayer />
+          <div className="activity-text">
+            <div>claude · 今日活动</div>
+            <span className="activity-sub">展开</span>
           </div>
         </div>
-      </div>
-
-      <div className="activity-text">
-        <div>claude · 今日活动</div>
-        <span className="activity-sub">展开</span>
       </div>
     </div>
   )
