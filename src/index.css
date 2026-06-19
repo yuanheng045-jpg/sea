@@ -178,8 +178,8 @@ button { font: inherit; cursor: pointer; color: inherit; }
   padding: 1px;
   background: linear-gradient(135deg,
     rgba(255,255,255,0) 0%,
-    rgba(255,255,255,0.3) 30%,
-    rgba(255,255,255,0.3) 70%,
+    rgba(255,255,255,0.18) 30%,
+    rgba(255,255,255,0.18) 70%,
     rgba(255,255,255,0) 100%);
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
@@ -222,8 +222,8 @@ button { font: inherit; cursor: pointer; color: inherit; }
   padding: 1px;
   background: linear-gradient(135deg,
     rgba(255,255,255,0) 0%,
-    rgba(255,255,255,0.3) 30%,
-    rgba(255,255,255,0.3) 70%,
+    rgba(255,255,255,0.18) 30%,
+    rgba(255,255,255,0.18) 70%,
     rgba(255,255,255,0) 100%);
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
@@ -293,8 +293,8 @@ button { font: inherit; cursor: pointer; color: inherit; }
   padding: 1px;
   background: linear-gradient(135deg,
     rgba(255,255,255,0) 0%,
-    rgba(255,255,255,0.3) 30%,
-    rgba(255,255,255,0.3) 70%,
+    rgba(255,255,255,0.18) 30%,
+    rgba(255,255,255,0.18) 70%,
     rgba(255,255,255,0) 100%);
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
