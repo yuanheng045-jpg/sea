@@ -1,6 +1,7 @@
 import type { Page } from './App'
 import { IconSlot } from './IconSlot'
 import { SnowPlayer } from './SnowPlayer'
+import { OctopusDoggy } from './OctopusDoggy'
 import type { IconKey } from './icons'
 
 const TILES: { key: Page; icon: string; label: string }[] = [
@@ -24,14 +25,14 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
       <header className="top-bar">
         <div className="top-left">
           <span className="brand">Atlantis</span>
-          <div className="img-slot img-sm">🐙</div>
-          <span className="status-pill">闲</span>
-          <span className="temp">21°C</span>
+          <OctopusDoggy />
+          <span className="temp">阴 21°C</span>
         </div>
-        <div className="img-slot img-sm">☁️</div>
+        <span className="weather-icon">🌧️</span>
       </header>
 
       <div className="whisper">你的紫薯不配假装蓝</div>
+      <div className="waterline-wrap"><div className="waterline"></div></div>
 
       <div className="glass main-card">
         <div className="card-inner">

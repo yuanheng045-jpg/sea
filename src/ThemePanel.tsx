@@ -330,8 +330,8 @@ export function ThemePanel() {
           onClick={toggleDaylight}
           title="开启后退出面板由算法按北京时间在 4 套间插值"
         >
-          <span>☀</span>
-          <small>{data.daylight ? '天光开' : '天光关'}</small>
+          <span>天光</span>
+          <small>{data.daylight ? '开' : '关'}</small>
         </button>
       </div>
 

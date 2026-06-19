@@ -1,13 +1,38 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Home } from './Home'
 import { ThemePanel } from './ThemePanel'
 import { IconSlot } from './IconSlot'
 import { RainSnow } from './RainSnow'
+import { Fireplace } from './Fireplace'
 
 export type Page = 'cc' | 'home' | 'page2' | 'api' | 'voice' | 'reading' | 'play'
 
 export function App() {
   const [page, setPage] = useState<Page>('home')
+  const pillStartX = useRef<number | null>(null)
+  const swipedRef = useRef(false)
+
+  const onPillPointerDown = (e: React.PointerEvent) => {
+    pillStartX.current = e.clientX
+    swipedRef.current = false
+  }
+  const onPillPointerUp = (e: React.PointerEvent) => {
+    if (pillStartX.current === null) return
+    const dx = e.clientX - pillStartX.current
+    pillStartX.current = null
+    if (Math.abs(dx) > 30) {
+      swipedRef.current = true
+      if (dx < 0 && page === 'home') setPage('page2')
+      else if (dx > 0 && page === 'page2') setPage('home')
+    }
+  }
+  const onPillClickCapture = (e: React.MouseEvent) => {
+    if (swipedRef.current) {
+      e.stopPropagation()
+      e.preventDefault()
+      swipedRef.current = false
+    }
+  }
 
   return (
     <div className="app">
@@ -34,11 +59,16 @@ export function App() {
         >
           <IconSlot iconKey="cc" fallback={<span className="dock-letters">CC</span>} className="img-dock" />
         </button>
-        <div className="dock-pill">
+        <div
+          className="dock-pill"
+          onPointerDown={onPillPointerDown}
+          onPointerUp={onPillPointerUp}
+          onClickCapture={onPillClickCapture}
+        >
           <button
             className={`dock-mid${page === 'home' ? ' active' : ''}`}
             onClick={() => setPage('home')}
-          >🏠</button>
+          ><Fireplace /></button>
           <button
             className={`dock-mid${page === 'page2' ? ' active' : ''}`}
             onClick={() => setPage('page2')}
