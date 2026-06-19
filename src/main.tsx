@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './App.tsx'
 import './index.css'
 import { startDaylight, type Presets } from './daylight'
+import { bootstrapIcons } from './icons'
 
 const STORAGE_KEY = 'sea:theme:v2'
 const LEGACY_KEY = 'sea:theme:v1'
@@ -50,6 +51,8 @@ fetch('/api/status', { credentials: 'include' })
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entry.value)) } catch {}
   })
   .catch(() => {})
+
+bootstrapIcons()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

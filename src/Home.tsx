@@ -1,4 +1,6 @@
 import type { Page } from './App'
+import { IconSlot } from './IconSlot'
+import type { IconKey } from './icons'
 
 const TILES: { key: Page; icon: string; label: string }[] = [
   { key: 'voice',   icon: '🐚', label: '海螺' },
@@ -80,7 +82,7 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
         <div className="app-scatter">
           {TILES.map(a => (
             <button key={a.key} className="app-tile" onClick={() => onNavigate(a.key)}>
-              <div className="img-slot img-tile">{a.icon}</div>
+              <IconSlot iconKey={a.key as IconKey} fallback={a.icon} className="img-tile" />
               <span className="tile-label">{a.label}</span>
             </button>
           ))}

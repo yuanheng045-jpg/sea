@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Home } from './Home'
 import { ThemePanel } from './ThemePanel'
+import { IconSlot } from './IconSlot'
 
 export type Page = 'cc' | 'home' | 'page2' | 'api' | 'voice' | 'reading' | 'play'
 
@@ -21,9 +22,6 @@ export function App() {
         {page !== 'home' && page !== 'page2' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
-            <button className="back-btn glass" onClick={() => setPage('home')}>
-              ← 返回首页
-            </button>
           </div>
         )}
       </div>
@@ -32,7 +30,7 @@ export function App() {
           className={`dock-edge${page === 'cc' ? ' active' : ''}`}
           onClick={() => setPage('cc')}
         >
-          <div className="img-slot img-dock">CC</div>
+          <IconSlot iconKey="cc" fallback={<span className="dock-letters">CC</span>} className="img-dock" />
         </button>
         <div className="dock-pill">
           <button
@@ -48,7 +46,7 @@ export function App() {
           className={`dock-edge${page === 'api' ? ' active' : ''}`}
           onClick={() => setPage('api')}
         >
-          <div className="img-slot img-dock">API</div>
+          <IconSlot iconKey="api" fallback={<span className="dock-letters">API</span>} className="img-dock" />
         </button>
       </nav>
     </div>
