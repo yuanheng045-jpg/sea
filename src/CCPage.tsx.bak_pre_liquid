@@ -394,13 +394,19 @@ function MessageRow({ message, expanded, onToggleThinking }: {
 }) {
   if (message.role === 'activity') {
     const acts = message.activities ?? []
-    const tools = acts.map((a: any) => a.tool || a.name).filter(Boolean)
-    if (tools.length === 0) return null
     return (
-      <div className="cc-activity-inline">
-        {tools.map((t: string, i: number) => (
-          <span key={i} className="cc-tool-chip">{t}</span>
-        ))}
+      <div className="cc-msg activity-row">
+        {acts.map((a: any, i: number) => {
+          const tool = a.tool || a.name || ''
+          const detail = a.detail || a.content || ''
+          return (
+            <div key={i} className="cc-activity-line">
+              苏煦在用 <span className="cc-act-tool">{tool || '工具'}</span>
+              {detail && <span className="cc-act-detail">：{String(detail).slice(0, 200)}</span>}
+            </div>
+          )
+        })}
+        {acts.length === 0 && <div className="cc-activity-line">苏煦在用工具</div>}
       </div>
     )
   }
@@ -448,27 +454,10 @@ function MessageRow({ message, expanded, onToggleThinking }: {
             <FileIconInline /> {(message.file as any).name ?? '文件'}
           </a>
         )}
-        {text && (
-          <div className="cc-text">
-            {text}
-            <span className="cc-msg-time">{formatTsShort(message.ts)}</span>
-          </div>
-        )}
+        {text && <div className="cc-text">{text}</div>}
       </div>
     </div>
   )
-}
-
-function formatTsShort(ms: number | undefined): string {
-  if (!ms) return ''
-  const d = new Date(ms)
-  const now = new Date()
-  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  if (d.toDateString() === now.toDateString()) return hm
-  const diff = now.getTime() - ms
-  if (diff < 86400000 * 2) return `昨天 ${hm}`
-  if (diff < 86400000 * 7) return `${['日','一','二','三','四','五','六'][d.getDay()]} ${hm}`
-  return `${d.getMonth()+1}/${d.getDate()} ${hm}`
 }
 
 // 数据格式化
@@ -509,19 +498,6 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
   onAction: (action: string) => void
   onColorChange: (who: 'su' | 'you', color: string) => void
 }) {
-  const [confirming, setConfirming] = useState<null | 'forge' | 'rotate'>(null)
-  const confirmTimerRef = useRef<number | undefined>(undefined)
-  const tapAction = (a: 'forge' | 'rotate') => {
-    if (confirming === a) {
-      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current)
-      setConfirming(null)
-      onAction(a === 'forge' ? 'session_forge' : 'session_rotate')
-      return
-    }
-    if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current)
-    setConfirming(a)
-    confirmTimerRef.current = window.setTimeout(() => setConfirming(null), 3000)
-  }
   const contextTokens = state?.contextTokens ?? 0
   const cacheRead = state?.cacheRead ?? 0
   const pct = Math.min(100, (contextTokens / MAX_CONTEXT_TOKENS) * 100)
@@ -597,15 +573,15 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
 
         <div className="cc-modal-actions">
           <button
-            className={`cc-panel-action${confirming === 'forge' ? ' confirming' : ''}`}
-            onClick={() => tapAction('forge')}
+            className="cc-panel-action"
+            onClick={() => onAction('session_forge')}
             title="压缩当前 session 释放上下文"
-          >{confirming === 'forge' ? '再点确认 compact' : 'compact'}</button>
+          >compact</button>
           <button
-            className={`cc-panel-action${confirming === 'rotate' ? ' confirming' : ''}`}
-            onClick={() => tapAction('rotate')}
+            className="cc-panel-action"
+            onClick={() => onAction('session_rotate')}
             title="换新 session（watcher 接通后生效）"
-          >{confirming === 'rotate' ? '再点确认 rotate' : 'rotate'}</button>
+          >rotate</button>
           <button onClick={onClose}>关闭</button>
         </div>
       </div>
