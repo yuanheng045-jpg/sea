@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { IconSlot } from './IconSlot'
 import {
   useChatState,
+  loadMoreMessages,
   sendMessage,
   sendRaw,
   sendSessionAction,
@@ -20,8 +21,10 @@ export function CCPage({ onBack }: { onBack: () => void }) {
   const {
     messages, connected, authed, ccAlive, ccBusy,
     streamingPhase, streamingElapsed, sessionState,
-    hintsEnabled, textColors, claudemd,
+    hintsEnabled, textColors, claudemd, visibleCount,
   } = useChatState()
+  const visibleMessages = messages.slice(-visibleCount)
+  const hasMore = messages.length > visibleCount
   const [draft, setDraft] = useState('')
   const [plusOpen, setPlusOpen] = useState(false)
   const [moonFull, setMoonFull] = useState(false)
@@ -39,6 +42,25 @@ export function CCPage({ onBack }: { onBack: () => void }) {
   const [expandedThinking, setExpandedThinking] = useState<Set<string>>(new Set())
   const listRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!sentinelRef.current || !listRef.current || !hasMore) return
+    const listEl = listRef.current
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        const prevHeight = listEl.scrollHeight
+        const prevTop = listEl.scrollTop
+        loadMoreMessages()
+        requestAnimationFrame(() => {
+          const newHeight = listEl.scrollHeight
+          listEl.scrollTop = prevTop + (newHeight - prevHeight)
+        })
+      }
+    }, { root: listEl, threshold: 0 })
+    obs.observe(sentinelRef.current)
+    return () => obs.disconnect()
+  }, [hasMore])
 
   // 加载 user styles：先 localStorage 即时显示，再 fetch /api/status 拉服务端最新值覆盖
   useEffect(() => {
@@ -206,10 +228,11 @@ export function CCPage({ onBack }: { onBack: () => void }) {
       <div className="cc-waterline" />
 
       <div className="cc-messages" ref={listRef}>
+        {hasMore && <div ref={sentinelRef} className="cc-load-sentinel" />}
         {messages.length === 0 && connected && authed && (
           <div className="cc-empty">还没消息</div>
         )}
-        {messages.map((m) => (
+        {visibleMessages.map((m) => (
           <MessageRow
             key={m.id}
             message={m}
@@ -436,6 +459,7 @@ function MessageRow({ message, expanded, onToggleThinking }: {
             src={`https://cc.atlantis-sy.blue${message.image}`}
             alt=""
             loading="lazy"
+            decoding="async"
           />
         )}
         {message.file && (

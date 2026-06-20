@@ -17,6 +17,7 @@ export type ChatMessage = {
 
 type State = {
   messages: ChatMessage[]
+  visibleCount: number
   ccAlive: boolean
   ccBusy: boolean
   streamingPhase: string | null
@@ -59,6 +60,7 @@ applyTextColors(loadTextColors())
 
 let state: State = {
   messages: [],
+  visibleCount: 50,
   ccAlive: false,
   ccBusy: false,
   streamingPhase: null,
@@ -95,7 +97,7 @@ function handleEvent(e: HubEvent) {
       break
     case 'history': {
       const msgs = ((e as any).messages ?? []) as ChatMessage[]
-      setState((s) => ({ ...s, messages: msgs }))
+      setState((s) => ({ ...s, messages: msgs, visibleCount: 50 }))
       break
     }
     case 'message': {
@@ -230,6 +232,10 @@ export function sendRaw(msg: any): boolean {
 
 export function sendSessionAction(action: string, extra?: Record<string, any>): boolean {
   return sendRaw({ type: action, ...(extra ?? {}) })
+}
+
+export function loadMoreMessages() {
+  setState((s) => ({ ...s, visibleCount: Math.min(s.visibleCount + 50, s.messages.length) }))
 }
 
 export function setHintsEnabled(enabled: boolean) {
