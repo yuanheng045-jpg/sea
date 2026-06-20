@@ -3156,3 +3156,104 @@ button { font: inherit; cursor: pointer; color: inherit; }
 
 /* v45: messages 间距 16 → 24 */
 .cc-messages { gap: 24px !important; }
+
+/* v46: 排版细调 —— line-height 1.75 + 段间距 9 + justify + 22em 字区宽 */
+.cc-text {
+  font-size: 15px !important;
+  line-height: 1.75 !important;
+  text-align: justify;
+  text-justify: inter-character;
+  max-width: 22em;     /* 22em × 15px ≈ 330px，移动端一行约 20 中文字 */
+}
+.cc-paragraph {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.cc-paragraph + .cc-paragraph {
+  margin-top: 9px;
+}
+
+/* v47: 字号 15 → 13 */
+.cc-text { font-size: 13px !important; }
+
+/* v48: 苏煦名字调小 + 统一所有状态点为蓝心跳 */
+.cc-name { font-size: 14px !important; }
+
+/* 通用：所有"状态点/血点/dock点"统一蓝色 + 三层 box-shadow 持续光 + 心跳 */
+.period-dot, .period-blood, .dock-status-dot.alive {
+  background: #4a8cc7 !important;
+  box-shadow: 0 0 6px #6b9eb8, 0 0 14px #a8c5d8, 0 0 28px rgba(74,140,199,.10) !important;
+  animation: cc-hb 0.85s ease-in-out infinite !important;
+  border-radius: 50% !important;
+}
+
+/* v49: 撤回 v48 强制蓝；各点保留原色 + 同款三层光 + halo + cc-hb */
+
+/* period 红点 —— 红色三层光 */
+.period-dot, .period-blood {
+  background: oklch(0.65 0.20 22) !important;
+  position: relative !important;
+  box-shadow:
+    0 0 6px oklch(0.74 0.18 22),
+    0 0 14px oklch(0.82 0.14 22),
+    0 0 28px oklch(0.65 0.20 22 / 0.10) !important;
+  animation: cc-hb 0.85s ease-in-out infinite !important;
+}
+.period-dot::after, .period-blood::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(0.65 0.20 22 / 0.20) 0%, transparent 70%);
+  animation: cc-pr 0.85s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* dock CC 按钮上的蓝点 —— 用心跳点同款 */
+.dock-status-dot.alive {
+  background: #4a8cc7 !important;
+  position: relative !important;
+  box-shadow:
+    0 0 6px #6b9eb8,
+    0 0 14px #a8c5d8,
+    0 0 28px rgba(74, 140, 199, 0.10) !important;
+  animation: cc-hb 0.85s ease-in-out infinite !important;
+}
+.dock-status-dot.alive::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(74, 140, 199, 0.18) 0%, transparent 70%);
+  animation: cc-pr 0.85s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* v50: 苏煦打字金点 → 蓝心跳同款，金色版 */
+.cc-status-dot.busy {
+  background: #c69a3d !important;
+  width: 8px !important;
+  height: 8px !important;
+  position: relative !important;
+  box-shadow:
+    0 0 6px #d6b35e,
+    0 0 14px #e5cf90,
+    0 0 28px rgba(198, 154, 61, 0.10) !important;
+  animation: cc-hb 0.85s ease-in-out infinite !important;
+}
+.cc-status-dot.busy::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(198, 154, 61, 0.18) 0%, transparent 70%) !important;
+  animation: cc-pr 0.85s ease-in-out infinite !important;
+  pointer-events: none;
+}

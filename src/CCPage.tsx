@@ -450,8 +450,14 @@ function MessageRow({ message, expanded, onToggleThinking }: {
         )}
         {text && (
           <div className="cc-text">
-            {text}
-            <span className="cc-msg-time">{formatTsShort(message.ts)}</span>
+            {text.split(/\n{2,}/).map((para, i, arr) => (
+              <p key={i} className="cc-paragraph">
+                {para}
+                {i === arr.length - 1 && (
+                  <span className="cc-msg-time">{formatTsShort(message.ts)}</span>
+                )}
+              </p>
+            ))}
           </div>
         )}
       </div>
