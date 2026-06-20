@@ -3003,12 +3003,6 @@ button { font: inherit; cursor: pointer; color: inherit; }
 
 /* v34: 给心跳点 halo + 月亮发光腾出空间 */
 .cc-page { padding-top: 18px !important; }
-
-/* v51 fix: cc-page 撑满 content-scroll，消除底部 padding-bottom 110px 染色挡条 */
-.cc-page {
-  position: absolute !important;
-  inset: 0 !important;
-}
 .cc-moon { filter: drop-shadow(0 0 6px rgba(230, 220, 220, 0.55)) drop-shadow(0 1px 1px rgba(120, 130, 150, 0.25)) !important; }
 
 /* v35: 心跳点真复活 + 月亮发光加强 */
@@ -3262,10 +3256,4 @@ button { font: inherit; cursor: pointer; color: inherit; }
   background: radial-gradient(circle, rgba(198, 154, 61, 0.18) 0%, transparent 70%) !important;
   animation: cc-pr 0.85s ease-in-out infinite !important;
   pointer-events: none;
-}
-/* ====== v56: 真凶修复 —— cc-page absolute inset 0 撑满整屏 ====== */
-/* content-scroll height:100% + padding-bottom:110px + border-box 让 cc-page 只到屏幕底 -110px 那条线，下方 20px 空挡透出 blob 光晕 = "输入栏后那层遮挡"。换 absolute 脱离 padding 限制 */
-.cc-page {
-  position: absolute !important;
-  inset: 0 !important;
 }
