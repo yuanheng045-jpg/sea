@@ -1,6 +1,13 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App.tsx'
+import '@fontsource/cormorant-garamond/400-italic.css'
+import '@fontsource/cormorant-garamond/500-italic.css'
+import '@fontsource/cormorant-garamond/600-italic.css'
+import '@fontsource/dm-sans/400.css'
+import '@fontsource/dm-sans/500.css'
+import '@fontsource/dm-sans/600.css'
+import 'lxgw-wenkai-webfont/lxgwwenkai-regular.css'
 import './index.css'
 import { startDaylight, type Presets } from './daylight'
 import { bootstrapIcons } from './icons'
@@ -40,19 +47,36 @@ try {
   if (raw) applyTheme(JSON.parse(raw))
 } catch {}
 
-// 2. Async fetch remote
-fetch('/api/status', { credentials: 'include' })
-  .then(r => (r.ok ? r.json() : null))
-  .then(data => {
-    if (!data) return
-    const entry = data['sea-theme']
-    if (entry?.value === undefined) return
-    applyTheme(entry.value)
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entry.value)) } catch {}
-  })
-  .catch(() => {})
+// 2. Async fetch remote (共享 Promise：theme + chatClient PIN 都用它)
+const statusPromise: Promise<Record<string, { value: any; updated_at: string }> | null> =
+  fetch('/api/status', { credentials: 'include' })
+    .then(r => (r.ok ? r.json() : null))
+    .catch(() => null)
+
+statusPromise.then(data => {
+  if (!data) return
+  const entry = data['sea-theme']
+  if (entry?.value === undefined) return
+  applyTheme(entry.value)
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entry.value)) } catch {}
+})
 
 bootstrapIcons()
+
+// Step 1 验收：底层 WS 连通 + 鉴权 + history。
+// PIN 从 /api/status 拿，UI 永不弹框；fetch 炸了再回退 prompt。
+import { getChatClientOrInit } from './chatStore'
+const hubClient = getChatClientOrInit({
+  promptPin: async () => {
+    try {
+      const data = await statusPromise
+      const fromServer = data?.['sea-channel-pin']?.value
+      if (typeof fromServer === 'string' && fromServer) return fromServer
+    } catch {}
+    return window.prompt('请输入 hub PIN')
+  }
+})
+;(window as any).hubClient = hubClient
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

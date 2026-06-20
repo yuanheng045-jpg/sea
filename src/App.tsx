@@ -4,6 +4,7 @@ import { ThemePanel } from './ThemePanel'
 import { IconSlot } from './IconSlot'
 import { RainSnow } from './RainSnow'
 import { Fireplace } from './Fireplace'
+import { CCPage } from './CCPage'
 
 export type Page = 'cc' | 'home' | 'page2' | 'api' | 'voice' | 'reading' | 'play'
 
@@ -46,15 +47,17 @@ export function App() {
       <div className="content-scroll">
         {page === 'home'  && <Home onNavigate={setPage} />}
         {page === 'page2' && <ThemePanel />}
-        {page !== 'home' && page !== 'page2' && (
+        {page === 'cc'    && <CCPage onBack={() => setPage('home')} />}
+        {page !== 'home' && page !== 'page2' && page !== 'cc' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>
         )}
       </div>
+      {page !== 'cc' && (
       <nav className="dock">
         <button
-          className={`dock-edge${page === 'cc' ? ' active' : ''}`}
+          className="dock-edge"
           onClick={() => setPage('cc')}
         >
           <IconSlot iconKey="cc" fallback={<span className="dock-letters">CC</span>} className="img-dock" />
@@ -81,6 +84,7 @@ export function App() {
           <IconSlot iconKey="api" fallback={<span className="dock-letters">API</span>} className="img-dock" />
         </button>
       </nav>
+      )}
     </div>
   )
 }
