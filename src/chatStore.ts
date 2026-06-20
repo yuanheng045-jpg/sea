@@ -118,6 +118,87 @@ function handleEvent(e: HubEvent) {
       }))
       break
     }
+    case 'thinking_start':
+    case 'text_start': {
+      const t = e as any
+      const streamId = `stream-${t.reply_to ?? Date.now()}`
+      setState((s) => {
+        if (s.messages.some((m) => m.id === streamId)) return s
+        return {
+          ...s,
+          messages: [...s.messages, {
+            id: streamId,
+            role: 'assistant',
+            content: '',
+            thinking: '',
+            ts: Date.now(),
+            pending: true,
+          }],
+        }
+      })
+      break
+    }
+    case 'thinking_delta': {
+      const t = e as any
+      setState((s) => {
+        const msgs = [...s.messages]
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].role === 'assistant' && msgs[i].pending) {
+            msgs[i] = { ...msgs[i], thinking: (msgs[i].thinking ?? '') + (t.text ?? '') }
+            break
+          }
+        }
+        return { ...s, messages: msgs }
+      })
+      break
+    }
+    case 'text_delta': {
+      const t = e as any
+      setState((s) => {
+        const msgs = [...s.messages]
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].role === 'assistant' && msgs[i].pending) {
+            const prev = typeof msgs[i].content === 'string' ? (msgs[i].content as string) : ''
+            msgs[i] = { ...msgs[i], content: prev + (t.text ?? '') }
+            break
+          }
+        }
+        return { ...s, messages: msgs }
+      })
+      break
+    }
+    case 'done': {
+      const d = e as any
+      setState((s) => {
+        const msgs = [...s.messages]
+        let replaced = false
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].role === 'assistant' && msgs[i].pending && msgs[i].id.startsWith('stream-')) {
+            msgs[i] = {
+              id: d.id,
+              role: 'assistant',
+              content: d.content ?? '',
+              thinking: d.thinking ?? undefined,
+              ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
+              pending: false,
+            }
+            replaced = true
+            break
+          }
+        }
+        if (!replaced && !msgs.some((m) => m.id === d.id)) {
+          msgs.push({
+            id: d.id,
+            role: 'assistant',
+            content: d.content ?? '',
+            thinking: d.thinking ?? undefined,
+            ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
+          })
+        }
+        return { ...s, messages: msgs }
+      })
+      break
+    }
     case 'edit': {
       const ed = e as any
       setState((s) => ({
