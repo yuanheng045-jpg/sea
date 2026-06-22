@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, Fragment } from 'react'
 import { IconSlot } from './IconSlot'
 import {
   useChatState,
   loadMoreMessages,
+  clearAutoExpanded,
   sendMessage,
   sendRaw,
   sendSessionAction,
@@ -97,8 +98,36 @@ export function CCPage({ onBack }: { onBack: () => void }) {
     }, 600)
   }
 
+  const initialScrollDoneRef = useRef(false)
   useEffect(() => {
-    if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
+    const el = listRef.current
+    if (!el || messages.length === 0) return
+    if (initialScrollDoneRef.current) {
+      // 后续：用户在底部时新消息自动跟，否则不打扰
+      const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50
+      if (isAtBottom) el.scrollTop = el.scrollHeight
+      return
+    }
+    // 首次：图片/字体陆续加载导致 scrollHeight 持续增长，强制每 80ms 滚到底直到稳定（用户主动滚则停）
+    const scrollDown = () => { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight }
+    scrollDown()
+    let userScrolled = false
+    const onUserScroll = () => { userScrolled = true }
+    el.addEventListener('wheel', onUserScroll, { passive: true })
+    el.addEventListener('touchmove', onUserScroll, { passive: true })
+    const interval = setInterval(() => { if (!userScrolled) scrollDown() }, 80)
+    const stopTimer = setTimeout(() => {
+      clearInterval(interval)
+      el.removeEventListener('wheel', onUserScroll)
+      el.removeEventListener('touchmove', onUserScroll)
+      initialScrollDoneRef.current = true
+    }, 2500)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(stopTimer)
+      el.removeEventListener('wheel', onUserScroll)
+      el.removeEventListener('touchmove', onUserScroll)
+    }
   }, [messages.length])
 
   useEffect(() => {
@@ -138,6 +167,9 @@ export function CCPage({ onBack }: { onBack: () => void }) {
     const onUp = (e: PointerEvent) => {
       if (!tracking) return
       tracking = false
+      // 用户选中了文本（复制粘贴中）→ 不识别为返回手势
+      const sel = window.getSelection()
+      if (sel && sel.toString().trim().length > 0) return
       const dx = e.clientX - startX
       const dy = Math.abs(e.clientY - startY)
       if (dx > SWIPE_THRESHOLD && dy < 60) onBack()
@@ -162,7 +194,12 @@ export function CCPage({ onBack }: { onBack: () => void }) {
     setDraft('')
   }
 
-  const toggleThinking = (id: string) => {
+  const toggleThinking = (id: string, isAutoExpanded: boolean) => {
+    if (isAutoExpanded) {
+      // 当前因 autoExpanded 展开 → 点击应该折叠 → 清掉 autoExpanded
+      clearAutoExpanded(id)
+      return
+    }
     setExpandedThinking((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -233,12 +270,27 @@ export function CCPage({ onBack }: { onBack: () => void }) {
           <div className="cc-empty">还没消息</div>
         )}
         {visibleMessages.map((m) => (
-          <MessageRow
-            key={m.id}
-            message={m}
-            expanded={expandedThinking.has(m.id)}
-            onToggleThinking={() => toggleThinking(m.id)}
-          />
+          <Fragment key={m.id}>
+            <MessageRow
+              message={m}
+              expanded={expandedThinking.has(m.id) || !!m.autoExpanded}
+              onToggleThinking={() => toggleThinking(m.id, !!m.autoExpanded)}
+            />
+            {m.role === 'user' && m.memoryHits && m.memoryHits.length > 0 && (
+              <details className="cc-memory-hits">
+                <summary>💡 命中 {m.memoryHits.length} 条记忆</summary>
+                <ul>
+                  {m.memoryHits.map((h: any, i: number) => (
+                    <li key={h.short_id || h.id || i}>
+                      <span className="cc-memory-id">[{h.short_id || h.id}]</span>{' '}
+                      {h.date ? <span className="cc-memory-date">{h.date}</span> : null}{' '}
+                      <span className="cc-memory-summary">{h.summary || ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </Fragment>
         ))}
       </div>
 

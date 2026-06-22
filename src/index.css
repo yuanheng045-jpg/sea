@@ -3269,3 +3269,63 @@ button { font: inherit; cursor: pointer; color: inherit; }
   position: absolute !important;
   inset: 0 !important;
 }
+
+
+/* v59 省电：body[data-power-save] 时全局暂停 CSS 动画
+   触发：页面不可见 OR 3 分钟无 touch/mouse/keydown/scroll 交互
+   一旦交互立即解除（reset() 在 App.tsx useEffect 里） */
+body[data-power-save="true"] *,
+body[data-power-save="true"] *::before,
+body[data-power-save="true"] *::after {
+  animation-play-state: paused !important;
+}
+
+
+/* v60 命中记忆折叠条：微透明玻璃，挂在 user message 之后（视觉在下条 thinking 之上）*/
+.cc-memory-hits {
+  margin: 4px 0 4px 28px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(4px) saturate(110%);
+  -webkit-backdrop-filter: blur(4px) saturate(110%);
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.cc-memory-hits summary {
+  cursor: pointer;
+  user-select: none;
+  opacity: 0.55;
+  list-style: none;
+  transition: opacity 0.2s;
+}
+.cc-memory-hits summary::-webkit-details-marker { display: none; }
+.cc-memory-hits[open] summary { opacity: 0.85; margin-bottom: 4px; }
+.cc-memory-hits ul {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.10);
+  padding-top: 4px;
+}
+.cc-memory-hits li {
+  padding: 3px 0;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.cc-memory-id {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  opacity: 0.5;
+}
+.cc-memory-date {
+  font-size: 10.5px;
+  opacity: 0.5;
+}
+.cc-memory-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+}

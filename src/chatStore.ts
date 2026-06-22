@@ -13,6 +13,8 @@ export type ChatMessage = {
   image?: any
   file?: any
   pending?: boolean
+  autoExpanded?: boolean
+  memoryHits?: any[]
 }
 
 type State = {
@@ -133,6 +135,7 @@ function handleEvent(e: HubEvent) {
             thinking: '',
             ts: Date.now(),
             pending: true,
+            autoExpanded: true,
           }],
         }
       })
@@ -181,6 +184,7 @@ function handleEvent(e: HubEvent) {
               thinking: d.thinking ?? undefined,
               ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
               pending: false,
+              autoExpanded: true,
             }
             replaced = true
             break
@@ -236,6 +240,19 @@ function handleEvent(e: HubEvent) {
       setState((s) => ({ ...s, claudemd: { ...s.claudemd, lastSave: ok ? 'ok' : 'fail' } }))
       break
     }
+    case 'memory_hits': {
+      const m = e as any
+      console.log('[memory_hits] recv message_id=', m.message_id, 'hits=', m.hits?.length, 'current msg ids=', state.messages.map(x => x.id).slice(-5))
+      setState((s) => {
+        const matched = s.messages.some((msg) => msg.id === m.message_id)
+        console.log('[memory_hits] matched=', matched)
+        return {
+          ...s,
+          messages: s.messages.map((msg) => msg.id === m.message_id ? { ...msg, memoryHits: m.hits } : msg),
+        }
+      })
+      break
+    }
     case 'ack': {
       // hub 排除发送者的 broadcast，所以发送者只能靠 ack 确认 + 拿到 server id
       const a = e as any
@@ -284,7 +301,7 @@ export function sendMessage(text: string, extra?: { style?: string; image?: any;
   setState((s) => ({
     ...s,
     messages: [
-      ...s.messages,
+      ...s.messages.map((m) => m.autoExpanded ? { ...m, autoExpanded: false } : m),
       {
         id: tempId,
         role: 'user',
@@ -317,6 +334,10 @@ export function sendSessionAction(action: string, extra?: Record<string, any>): 
 
 export function loadMoreMessages() {
   setState((s) => ({ ...s, visibleCount: Math.min(s.visibleCount + 50, s.messages.length) }))
+}
+
+export function clearAutoExpanded(id: string) {
+  setState((s) => ({ ...s, messages: s.messages.map((m) => m.id === id ? { ...m, autoExpanded: false } : m) }))
 }
 
 export function setHintsEnabled(enabled: boolean) {

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Home } from './Home'
 import { ThemePanel } from './ThemePanel'
 import { IconSlot } from './IconSlot'
@@ -10,6 +10,39 @@ export type Page = 'cc' | 'home' | 'page2' | 'api' | 'voice' | 'reading' | 'play
 
 export function App() {
   const [page, setPage] = useState<Page>('home')
+
+  // 省电：页面不可见 / 3 分钟无交互 → body[data-power-save] → CSS 全局暂停动画
+  useEffect(() => {
+    let idleTimer: number | null = null
+    const IDLE_MS = 3 * 60 * 1000
+    const enter = () => document.body.setAttribute('data-power-save', 'true')
+    const exit = () => document.body.removeAttribute('data-power-save')
+    const reset = () => {
+      exit()
+      if (idleTimer) clearTimeout(idleTimer)
+      idleTimer = window.setTimeout(enter, IDLE_MS)
+    }
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') {
+        enter()
+        if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
+      } else { reset() }
+    }
+    reset()
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('touchstart', reset, { passive: true })
+    window.addEventListener('mousemove', reset, { passive: true })
+    window.addEventListener('keydown', reset)
+    window.addEventListener('scroll', reset, { passive: true } as any)
+    return () => {
+      if (idleTimer) clearTimeout(idleTimer)
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('touchstart', reset)
+      window.removeEventListener('mousemove', reset)
+      window.removeEventListener('keydown', reset)
+      window.removeEventListener('scroll', reset)
+    }
+  }, [])
   const pillStartX = useRef<number | null>(null)
   const swipedRef = useRef(false)
 
