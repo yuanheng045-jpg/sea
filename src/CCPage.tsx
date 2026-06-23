@@ -8,6 +8,7 @@ import {
   sendRaw,
   sendSessionAction,
   setHintsEnabled,
+  setHealthEnabled,
   setTextColor,
   sendClaudemdGet,
   sendClaudemdSave,
@@ -22,7 +23,7 @@ export function CCPage({ onBack }: { onBack: () => void }) {
   const {
     messages, connected, authed, ccAlive, ccBusy,
     streamingPhase, streamingElapsed, sessionState,
-    hintsEnabled, textColors, claudemd, visibleCount,
+    hintsEnabled, healthEnabled, textColors, claudemd, visibleCount,
   } = useChatState()
   const visibleMessages = messages.slice(-visibleCount)
   const hasMore = messages.length > visibleCount
@@ -39,6 +40,7 @@ export function CCPage({ onBack }: { onBack: () => void }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState<'photo' | 'file' | null>(null)
   const [pendingImages, setPendingImages] = useState<File[] | null>(null)
+  const [attachments, setAttachments] = useState<Array<{ kind: 'image' | 'file'; url: string; name?: string }>>([])
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [expandedThinking, setExpandedThinking] = useState<Set<string>>(new Set())
   const listRef = useRef<HTMLDivElement>(null)
@@ -188,10 +190,18 @@ export function CCPage({ onBack }: { onBack: () => void }) {
   }, [onBack, styleEditorOpen, panelOpen])
 
   const onSend = () => {
-    if (!draft.trim()) return
+    const text = draft.trim()
     const active = (moonFull ? styleTexts.f : styleTexts.c).trim()
-    sendMessage(draft, active ? { style: active } : undefined)
+    if (!text && attachments.length === 0) return
+    const images = attachments.filter((a) => a.kind === 'image').map((a) => a.url)
+    const files = attachments.filter((a) => a.kind === 'file').map((a) => ({ url: a.url, name: a.name }))
+    const extra: any = {}
+    if (active) extra.style = active
+    if (images.length) extra.images = images
+    if (files.length) extra.files = files
+    sendMessage(text, Object.keys(extra).length ? extra : undefined)
     setDraft('')
+    setAttachments([])
   }
 
   const toggleThinking = (id: string, isAutoExpanded: boolean) => {
@@ -318,13 +328,25 @@ export function CCPage({ onBack }: { onBack: () => void }) {
           setUploading('file'); setPlusOpen(false)
           try {
             const { url, name } = await uploadToHub(f)
-            const activeStyle = (moonFull ? styleTexts.f : styleTexts.c).trim()
-            sendMessage('', activeStyle ? { file: { url, name }, style: activeStyle } : { file: { url, name } })
+            setAttachments((prev) => [...prev, { kind: 'file', url, name }])
           } catch (err) { console.error('file upload failed', err); alert('文件上传失败') }
           finally { setUploading(null); e.target.value = '' }
         }}
       />
       <div className="cc-input-bar">
+        <div className="cc-input-col">
+        {attachments.length > 0 && (
+          <div className="cc-attach-row">
+            {attachments.map((att, i) => (
+              <div className="cc-attach" key={i}>
+                {att.kind === 'image'
+                  ? <img className="cc-attach-thumb" src={`https://cc.atlantis-sy.blue${att.url}`} alt="" />
+                  : <span className="cc-attach-file"><FileIconInline />{att.name}</span>}
+                <button className="cc-attach-del" onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))} aria-label="移除附件">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="cc-input-pill">
           <div className="cc-plus-wrap">
             {plusOpen && (
@@ -349,6 +371,14 @@ export function CCPage({ onBack }: { onBack: () => void }) {
                 >
                   <HintsSvg />
                 </button>
+                <button
+                  className={`cc-plus-item health${healthEnabled ? ' on' : ' off'}`}
+                  onClick={(e) => { e.stopPropagation(); setHealthEnabled(!healthEnabled) }}
+                  aria-label={`心率注入 ${healthEnabled ? '开启' : '关闭'}`}
+                  title={`心率：${healthEnabled ? '开' : '关'}`}
+                >
+                  <HeartSvg />
+                </button>
               </div>
             )}
             <button
@@ -368,11 +398,12 @@ export function CCPage({ onBack }: { onBack: () => void }) {
           <button
             className="cc-send"
             onClick={onSend}
-            disabled={!draft.trim() || !authed}
+            disabled={(!draft.trim() && attachments.length === 0) || !authed}
             aria-label="发送"
           >
             <ClaudeSparkle />
           </button>
+        </div>
         </div>
       </div>
 
@@ -431,7 +462,8 @@ export function CCPage({ onBack }: { onBack: () => void }) {
           progress={uploadProgress}
           onCancel={() => { setPendingImages(null); setUploadProgress(null) }}
           onPick={async (level) => {
-            const files = pendingImages
+            const files = pendingImages ?? []
+            if (!files.length) { setPendingImages(null); return }
             setUploadProgress({ done: 0, total: files.length })
             try {
               for (let i = 0; i < files.length; i++) {
@@ -445,8 +477,7 @@ export function CCPage({ onBack }: { onBack: () => void }) {
                   if (blob) { toUpload = blob; mime = 'image/jpeg'; filename = f.name.replace(/\.\w+$/, '.jpg') }
                 }
                 const { url } = await uploadBlobToHub(toUpload, mime, filename)
-                const activeStyle = (moonFull ? styleTexts.f : styleTexts.c).trim()
-                sendMessage('', activeStyle ? { image: url, style: activeStyle } : { image: url })
+                setAttachments((prev) => [...prev, { kind: 'image', url }])
                 setUploadProgress({ done: i + 1, total: files.length })
               }
             } catch (err) {
@@ -514,6 +545,14 @@ function MessageRow({ message, expanded, onToggleThinking }: {
             decoding="async"
           />
         )}
+        {Array.isArray(message.images) && message.images.map((u: string, i: number) => (
+          <img key={i} className="cc-msg-img" src={`https://cc.atlantis-sy.blue${u}`} alt="" loading="lazy" decoding="async" />
+        ))}
+        {Array.isArray(message.files) && message.files.map((fl: any, i: number) => (
+          <a key={i} className="cc-msg-file" href={`https://cc.atlantis-sy.blue${fl.url ?? ''}`} target="_blank" rel="noopener">
+            <FileIconInline /> {fl.name ?? '文件'}
+          </a>
+        ))}
         {message.file && (
           <a
             className="cc-msg-file"
@@ -757,6 +796,14 @@ function HintsSvg() {
       <path d="M 9 16 Q 6 14 6 10 A 6 6 0 1 1 18 10 Q 18 14 15 16 L 15 18 L 9 18 Z" />
       <path d="M 10 20 L 14 20" />
       <path d="M 11 22 L 13 22" />
+    </svg>
+  )
+}
+
+function HeartSvg() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round">
+      <path d="M12 21s-7-4.5-9.5-9.5C0.5 7 4 3 7.5 3c2 0 3.5 1 4.5 2.5C13 4 14.5 3 16.5 3 20 3 23.5 7 21.5 11.5 19 16.5 12 21 12 21z" />
     </svg>
   )
 }

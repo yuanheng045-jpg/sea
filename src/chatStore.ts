@@ -12,6 +12,8 @@ export type ChatMessage = {
   thinking?: string
   image?: any
   file?: any
+  images?: string[]
+  files?: Array<{ url: string; name?: string }>
   pending?: boolean
   autoExpanded?: boolean
   memoryHits?: any[]
@@ -28,6 +30,7 @@ type State = {
   authed: boolean
   sessionState: Record<string, any> | null
   hintsEnabled: boolean
+  healthEnabled: boolean
   textColors: { su: string; you: string }
   claudemd: { content: string | null; lastSave: 'ok' | 'fail' | null }
 }
@@ -36,6 +39,15 @@ const HINTS_KEY = 'sea-hints-enabled'
 function loadHints(): boolean {
   try {
     const raw = localStorage.getItem(HINTS_KEY)
+    if (raw === null) return true
+    return raw === 'true'
+  } catch { return true }
+}
+
+const HEALTH_KEY = 'sea-health-enabled'
+function loadHealth(): boolean {
+  try {
+    const raw = localStorage.getItem(HEALTH_KEY)
     if (raw === null) return true
     return raw === 'true'
   } catch { return true }
@@ -71,6 +83,7 @@ let state: State = {
   authed: false,
   sessionState: null,
   hintsEnabled: loadHints(),
+  healthEnabled: loadHealth(),
   textColors: loadTextColors(),
   claudemd: { content: null, lastSave: null },
 }
@@ -242,15 +255,10 @@ function handleEvent(e: HubEvent) {
     }
     case 'memory_hits': {
       const m = e as any
-      console.log('[memory_hits] recv message_id=', m.message_id, 'hits=', m.hits?.length, 'current msg ids=', state.messages.map(x => x.id).slice(-5))
-      setState((s) => {
-        const matched = s.messages.some((msg) => msg.id === m.message_id)
-        console.log('[memory_hits] matched=', matched)
-        return {
-          ...s,
-          messages: s.messages.map((msg) => msg.id === m.message_id ? { ...msg, memoryHits: m.hits } : msg),
-        }
-      })
+      setState((s) => ({
+        ...s,
+        messages: s.messages.map((msg) => msg.id === m.message_id ? { ...msg, memoryHits: m.hits } : msg),
+      }))
       break
     }
     case 'ack': {
@@ -293,10 +301,10 @@ export function getChatClientOrInit(
 }
 
 let _tempIdCounter = 0
-export function sendMessage(text: string, extra?: { style?: string; image?: any; file?: any }) {
+export function sendMessage(text: string, extra?: { style?: string; image?: any; file?: any; images?: string[]; files?: Array<{ url: string; name?: string }> }) {
   if (!_client) return
   const trimmed = text.trim()
-  if (!trimmed && !extra?.image && !extra?.file) return
+  if (!trimmed && !extra?.image && !extra?.file && !extra?.images?.length && !extra?.files?.length) return
   const tempId = `local-${Date.now()}-${_tempIdCounter++}`
   setState((s) => ({
     ...s,
@@ -309,6 +317,8 @@ export function sendMessage(text: string, extra?: { style?: string; image?: any;
         ts: Date.now(),
         image: extra?.image,
         file: extra?.file,
+        images: extra?.images,
+        files: extra?.files,
         pending: true,
       },
     ],
@@ -319,7 +329,10 @@ export function sendMessage(text: string, extra?: { style?: string; image?: any;
     style: extra?.style,
     image: extra?.image,
     file: extra?.file,
+    images: extra?.images,
+    files: extra?.files,
     hints_enabled: state.hintsEnabled,
+    health_enabled: state.healthEnabled,
   })
 }
 
@@ -343,6 +356,11 @@ export function clearAutoExpanded(id: string) {
 export function setHintsEnabled(enabled: boolean) {
   try { localStorage.setItem(HINTS_KEY, String(enabled)) } catch {}
   setState((s) => ({ ...s, hintsEnabled: enabled }))
+}
+
+export function setHealthEnabled(enabled: boolean) {
+  try { localStorage.setItem(HEALTH_KEY, String(enabled)) } catch {}
+  setState((s) => ({ ...s, healthEnabled: enabled }))
 }
 
 

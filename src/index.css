@@ -3329,3 +3329,30 @@ body[data-power-save="true"] *::after {
   flex: 1 1 auto;
   min-width: 0;
 }
+
+
+/* v60 心率开关按钮（加号菜单里）：开=蓝色心，关=灰色心 */
+.cc-plus-item.health.on { color: oklch(0.62 0.13 256); }
+.cc-plus-item.health.off { color: var(--ink-faint); opacity: 0.45; }
+.cc-plus-item.health.on svg { filter: drop-shadow(0 0 3px oklch(0.62 0.13 256 / 0.4)); }
+
+/* v61 输入栏附件：图缩略图 / 文件名 + 删除，挂在 pill 上方，可带文字一起发 */
+.cc-input-col { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.cc-attach {
+  display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+  max-width: 100%; padding: 6px 8px;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(4px) saturate(110%); -webkit-backdrop-filter: blur(4px) saturate(110%);
+  border: 0.5px solid rgba(255,255,255,0.18); border-radius: 12px;
+}
+.cc-attach-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; display: block; }
+.cc-attach-file { font-size: 12px; color: var(--ink-soft); display: inline-flex; align-items: center; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-attach-del {
+  width: 20px; height: 20px; border-radius: 50%; border: none;
+  background: rgba(0,0,0,0.12); color: var(--ink-soft); font-size: 11px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; padding: 0;
+}
+.cc-attach-del:hover { background: rgba(0,0,0,0.2); }
+
+/* v62 附件多个：横排可换行 */
+.cc-attach-row { display: flex; flex-wrap: wrap; gap: 8px; }
