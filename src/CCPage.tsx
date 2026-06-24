@@ -17,6 +17,16 @@ import {
 
 const SWIPE_THRESHOLD = 60
 const MAX_CONTEXT_TOKENS = 750_000
+const CC_MODELS = [
+  { value: 'claude-opus-4-8[1m]', label: 'Opus 4.8' },
+  { value: 'claude-opus-4-7[1m]', label: 'Opus 4.7' },
+  { value: 'claude-opus-4-6[1m]', label: 'Opus 4.6' },
+  { value: 'claude-opus-4-5[1m]', label: 'Opus 4.5' },
+  { value: 'claude-sonnet-4-6[1m]', label: 'Sonnet 4.6' },
+  { value: 'claude-sonnet-4-5[1m]', label: 'Sonnet 4.5' },
+  { value: 'claude-haiku-4-5', label: 'Haiku 4.5' },
+  { value: 'claude-fable-5', label: 'Fable 5' },
+]
 const STYLES_KEY = 'sea-userstyles'
 
 export function CCPage({ onBack }: { onBack: () => void }) {
@@ -630,13 +640,13 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
   onAction: (action: string) => void
   onColorChange: (who: 'su' | 'you', color: string) => void
 }) {
-  const [confirming, setConfirming] = useState<null | 'forge' | 'rotate'>(null)
+  const [confirming, setConfirming] = useState<null | 'forge' | 'compact'>(null)
   const confirmTimerRef = useRef<number | undefined>(undefined)
-  const tapAction = (a: 'forge' | 'rotate') => {
+  const tapAction = (a: 'forge' | 'compact') => {
     if (confirming === a) {
       if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current)
       setConfirming(null)
-      onAction(a === 'forge' ? 'session_forge' : 'session_rotate')
+      onAction(a === 'forge' ? 'session_forge' : 'session_compact')
       return
     }
     if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current)
@@ -646,6 +656,7 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
   const contextTokens = state?.contextTokens ?? 0
   const cacheRead = state?.cacheRead ?? 0
   const pct = Math.min(100, (contextTokens / MAX_CONTEXT_TOKENS) * 100)
+  const curModel = (state as any)?.desiredModel || state?.model || ''
   const cacheHitPct = contextTokens > 0 ? Math.round((cacheRead / contextTokens) * 100) : 0
 
   return (
@@ -677,6 +688,14 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
                 <div className="cc-panel-card-val small">{shortModel(state.model)}</div>
                 <div className="cc-panel-card-label">模型</div>
               </div>
+            </div>
+
+            <div className="cc-panel-section">
+              <div className="cc-panel-section-title">切换模型 · 下条生效</div>
+              <select className="cc-model-select" style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', color: 'inherit' }} value={curModel} onChange={(e) => sendSessionAction('session_set_model', { model: e.target.value })}>
+                {curModel && !CC_MODELS.some((mm) => mm.value === curModel) ? <option value={curModel}>{shortModel(curModel)}（当前）</option> : null}
+                {CC_MODELS.map((mm) => <option key={mm.value} value={mm.value}>{mm.label}</option>)}
+              </select>
             </div>
 
             <div className="cc-panel-meta" title="本轮 token 用量：你打的输入 + 苏煦回复的输出">
@@ -720,13 +739,13 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
           <button
             className={`cc-panel-action${confirming === 'forge' ? ' confirming' : ''}`}
             onClick={() => tapAction('forge')}
-            title="压缩当前 session 释放上下文"
-          >{confirming === 'forge' ? '再点确认 compact' : 'compact'}</button>
+            title="开新窗口续聊：保留最近20条原文，其余存入记忆"
+          >{confirming === 'forge' ? '再点确认换窗' : '换窗'}</button>
           <button
-            className={`cc-panel-action${confirming === 'rotate' ? ' confirming' : ''}`}
-            onClick={() => tapAction('rotate')}
-            title="换新 session（watcher 接通后生效）"
-          >{confirming === 'rotate' ? '再点确认 rotate' : 'rotate'}</button>
+            className={`cc-panel-action${confirming === 'compact' ? ' confirming' : ''}`}
+            onClick={() => tapAction('compact')}
+            title="原生 /compact：同窗口压缩，保留全部脉络、上下文变小（耗时稍长）"
+          >{confirming === 'compact' ? '再点确认压缩' : '压缩'}</button>
           <button onClick={onClose}>关闭</button>
         </div>
       </div>
