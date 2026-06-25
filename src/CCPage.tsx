@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, Fragment } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, Fragment } from 'react'
 import { IconSlot } from './IconSlot'
 import {
   useChatState,
@@ -111,7 +111,7 @@ export function CCPage({ onBack }: { onBack: () => void }) {
   }
 
   const initialScrollDoneRef = useRef(false)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = listRef.current
     if (!el || messages.length === 0) return
     if (initialScrollDoneRef.current) {
