@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
-export type IconKey = 'cc' | 'api' | 'voice' | 'reading' | 'play' | 'avatar-her' | 'avatar-his' | 'avatar-su' | 'avatar-you'
+export type IconKey = 'cc' | 'api' | 'voice' | 'reading' | 'play' | 'theme' | 'status' | 'avatar-her' | 'avatar-his' | 'avatar-su' | 'avatar-you'
 type Icons = Record<IconKey, string | null>
 
-const DEFAULT: Icons = { cc: null, api: null, voice: null, reading: null, play: null, 'avatar-her': null, 'avatar-his': null, 'avatar-su': null, 'avatar-you': null }
+const DEFAULT: Icons = { cc: null, api: null, voice: null, reading: null, play: null, theme: null, status: null, 'avatar-her': null, 'avatar-his': null, 'avatar-su': null, 'avatar-you': null }
 let _icons: Icons = { ...DEFAULT }
 const listeners = new Set<() => void>()
 const STORAGE_KEY = 'sea:icons:v1'

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, Fragment } from 'react'
 import { IconSlot } from './IconSlot'
+import { enablePush } from './push'
 import {
   useChatState,
   loadMoreMessages,
@@ -110,6 +111,15 @@ export function CCPage({ onBack }: { onBack: () => void }) {
     }, 600)
   }
 
+  useEffect(() => {
+    if (!connected || !authed || !('Notification' in window)) return
+    if (Notification.permission === 'granted') { enablePush(sendRaw) }
+    else if (Notification.permission === 'default') {
+      const ask = () => { document.removeEventListener('pointerdown', ask); enablePush(sendRaw) }
+      document.addEventListener('pointerdown', ask, { once: true })
+      return () => document.removeEventListener('pointerdown', ask)
+    }
+  }, [connected, authed])
   const initialScrollDoneRef = useRef(false)
   useLayoutEffect(() => {
     const el = listRef.current
@@ -641,6 +651,7 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
   onColorChange: (who: 'su' | 'you', color: string) => void
 }) {
   const [confirming, setConfirming] = useState<null | 'forge' | 'compact'>(null)
+  const { actionPending } = useChatState()
   const confirmTimerRef = useRef<number | undefined>(undefined)
   const tapAction = (a: 'forge' | 'compact') => {
     if (confirming === a) {
@@ -740,12 +751,12 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
             className={`cc-panel-action${confirming === 'forge' ? ' confirming' : ''}`}
             onClick={() => tapAction('forge')}
             title="开新窗口续聊：保留最近20条原文，其余存入记忆"
-          >{confirming === 'forge' ? '再点确认换窗' : '换窗'}</button>
+          >{actionPending === 'forge' ? '换窗中…' : confirming === 'forge' ? '再点确认换窗' : '换窗'}</button>
           <button
             className={`cc-panel-action${confirming === 'compact' ? ' confirming' : ''}`}
             onClick={() => tapAction('compact')}
             title="原生 /compact：同窗口压缩，保留全部脉络、上下文变小（耗时稍长）"
-          >{confirming === 'compact' ? '再点确认压缩' : '压缩'}</button>
+          >{actionPending === 'compact' ? '压缩中…' : confirming === 'compact' ? '再点确认压缩' : '压缩'}</button>
           <button onClick={onClose}>关闭</button>
         </div>
       </div>

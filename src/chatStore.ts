@@ -29,6 +29,7 @@ type State = {
   connected: boolean
   authed: boolean
   sessionState: Record<string, any> | null
+  actionPending: 'forge' | 'compact' | null
   hintsEnabled: boolean
   healthEnabled: boolean
   textColors: { su: string; you: string }
@@ -82,6 +83,7 @@ let state: State = {
   connected: false,
   authed: false,
   sessionState: null,
+  actionPending: null,
   hintsEnabled: loadHints(),
   healthEnabled: loadHealth(),
   textColors: loadTextColors(),
@@ -243,6 +245,10 @@ function handleEvent(e: HubEvent) {
       setState((s) => ({ ...s, sessionState: e as any }))
       break
     }
+    case 'session_action_result': {
+      setState((s) => ({ ...s, actionPending: null }))
+      break
+    }
     case 'claudemd': {
       const content = (e as any).content ?? ''
       setState((s) => ({ ...s, claudemd: { content, lastSave: null } }))
@@ -342,6 +348,8 @@ export function sendRaw(msg: any): boolean {
 }
 
 export function sendSessionAction(action: string, extra?: Record<string, any>): boolean {
+  if (action === 'session_forge') setState((s) => ({ ...s, actionPending: 'forge' }))
+  else if (action === 'session_compact') setState((s) => ({ ...s, actionPending: 'compact' }))
   return sendRaw({ type: action, ...(extra ?? {}) })
 }
 

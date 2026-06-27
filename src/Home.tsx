@@ -2,12 +2,12 @@ import type { Page } from './App'
 import { IconSlot } from './IconSlot'
 import { SnowPlayer } from './SnowPlayer'
 import { OctopusDoggy } from './OctopusDoggy'
-import type { IconKey } from './icons'
+import { AppCanvas, type AppDef } from './AppCanvas'
 
-const TILES: { key: Page; icon: string; label: string }[] = [
-  { key: 'voice',   icon: '🐚', label: '海螺' },
-  { key: 'reading', icon: '📖', label: '书' },
-  { key: 'play',    icon: '🍎', label: '苹果' },
+const HOME_APPS: AppDef[] = [
+  { key: 'voice',   iconKey: 'voice',   icon: '🐚', label: '海螺', def: { x: 28, y: 10 } },
+  { key: 'reading', iconKey: 'reading', icon: '📖', label: '书',   def: { x: 67, y: 30 } },
+  { key: 'play',    iconKey: 'play',    icon: '🍎', label: '苹果', def: { x: 39, y: 62 } },
 ]
 
 const CAL = [
@@ -88,14 +88,7 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
       </div>
 
       <div className="mid-area">
-        <div className="app-scatter">
-          {TILES.map(a => (
-            <button key={a.key} className="app-tile" onClick={() => onNavigate(a.key)}>
-              <IconSlot iconKey={a.key as IconKey} fallback={a.icon} className="img-tile" />
-              <span className="tile-label">{a.label}</span>
-            </button>
-          ))}
-        </div>
+        <AppCanvas apps={HOME_APPS} onNavigate={onNavigate} panel />
         <div className="snow-column">
           <SnowPlayer />
           <div className="activity-text">

@@ -18,8 +18,17 @@ export function IconSlot({ iconKey, fallback, className }: Props) {
   const longPressedRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const onDown = () => {
+  const startRef = useRef<{ x: number; y: number } | null>(null)
+
+  const ptXY = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    const m = e as React.MouseEvent
+    return { x: m.clientX, y: m.clientY }
+  }
+
+  const onDown = (e: React.MouseEvent | React.TouchEvent) => {
     longPressedRef.current = false
+    startRef.current = ptXY(e)
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = window.setTimeout(() => {
       longPressedRef.current = true
@@ -27,7 +36,19 @@ export function IconSlot({ iconKey, fallback, className }: Props) {
     }, 600)
   }
 
+  const onMove = (e: React.MouseEvent | React.TouchEvent) => {
+    const sr = startRef.current
+    if (!sr || timerRef.current === undefined) return
+    const q = ptXY(e)
+    if (Math.hypot(q.x - sr.x, q.y - sr.y) > 10) {
+      clearTimeout(timerRef.current)
+      timerRef.current = undefined
+      startRef.current = null
+    }
+  }
+
   const onUp = () => {
+    startRef.current = null
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = undefined
@@ -57,8 +78,10 @@ export function IconSlot({ iconKey, fallback, className }: Props) {
       <div
         className={`img-slot ${className ?? ''}${src ? ' has-img' : ''}`}
         onMouseDown={onDown}
+        onMouseMove={onMove}
         onMouseUp={onUp}
         onTouchStart={onDown}
+        onTouchMove={onMove}
         onTouchEnd={onUp}
         onTouchCancel={onUp}
         onClickCapture={onClickCapture}

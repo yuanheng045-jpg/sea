@@ -4,6 +4,7 @@
 
 const WS_URL = 'wss://cc.atlantis-sy.blue/'
 const PIN_KEY = 'sea-channel-pin'
+const CLIENT_ID_KEY = 'sea-client-id'
 
 export type HubEvent =
   | { type: 'open' }
@@ -67,7 +68,9 @@ export function createChatClient(opts?: {
       }
     }
     if (pin && ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'auth', pin }))
+      let cid = localStorage.getItem(CLIENT_ID_KEY)
+      if (!cid) { cid = 'c_' + Math.random().toString(36).slice(2, 12); localStorage.setItem(CLIENT_ID_KEY, cid) }
+      ws.send(JSON.stringify({ type: 'auth', pin, client_id: cid }))
     }
   }
 
@@ -102,6 +105,8 @@ export function createChatClient(opts?: {
         authWithPin().catch((err) => emit({ type: 'error', message: String(err) }))
       } else if (msg.type === 'auth_fail') {
         localStorage.removeItem(PIN_KEY)
+      } else if (msg.type === 'auth_ok' && msg.client_id) {
+        localStorage.setItem(CLIENT_ID_KEY, msg.client_id)
       }
     }
 

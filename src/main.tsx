@@ -11,6 +11,7 @@ import 'lxgw-wenkai-webfont/lxgwwenkai-regular.css'
 import './index.css'
 import { startDaylight, type Presets } from './daylight'
 import { bootstrapIcons } from './icons'
+import { bootstrapAppPos } from './appPos'
 
 const STORAGE_KEY = 'sea:theme:v2'
 const LEGACY_KEY = 'sea:theme:v1'
@@ -62,6 +63,7 @@ statusPromise.then(data => {
 })
 
 bootstrapIcons()
+bootstrapAppPos()
 
 // Step 1 验收：底层 WS 连通 + 鉴权 + history。
 // PIN 从 /api/status 拿，UI 永不弹框；fetch 炸了再回退 prompt。

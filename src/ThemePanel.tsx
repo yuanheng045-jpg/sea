@@ -201,13 +201,14 @@ async function pushRemote(data: ThemeData): Promise<boolean> {
 
 type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error'
 
-export function ThemePanel() {
+export function ThemePanel({ onBack }: { onBack?: () => void }) {
   const [data, setData] = useState<ThemeData>(loadInitial)
   const [tab, setTab] = useState<Tab>('noon')
   const [sync, setSync] = useState<SyncStatus>('idle')
   const skipPushRef = useRef(false)
   const manualRef = useRef(data.manual)
   const dataRef = useRef(data)
+  const pendingRef = useRef(false)
 
   useEffect(() => { manualRef.current = data.manual }, [data.manual])
   useEffect(() => { dataRef.current = data }, [data])
@@ -230,6 +231,7 @@ export function ThemePanel() {
     return () => {
       cancelled = true
       const d = dataRef.current
+      if (pendingRef.current) { pendingRef.current = false; void pushRemote(d) }
       if (d.daylight) {
         startDaylight(d.presets)
       } else {
@@ -251,8 +253,10 @@ export function ThemePanel() {
       return
     }
     setSync('syncing')
+    pendingRef.current = true
     const t = setTimeout(async () => {
       const ok = await pushRemote(data)
+      pendingRef.current = false
       setSync(ok ? 'synced' : 'error')
     }, 500)
     return () => clearTimeout(t)
@@ -301,12 +305,15 @@ export function ThemePanel() {
   return (
     <div className="theme-panel">
       <header className="tp-header">
+        <div className="tp-head-left">
+        {onBack && <button className="tp-back" onClick={onBack} aria-label="返回">‹</button>}
         <h2 className="tp-title">
           主题面板
           {sync === 'syncing' && <span className="tp-sync">· 同步中</span>}
           {sync === 'synced'  && <span className="tp-sync tp-sync-ok">· 已同步</span>}
           {sync === 'error'   && <span className="tp-sync tp-sync-err">· 同步失败</span>}
         </h2>
+        </div>
         <div className="tp-actions">
           <button className="tp-btn" onClick={resetTab}>重置当前</button>
           <button className="tp-btn" onClick={applyToManual}>设为常态</button>

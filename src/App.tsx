@@ -5,8 +5,10 @@ import { IconSlot } from './IconSlot'
 import { RainSnow } from './RainSnow'
 import { Fireplace } from './Fireplace'
 import { CCPage } from './CCPage'
+import { Page2 } from './Page2'
+import { StatusPage } from './StatusPage'
 
-export type Page = 'cc' | 'home' | 'page2' | 'api' | 'voice' | 'reading' | 'play'
+export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play'
 
 export function App() {
   const [page, setPage] = useState<Page>('home')
@@ -79,9 +81,11 @@ export function App() {
       <RainSnow />
       <div className="content-scroll">
         {page === 'home'  && <Home onNavigate={setPage} />}
-        {page === 'page2' && <ThemePanel />}
+        {page === 'page2' && <Page2 onNavigate={setPage} />}
+        {page === 'theme' && <ThemePanel onBack={() => setPage('page2')} />}
+        {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
         {page === 'cc'    && <CCPage onBack={() => setPage('home')} />}
-        {page !== 'home' && page !== 'page2' && page !== 'cc' && (
+        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>
