@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, Fragment, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, Fragment, type MouseEvent as ReactMouseEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { IconSlot } from './IconSlot'
 import { enablePush } from './push'
 import {
@@ -35,9 +36,10 @@ const MC_API = 'https://puppy.atlantis-sy.blue/nm'
 const MC_AUTH = 'nm_a8f3e2d1c7b94056'
 let mcAudio: HTMLAudioElement | null = null
 let mcPlayingId: string | null = null
+let mcJustEnded: string | null = null
 const mcListeners = new Set<() => void>()
 const mcAutoPlayed = new Set<string>()
-const WAVE_FRONT = 'M0,6 q10,-4 20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 L240,110 L0,110 Z'
+const WAVE_FRONT = 'M0,6 q7.5,-7 15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 L240,110 L0,110 Z'
 const MC_REDUCE = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 function mcNotify() { mcListeners.forEach(fn => fn()) }
 
@@ -53,14 +55,27 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
   const [cur, setCur] = useState(0)
   const [dur, setDur] = useState(0)
   const [coverOk, setCoverOk] = useState(true)
+  const [drops, setDrops] = useState<Array<{id:number;x:number;y0:number;fall:number;drift:number;spin:number;t:number;s:number;dot:boolean}>>([])
+  const [draining, setDraining] = useState(false)
+  const fallingRef = useRef(false)
+  const emitRef = useRef<{ on: boolean; timer: number; id: number }>({ on: false, timer: 0, id: 0 })
   const cardRef = useRef<HTMLDivElement>(null)
+  const glints = useMemo(() => Array.from({ length: 10 }, () => ({
+    x: Math.round(6 + Math.random() * 88),
+    rel: Math.random(),
+    s: (3 + Math.random() * 2.2).toFixed(1),
+    t: (2.2 + Math.random() * 1.6).toFixed(2),
+    d: (Math.random() * 2.8).toFixed(2),
+  })), [])
 
   useEffect(() => {
     const sync = () => {
+      if (mcJustEnded === songId) { mcJustEnded = null; endDrain() }
       if (mcPlayingId === songId && mcAudio) {
         setState(mcAudio.paused ? 'idle' : 'playing')
         setCur(mcAudio.currentTime); setDur(mcAudio.duration || 0)
-      } else { setState('idle'); setCur(0); setDur(0) }
+      } else if (!fallingRef.current) { setState('idle'); setCur(0); setDur(0) }
+      else { setState('idle') }
     }
     mcListeners.add(sync); return () => { mcListeners.delete(sync) }
   }, [songId])
@@ -68,15 +83,69 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
   useEffect(() => {
     if (state !== 'playing') return
     const iv = setInterval(() => {
-      if (mcPlayingId === songId && mcAudio) { setCur(mcAudio.currentTime); setDur(mcAudio.duration || 0) }
+      if (mcPlayingId === songId && mcAudio) {
+        setCur(mcAudio.currentTime); setDur(mcAudio.duration || 0)
+        const dd = mcAudio.duration || 0
+        if (dd && mcAudio.currentTime / dd >= 0.5) startEmit()
+      }
     }, 250)
-    return () => clearInterval(iv)
+    return () => { clearInterval(iv); stopEmit() }
   }, [state, songId])
 
   useEffect(() => {
     if (autoPlay && !mcAutoPlayed.has(songId)) { mcAutoPlayed.add(songId); startPlay() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  function spawnBatch(n: number) {
+    const card = cardRef.current
+    if (!card || !(mcPlayingId === songId && mcAudio && !mcAudio.paused)) return
+    const rect = card.getBoundingClientRect()
+    const bar = document.querySelector('.cc-input-bar')
+    const groundY = bar ? bar.getBoundingClientRect().top + 6 : window.innerHeight - 54
+    const usable = rect.width - 32
+    const news = [] as Array<{id:number;x:number;y0:number;fall:number;drift:number;spin:number;t:number;s:number;dot:boolean}>
+    for (let i = 0; i < n; i++) {
+      const s = 0.6 + Math.random() * 0.7
+      const frac = n <= 1 ? (0.32 + Math.random() * 0.36) : Math.max(0, Math.min(1, (i + 0.5 + (Math.random() - 0.5) * 0.6) / n))
+      const x = rect.left + 16 + frac * usable
+      const y0 = rect.bottom - 6 - Math.random() * (rect.height * 0.32)
+      const fall = Math.max(80, groundY - y0)
+      const drift = Math.round((Math.random() - 0.5) * 26)
+      const spin = Math.round((Math.random() - 0.5) * 140)
+      const t = Math.round(1900 + Math.random() * 280)
+      const dot = Math.random() < 0.25
+      const id = ++emitRef.current.id
+      news.push({ id, x, y0, fall, drift, spin, t, s, dot })
+      window.setTimeout(() => setDrops(arr => arr.filter(p => p.id !== id)), t + 160)
+    }
+    setDrops(arr => [...arr, ...news])
+  }
+  function emitTick() {
+    if (!emitRef.current.on) return
+    let n = 1
+    if (mcAudio && mcAudio.duration) {
+      const f = Math.max(0, Math.min(1, (mcAudio.currentTime / mcAudio.duration - 0.5) / 0.5))
+      n = 1 + Math.round(f * 4)
+    }
+    spawnBatch(n)
+    emitRef.current.timer = window.setTimeout(emitTick, 1500)
+  }
+  function startEmit() {
+    if (emitRef.current.on) return
+    emitRef.current.on = true
+    emitTick()
+  }
+  function stopEmit() {
+    emitRef.current.on = false
+    if (emitRef.current.timer) { clearTimeout(emitRef.current.timer); emitRef.current.timer = 0 }
+  }
+  function endDrain() {
+    stopEmit()
+    fallingRef.current = true
+    setDraining(true)
+    window.setTimeout(() => { fallingRef.current = false; setDraining(false); setDrops([]); mcNotify() }, 2200)
+  }
 
   async function startPlay() {
     if (mcAudio) mcAudio.pause()
@@ -89,7 +158,7 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
       if (!mcAudio) mcAudio = new Audio()
       mcAudio.src = MC_API + '/api/music/proxy?url=' + encodeURIComponent(d.url)
       mcAudio.onloadedmetadata = () => setDur(mcAudio!.duration || 0)
-      mcAudio.onended = () => { mcPlayingId = null; mcNotify() }
+      mcAudio.onended = () => { mcJustEnded = songId; mcPlayingId = null; mcNotify() }
       await mcAudio.play()
       mcPlayingId = songId; mcNotify()
     } catch { setState('idle') }
@@ -135,22 +204,37 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
   const pct = dur > 0 ? Math.min(100, (cur / dur) * 100) : 0
   return (
     <div className="mc-card glass" ref={cardRef} onClick={tankClick}>
-      <svg className="mc-water" viewBox="0 0 120 100" preserveAspectRatio="none">
+      <svg className={`mc-water${draining ? ' mc-water-end' : ''}`} viewBox="0 0 120 100" preserveAspectRatio="none">
         <defs>
           <linearGradient id={`sea-${songId}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(214,232,247,0.32)" />
-            <stop offset="32%" stopColor="rgba(120,178,220,0.38)" />
-            <stop offset="100%" stopColor="rgba(46,116,184,0.50)" />
+            <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+            <stop offset="12%" stopColor="rgba(214,234,250,0.20)" />
+            <stop offset="58%" stopColor="rgba(86,150,216,0.40)" />
+            <stop offset="100%" stopColor="rgba(34,98,208,0.60)" />
           </linearGradient>
+          <filter id={`turb-${songId}`} x="-15%" y="-15%" width="130%" height="130%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.014 0.03" numOctaves="2" seed="4" result="n">
+              {!MC_REDUCE && <animate attributeName="baseFrequency" dur="26s" values="0.014 0.03;0.02 0.041;0.014 0.03" repeatCount="indefinite" />}
+            </feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="4.5" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
         </defs>
         <g transform={`translate(0 ${100 - pct})`}>
+          <g filter={`url(#turb-${songId})`}>
           <g>
-            {!MC_REDUCE && <animateTransform attributeName="transform" type="translate" from="0 0" to="-120 0" dur="7s" repeatCount="indefinite" />}
+            {!MC_REDUCE && <animateTransform attributeName="transform" type="translate" from="0 0" to="-120 0" dur="20s" repeatCount="indefinite" />}
             <path d={WAVE_FRONT} fill={`url(#sea-${songId})`} />
+          </g>
           </g>
         </g>
       </svg>
-      <div className="mc-mist" style={{ bottom: `calc(${pct}% - 14px)` }} />
+      {state === 'playing' && (
+        <div className="mc-glints" aria-hidden="true">
+          {glints.map((g, i) => (
+            <span key={i} className="mc-glint" style={{ left: g.x + '%', top: Math.min(95, (100 - pct) + g.rel * (pct * 0.5)) + '%', ['--gs' as any]: g.s + 'px', ['--gt' as any]: g.t + 's', ['--gd' as any]: g.d + 's' }} />
+          ))}
+        </div>
+      )}
       <div className="mc-content">
         <button className="mc-cover-btn" onClick={openFull} aria-label="打开播放器">
           {coverOk && cover
@@ -169,6 +253,30 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
           </div>
         </div>
       </div>
+      {drops.length > 0 && createPortal(
+        <div className="mc-rain" aria-hidden="true">
+          <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><defs>
+            <radialGradient id="mcStarG" cx="50%" cy="42%" r="62%">
+              <stop offset="0%" stopColor="#f4f9ff" />
+              <stop offset="38%" stopColor="#a6d0f5" />
+              <stop offset="100%" stopColor="#3f7ec9" />
+            </radialGradient>
+            <radialGradient id="mcDotG">
+              <stop offset="0%" stopColor="#dcebff" stopOpacity="0.95" />
+              <stop offset="55%" stopColor="#79b1e6" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="#79b1e6" stopOpacity="0" />
+            </radialGradient>
+          </defs></svg>
+          {drops.map((st) => (
+            <span key={st.id} className="mc-drop" style={{ left: st.x + 'px', top: st.y0 + 'px', ['--fall' as any]: st.fall + 'px', animationDuration: st.t + 'ms' }}>
+              <svg className="mc-drip" viewBox="0 0 24 24" style={{ ['--drift' as any]: st.drift + 'px', ['--spin' as any]: st.spin + 'deg', ['--s' as any]: st.s, animationDuration: st.t + 'ms' }}>
+                {st.dot
+                  ? <circle cx="12" cy="12" r="9" fill="url(#mcDotG)" />
+                  : <path d="M12 1 Q 13.4 10.6 23 12 Q 13.4 13.4 12 23 Q 10.6 13.4 1 12 Q 10.6 10.6 12 1 Z" fill="url(#mcStarG)" />}
+              </svg>
+            </span>
+          ))}
+        </div>, document.body)}
     </div>
   )
 }
