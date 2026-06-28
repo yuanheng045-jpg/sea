@@ -41,6 +41,10 @@ const mcListeners = new Set<() => void>()
 const mcAutoPlayed = new Set<string>()
 const WAVE_FRONT = 'M0,6 q7.5,-7 15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 L240,110 L0,110 Z'
 const MC_REDUCE = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const MC_FALL_V = 0.16          // 雨滴恒定下落速度(px/ms):时长=距离/速度,远近一样快(观赏速度,放慢一倍)
+const MC_RATE_LIGHT = 2.2       // 小雨:每秒到达雨滴数(歌过半起点)
+const MC_RATE_HEAVY = 15        // 大雨:每秒到达雨滴数(临近结束)
+const MC_MAX_LIVE = typeof window !== 'undefined' && window.innerWidth < 700 ? 60 : 90  // 并发软上限,防大雨卡顿(放慢后寿命变长,放宽上限)
 function mcNotify() { mcListeners.forEach(fn => fn()) }
 
 function fmtTime(s: number) {
@@ -59,6 +63,8 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
   const [draining, setDraining] = useState(false)
   const fallingRef = useRef(false)
   const emitRef = useRef<{ on: boolean; timer: number; id: number }>({ on: false, timer: 0, id: 0 })
+  const liveRef = useRef(0)
+  const geomRef = useRef<{ rect: DOMRect; groundY: number; at: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const glints = useMemo(() => Array.from({ length: 10 }, () => ({
     x: Math.round(6 + Math.random() * 88),
@@ -97,44 +103,55 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function spawnBatch(n: number) {
+  function mcGeom() {
     const card = cardRef.current
-    if (!card || !(mcPlayingId === songId && mcAudio && !mcAudio.paused)) return
+    if (!card) return null
+    const now = Date.now()
+    if (geomRef.current && now - geomRef.current.at < 200) return geomRef.current
     const rect = card.getBoundingClientRect()
     const bar = document.querySelector('.cc-input-bar')
     const groundY = bar ? bar.getBoundingClientRect().top + 6 : window.innerHeight - 54
-    const usable = rect.width - 32
-    const news = [] as Array<{id:number;x:number;y0:number;fall:number;drift:number;spin:number;t:number;s:number;dot:boolean}>
-    for (let i = 0; i < n; i++) {
-      const s = 0.6 + Math.random() * 0.7
-      const frac = n <= 1 ? (0.32 + Math.random() * 0.36) : Math.max(0, Math.min(1, (i + 0.5 + (Math.random() - 0.5) * 0.6) / n))
-      const x = rect.left + 16 + frac * usable
-      const y0 = rect.bottom - 6 - Math.random() * (rect.height * 0.32)
-      const fall = Math.max(80, groundY - y0)
-      const drift = Math.round((Math.random() - 0.5) * 26)
-      const spin = Math.round((Math.random() - 0.5) * 140)
-      const t = Math.round(1900 + Math.random() * 280)
-      const dot = Math.random() < 0.25
-      const id = ++emitRef.current.id
-      news.push({ id, x, y0, fall, drift, spin, t, s, dot })
-      window.setTimeout(() => setDrops(arr => arr.filter(p => p.id !== id)), t + 160)
-    }
-    setDrops(arr => [...arr, ...news])
+    const g = { rect, groundY, at: now }
+    geomRef.current = g
+    return g
   }
-  function emitTick() {
+  function spawnOne() {
+    const g = mcGeom()
+    if (!g || !(mcPlayingId === songId && mcAudio && !mcAudio.paused)) return
+    if (liveRef.current >= MC_MAX_LIVE) return
+    const { rect, groundY } = g
+    // 落点:严格限定在卡片宽度内均匀分布(12px 雨滴整体不越出卡片,避免像凭空冒出)
+    const x = rect.left + Math.random() * Math.max(0, rect.width - 12)
+    const s = 0.6 + Math.random() * 0.7
+    const y0 = rect.bottom - 6 - Math.random() * (rect.height * 0.32)
+    const fall = Math.max(60, groundY - y0)
+    // 速度恒定:时长 = 距离 / 速度(仅 ±3% 抖动),不论远近每颗看着一样快
+    const t = Math.round(Math.max(360, fall / MC_FALL_V) * (0.97 + Math.random() * 0.06))
+    const drift = Math.round((Math.random() - 0.5) * 26)
+    const spin = Math.round((Math.random() - 0.5) * 140)
+    const dot = Math.random() < 0.25
+    const id = ++emitRef.current.id
+    liveRef.current++
+    setDrops(arr => [...arr, { id, x, y0, fall, drift, spin, t, s, dot }])
+    window.setTimeout(() => { liveRef.current = Math.max(0, liveRef.current - 1); setDrops(arr => arr.filter(p => p.id !== id)) }, t + 160)
+  }
+  function scheduleNext() {
     if (!emitRef.current.on) return
-    let n = 1
+    let f = 0
     if (mcAudio && mcAudio.duration) {
-      const f = Math.max(0, Math.min(1, (mcAudio.currentTime / mcAudio.duration - 0.5) / 0.5))
-      n = 1 + Math.round(f * 4)
+      f = Math.max(0, Math.min(1, (mcAudio.currentTime / mcAudio.duration - 0.5) / 0.5))
     }
-    spawnBatch(n)
-    emitRef.current.timer = window.setTimeout(emitTick, 1500)
+    spawnOne()
+    // 泊松过程:每颗到达彼此独立、间隔服从指数分布 → 天然成簇又留空隙(真随机,无节拍、无颗数上限)
+    // 强度 rate(滴/秒)随进度二次曲线从小雨爬到大雨,渐强全靠密度,不动单颗速度
+    const rate = MC_RATE_LIGHT + (f * f) * (MC_RATE_HEAVY - MC_RATE_LIGHT)
+    const dt = -Math.log(1 - Math.random()) / (rate / 1000)
+    emitRef.current.timer = window.setTimeout(scheduleNext, Math.max(16, dt))
   }
   function startEmit() {
     if (emitRef.current.on) return
     emitRef.current.on = true
-    emitTick()
+    scheduleNext()
   }
   function stopEmit() {
     emitRef.current.on = false
@@ -144,7 +161,7 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
     stopEmit()
     fallingRef.current = true
     setDraining(true)
-    window.setTimeout(() => { fallingRef.current = false; setDraining(false); setDrops([]); mcNotify() }, 2200)
+    window.setTimeout(() => { fallingRef.current = false; setDraining(false); setDrops([]); liveRef.current = 0; mcNotify() }, 2600)
   }
 
   async function startPlay() {
@@ -186,11 +203,6 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
     }
   }
 
-  function openFull(e: ReactMouseEvent) {
-    e.stopPropagation()
-    const qs = new URLSearchParams({ id: songId, name, artist, cover })
-    window.open(MC_API + '/player.html?' + qs.toString(), '_blank')
-  }
 
   function tankClick(e: ReactMouseEvent) {
     if (mcPlayingId === songId && mcAudio && mcAudio.duration && cardRef.current) {
@@ -236,13 +248,13 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
         </div>
       )}
       <div className="mc-content">
-        <button className="mc-cover-btn" onClick={openFull} aria-label="打开播放器">
+        <div className="mc-cover-btn">
           {coverOk && cover
             ? <img className="mc-cover" src={cover} alt="" referrerPolicy="no-referrer" onError={() => setCoverOk(false)} />
             : <span className="mc-cover mc-cover-ph">♪</span>}
-        </button>
+        </div>
         <div className="mc-meta">
-          <button className="mc-title" onClick={openFull} title="打开播放器">{name.replace(/：/g, ':')} · {artist.replace(/：/g, ':')}</button>
+          <div className="mc-title">{name.replace(/：/g, ':')} · {artist.replace(/：/g, ':')}</div>
           <div className="mc-row">
             <button className="mc-btn" onClick={restart} aria-label="重播"><svg className="mc-ic" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="2.2" height="12" rx="1"/><path d="M19 6.5v11a.6.6 0 0 1-.95.5l-8-5.5a.6.6 0 0 1 0-1l8-5.5a.6.6 0 0 1 .95.5z"/></svg></button>
             <button className="mc-btn mc-btn-main" onClick={togglePlay} aria-label="播放或暂停">
