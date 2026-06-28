@@ -3639,3 +3639,138 @@ body[data-power-save] .gear, body[data-power-save] .butterfly, body[data-power-s
 .st-editlabel small { font-family: var(--font-mono, monospace); font-style: normal; font-size: 10.5px; color: var(--ink-faint); }
 .st-textarea { width: 100%; box-sizing: border-box; background: oklch(1 0 0 / 0.5); border: 1px solid oklch(1 0 0 / 0.6); border-radius: 12px; padding: 9px 11px; font-family: var(--font-body); font-size: 12.5px; color: var(--ink); line-height: 1.55; resize: vertical; }
 .st-textarea:focus { outline: none; border-color: oklch(0.62 0.1 250 / 0.55); background: oklch(1 0 0 / 0.62); }
+
+/* ── Music card — glass tank with seawater progress (matches .glass) ── */
+.mc-card {
+  position: relative;
+  overflow: hidden;
+  margin: 8px 0;
+  width: 300px; max-width: 100%;
+  min-height: 80px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(255,255,255,0.06) 100%),
+    rgba(150, 180, 220, 0.04);
+  backdrop-filter: blur(5px) saturate(120%);
+  -webkit-backdrop-filter: blur(5px) saturate(120%);
+  cursor: pointer;
+}
+.mc-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  z-index: 3;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.18) 30%,
+    rgba(255,255,255,0.18) 70%,
+    rgba(255,255,255,0) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+/* seawater fill — single wavy animated body; its own top edge is the surface (no seam) */
+.mc-water {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+  filter: blur(1.5px);
+  -webkit-filter: blur(1.5px);
+  clip-path: inset(0 round 24px);
+  -webkit-clip-path: inset(0 round 24px);
+}
+/* drifting mist that rides the waterline */
+.mc-mist {
+  position: absolute; left: -6%; right: -6%;
+  height: 28px;
+  z-index: 1;
+  pointer-events: none;
+  filter: blur(7px);
+  opacity: 0.5;
+  background: linear-gradient(to top,
+    rgba(220,234,246,0) 0%,
+    rgba(222,236,248,0.42) 45%,
+    rgba(230,242,250,0.30) 70%,
+    rgba(224,238,248,0.12) 88%,
+    rgba(224,238,248,0) 100%);
+  transition: bottom 0.45s var(--ease-out);
+  animation: mc-mist 7.5s ease-in-out infinite;
+}
+@keyframes mc-mist {
+  0%,100% { opacity: 0.32; transform: translateX(0) scaleY(0.9); }
+  50% { opacity: 0.58; transform: translateX(-8px) scaleY(1.12); }
+}
+/* content above water */
+.mc-content {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 14px;
+  min-height: 80px;
+}
+.mc-cover-btn { border: 0; background: transparent; padding: 0; flex-shrink: 0; cursor: pointer; line-height: 0; }
+.mc-cover {
+  width: 56px; height: 56px;
+  border-radius: 13px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px -2px oklch(0.3 0.06 252 / 0.30), inset 0 0 0 1px rgba(255,255,255,0.25);
+  transition: transform 200ms var(--ease-out);
+}
+.mc-cover-btn:active .mc-cover { transform: scale(0.95); }
+.mc-cover-ph {
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(150,180,220,0.18);
+  color: var(--ink-faint); font-size: 22px;
+}
+.mc-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.mc-title {
+  border: 0; background: transparent;
+  align-self: flex-start;
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color 180ms ease;
+}
+.mc-title:hover { color: var(--ink); }
+.mc-row { display: flex; align-items: center; gap: 4px; }
+.mc-btn {
+  border: 0; background: transparent;
+  color: var(--ink-soft);
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+  border-radius: 999px;
+  transition: color 180ms ease, background 180ms ease, transform 180ms var(--ease-out);
+}
+.mc-btn:hover { color: var(--ink); background: rgba(255,255,255,0.22); }
+.mc-btn:active { transform: scale(0.9); }
+.mc-btn-main { color: var(--ink); }
+.mc-ic { width: 15px; height: 15px; display: block; }
+.mc-btn-main .mc-ic { width: 17px; height: 17px; }
+.mc-spin { animation: mc-spin 0.8s linear infinite; transform-origin: center; }
+@keyframes mc-spin { to { transform: rotate(360deg); } }
+.mc-time {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  padding-left: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mc-wave, .mc-wave-b, .mc-mist, .mc-spin { animation: none; }
+  .mc-water { transition: none; }
+  .mc-btn, .mc-cover { transition: none; }
+}

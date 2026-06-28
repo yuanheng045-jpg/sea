@@ -17,6 +17,7 @@ export type ChatMessage = {
   pending?: boolean
   autoExpanded?: boolean
   memoryHits?: any[]
+  fresh?: boolean
 }
 
 type State = {
@@ -121,7 +122,7 @@ function handleEvent(e: HubEvent) {
       const m = e as any as ChatMessage
       setState((s) => {
         if (s.messages.some((x) => x.id === m.id)) return s
-        return { ...s, messages: [...s.messages, m] }
+        return { ...s, messages: [...s.messages, { ...m, fresh: true }] }
       })
       break
     }

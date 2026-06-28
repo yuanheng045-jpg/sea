@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, Fragment } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, Fragment, type MouseEvent as ReactMouseEvent } from 'react'
 import { IconSlot } from './IconSlot'
 import { enablePush } from './push'
 import {
@@ -28,6 +28,165 @@ const CC_MODELS = [
   { value: 'claude-haiku-4-5', label: 'Haiku 4.5' },
   { value: 'claude-fable-5', label: 'Fable 5' },
 ]
+
+// ── Music card ──
+const MUSIC_RE = /\[music:(\d+):([^:]*):([^:]*):([^\]]*)\](.*)?/
+const MC_API = 'https://puppy.atlantis-sy.blue/nm'
+const MC_AUTH = 'nm_a8f3e2d1c7b94056'
+let mcAudio: HTMLAudioElement | null = null
+let mcPlayingId: string | null = null
+const mcListeners = new Set<() => void>()
+const mcAutoPlayed = new Set<string>()
+const WAVE_FRONT = 'M0,6 q10,-4 20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 L240,110 L0,110 Z'
+const MC_REDUCE = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+function mcNotify() { mcListeners.forEach(fn => fn()) }
+
+function fmtTime(s: number) {
+  if (!isFinite(s) || s < 0) s = 0
+  const m = Math.floor(s / 60)
+  const ss = Math.floor(s % 60)
+  return m + ':' + String(ss).padStart(2, '0')
+}
+
+function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; name: string; artist: string; cover: string; autoPlay?: boolean }) {
+  const [state, setState] = useState<'idle'|'loading'|'playing'>('idle')
+  const [cur, setCur] = useState(0)
+  const [dur, setDur] = useState(0)
+  const [coverOk, setCoverOk] = useState(true)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const sync = () => {
+      if (mcPlayingId === songId && mcAudio) {
+        setState(mcAudio.paused ? 'idle' : 'playing')
+        setCur(mcAudio.currentTime); setDur(mcAudio.duration || 0)
+      } else { setState('idle'); setCur(0); setDur(0) }
+    }
+    mcListeners.add(sync); return () => { mcListeners.delete(sync) }
+  }, [songId])
+
+  useEffect(() => {
+    if (state !== 'playing') return
+    const iv = setInterval(() => {
+      if (mcPlayingId === songId && mcAudio) { setCur(mcAudio.currentTime); setDur(mcAudio.duration || 0) }
+    }, 250)
+    return () => clearInterval(iv)
+  }, [state, songId])
+
+  useEffect(() => {
+    if (autoPlay && !mcAutoPlayed.has(songId)) { mcAutoPlayed.add(songId); startPlay() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function startPlay() {
+    if (mcAudio) mcAudio.pause()
+    mcPlayingId = null; mcNotify()
+    setState('loading')
+    try {
+      const r = await fetch(MC_API + '/api/music/url?id=' + songId, { headers: { Authorization: 'Bearer ' + MC_AUTH } })
+      const d = await r.json()
+      if (!d.url) { setState('idle'); return }
+      if (!mcAudio) mcAudio = new Audio()
+      mcAudio.src = MC_API + '/api/music/proxy?url=' + encodeURIComponent(d.url)
+      mcAudio.onloadedmetadata = () => setDur(mcAudio!.duration || 0)
+      mcAudio.onended = () => { mcPlayingId = null; mcNotify() }
+      await mcAudio.play()
+      mcPlayingId = songId; mcNotify()
+    } catch { setState('idle') }
+  }
+
+  function togglePlay(e: ReactMouseEvent) {
+    e.stopPropagation()
+    if (mcPlayingId === songId && mcAudio) {
+      if (mcAudio.paused) { mcAudio.play(); mcNotify() }
+      else { mcAudio.pause(); mcNotify() }
+    } else { startPlay() }
+  }
+
+  function restart(e: ReactMouseEvent) {
+    e.stopPropagation()
+    if (mcPlayingId === songId && mcAudio) { mcAudio.currentTime = 0; setCur(0) }
+    else { startPlay() }
+  }
+
+  function skip(e: ReactMouseEvent) {
+    e.stopPropagation()
+    if (mcPlayingId === songId && mcAudio) {
+      mcAudio.currentTime = Math.min((mcAudio.duration || 0), mcAudio.currentTime + 15)
+      setCur(mcAudio.currentTime)
+    }
+  }
+
+  function openFull(e: ReactMouseEvent) {
+    e.stopPropagation()
+    const qs = new URLSearchParams({ id: songId, name, artist, cover })
+    window.open(MC_API + '/player.html?' + qs.toString(), '_blank')
+  }
+
+  function tankClick(e: ReactMouseEvent) {
+    if (mcPlayingId === songId && mcAudio && mcAudio.duration && cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect()
+      const ratio = Math.max(0, Math.min(1, (rect.bottom - e.clientY) / rect.height))
+      mcAudio.currentTime = ratio * mcAudio.duration
+      setCur(mcAudio.currentTime)
+    } else { startPlay() }
+  }
+
+  const pct = dur > 0 ? Math.min(100, (cur / dur) * 100) : 0
+  return (
+    <div className="mc-card glass" ref={cardRef} onClick={tankClick}>
+      <svg className="mc-water" viewBox="0 0 120 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id={`sea-${songId}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(214,232,247,0.32)" />
+            <stop offset="32%" stopColor="rgba(120,178,220,0.38)" />
+            <stop offset="100%" stopColor="rgba(46,116,184,0.50)" />
+          </linearGradient>
+        </defs>
+        <g transform={`translate(0 ${100 - pct})`}>
+          <g>
+            {!MC_REDUCE && <animateTransform attributeName="transform" type="translate" from="0 0" to="-120 0" dur="7s" repeatCount="indefinite" />}
+            <path d={WAVE_FRONT} fill={`url(#sea-${songId})`} />
+          </g>
+        </g>
+      </svg>
+      <div className="mc-mist" style={{ bottom: `calc(${pct}% - 14px)` }} />
+      <div className="mc-content">
+        <button className="mc-cover-btn" onClick={openFull} aria-label="打开播放器">
+          {coverOk && cover
+            ? <img className="mc-cover" src={cover} alt="" referrerPolicy="no-referrer" onError={() => setCoverOk(false)} />
+            : <span className="mc-cover mc-cover-ph">♪</span>}
+        </button>
+        <div className="mc-meta">
+          <button className="mc-title" onClick={openFull} title="打开播放器">{name.replace(/：/g, ':')} · {artist.replace(/：/g, ':')}</button>
+          <div className="mc-row">
+            <button className="mc-btn" onClick={restart} aria-label="重播"><svg className="mc-ic" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="2.2" height="12" rx="1"/><path d="M19 6.5v11a.6.6 0 0 1-.95.5l-8-5.5a.6.6 0 0 1 0-1l8-5.5a.6.6 0 0 1 .95.5z"/></svg></button>
+            <button className="mc-btn mc-btn-main" onClick={togglePlay} aria-label="播放或暂停">
+              {state === 'loading' ? <svg className="mc-ic mc-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="8" strokeOpacity="0.25"/><path d="M12 4a8 8 0 0 1 8 8" strokeLinecap="round"/></svg> : state === 'playing' ? <svg className="mc-ic" viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="5.5" width="3.2" height="13" rx="1.3"/><rect x="13.8" y="5.5" width="3.2" height="13" rx="1.3"/></svg> : <svg className="mc-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5v13a.6.6 0 0 0 .92.5l10.5-6.5a.6.6 0 0 0 0-1.02L7.92 5A.6.6 0 0 0 7 5.5z"/></svg>}
+            </button>
+            <button className="mc-btn" onClick={skip} aria-label="快进15秒"><svg className="mc-ic" viewBox="0 0 24 24" fill="currentColor"><rect x="15.8" y="6" width="2.2" height="12" rx="1"/><path d="M5 6.5v11a.6.6 0 0 0 .95.5l8-5.5a.6.6 0 0 0 0-1l-8-5.5A.6.6 0 0 0 5 6.5z"/></svg></button>
+            <span className="mc-time">{fmtTime(cur)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function renderPara(text: string, autoPlay?: boolean) {
+  const m = text.match(MUSIC_RE)
+  if (!m) return text
+  const before = text.substring(0, m.index!).trim()
+  const [, songId, name, artist, cover, note] = m
+  return (
+    <>
+      {before && <span>{before} </span>}
+      <MusicCard songId={songId} name={name} artist={artist} cover={cover} autoPlay={autoPlay} />
+      {note?.trim() && <div style={{ marginTop: 4 }}>{note.trim()}</div>}
+    </>
+  )
+}
+
 const STYLES_KEY = 'sea-userstyles'
 
 export function CCPage({ onBack }: { onBack: () => void }) {
@@ -587,7 +746,7 @@ function MessageRow({ message, expanded, onToggleThinking }: {
           <div className="cc-text">
             {text.split(/\n{2,}/).map((para, i, arr) => (
               <p key={i} className="cc-paragraph">
-                {para}
+                {renderPara(para, message.fresh)}
                 {i === arr.length - 1 && (
                   <span className="cc-msg-time">{formatTsShort(message.ts)}</span>
                 )}
