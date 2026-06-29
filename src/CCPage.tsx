@@ -1114,39 +1114,7 @@ function HeartSvg() {
 }
 
 function WhaleSvg() {
-  return (
-    <svg viewBox="0 0 52 32" width="42" height="26" className="whale-svg" aria-hidden>
-      <path
-        d="M 14 22 Q 10 14 18 9 Q 30 5 40 10 Q 47 14 45 21 Q 40 26 28 26 Q 18 26 14 22 Z"
-        fill="rgba(20,106,255,0.22)"
-      />
-      <path
-        d="M 18 22 Q 28 28 40 22 Q 38 26 28 26 Q 19 26 18 22 Z"
-        fill="rgba(255,255,255,0.32)"
-      />
-      <path
-        d="M 14 20 L 4 12 Q 6 16 4 22 L 14 22 Z"
-        fill="rgba(20,106,255,0.24)"
-      />
-      <path d="M 4 12 L 1 8 L 3 13 Z" fill="rgba(20,106,255,0.18)" />
-      <path d="M 4 22 L 1 26 L 3 22 Z" fill="rgba(20,106,255,0.18)" />
-      <path
-        d="M 37 21 Q 40 23 43 21"
-        stroke="rgba(20,106,255,0.55)" strokeWidth="0.7" fill="none" strokeLinecap="round"
-      />
-      <circle cx="36" cy="15" r="1.3" fill="rgba(20,106,255,0.55)" />
-      <circle cx="36.4" cy="14.7" r="0.45" fill="rgba(255,255,255,0.9)" />
-      <g>
-        <path d="M 28 9 L 28 3" stroke="rgba(20,106,255,0.5)" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-        <path d="M 26 7 L 24 2" stroke="rgba(20,106,255,0.45)" strokeWidth="0.9" strokeLinecap="round" fill="none" />
-        <path d="M 30 7 L 32 2" stroke="rgba(20,106,255,0.45)" strokeWidth="0.9" strokeLinecap="round" fill="none" />
-        <circle cx="28" cy="1.5" r="0.55" fill="rgba(20,106,255,0.40)" />
-        <circle cx="25" cy="0.8" r="0.4" fill="rgba(20,106,255,0.35)" />
-        <circle cx="31" cy="0.8" r="0.4" fill="rgba(20,106,255,0.35)" />
-        <animateTransform attributeName="transform" type="translate" values="0,0; 0,-1; 0,0" dur="2.8s" repeatCount="indefinite" />
-      </g>
-    </svg>
-  )
+  return <span className="whale-emoji" aria-hidden>🐋</span>
 }
 
 

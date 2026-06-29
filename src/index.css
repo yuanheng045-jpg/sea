@@ -1959,6 +1959,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
 }
 .cc-whale-btn:hover { transform: scale(1.06) translateX(1px); }
 .whale-svg { display: block; }
+.whale-emoji { display: block; font-size: 23px; line-height: 1; }
 
 .cc-waterline {
   height: 1px;
@@ -4462,44 +4463,39 @@ body[data-chat-bubbles="on"] .cc-thinking-body {
 }
 
 
-/* ============ 玻璃质感对齐:输入栏 + 导航栏 → 主页 .glass 同款 ============
-   主页 .glass 经 v17-v20 进化多了:specular 左上高光 / 底部厚度阴影 / 底沿亮线 / ::after overlay 染色。
-   这里把这些静态效果补给 dock 和 cc-input-pill,使三者玻璃一模一样。
-   底沿流光(glass-rim-shimmer 常驻动画)有意不加 —— 防发热,详见回复。 */
+/* ====== 玻璃精确对齐:dock + 输入栏 → 主页 .glass 最终态 ======
+   主页 .glass 最终态(源码 3409/3413/3426)实测:
+   - ::before specular 高光 = display:none (关掉)
+   - box-shadow = 7 层(顶外细光/落影/顶内提亮/底厚度/底宽柔晕/底软光/底细边)
+   - ::after 描边 = 135deg gradient 0.18 + mix-blend-mode:normal
+   之前误给它们加了 specular + overlay + 简化 box-shadow,现纠正为与面板逐属性一致。 */
 .dock-edge,
 .dock-pill,
 .cc-input-pill {
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.30),
-    0 20px 50px rgba(0, 0, 0, 0.07),
-    inset 0 0 20px rgba(255, 255, 255, 0.05),
-    inset 0 -8px 18px rgba(20, 30, 60, 0.05),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.32);
+    0 1px 0 rgba(255, 255, 255, 0.12),
+    0 22px 50px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16),
+    inset 0 -14px 26px rgba(20, 30, 60, 0.05),
+    inset 0 -10px 18px rgba(255, 255, 255, 0.03),
+    inset 0 -3px 6px rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.16);
 }
+/* specular 不要(与面板一致) */
 .dock-edge::before,
 .dock-pill::before,
 .cc-input-pill::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    ellipse 70% 50% at 22% 14%,
-    rgba(255, 255, 255, 0.28) 0%,
-    rgba(255, 255, 255, 0.10) 35%,
-    transparent 70%
-  );
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
-.dock-edge > *,
-.dock-pill > *,
-.cc-input-pill > * {
-  position: relative;
-  z-index: 1;
-}
+/* 描边与面板一致:gradient 0.18 + normal 混合 */
 .dock-edge::after,
 .dock-pill::after,
 .cc-input-pill::after {
-  mix-blend-mode: overlay;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.18) 30%,
+    rgba(255,255,255,0.18) 70%,
+    rgba(255,255,255,0) 100%);
+  mix-blend-mode: normal;
+  opacity: 1;
 }
