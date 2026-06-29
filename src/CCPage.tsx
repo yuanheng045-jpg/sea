@@ -5,19 +5,9 @@ import { observeBubble } from './bubbleIO'
 import type { Page } from './App'
 import { IconSlot } from './IconSlot'
 import { enablePush } from './push'
-import {
-  useChatState,
-  loadMoreMessages,
-  clearAutoExpanded,
-  sendMessage,
-  sendRaw,
-  sendSessionAction,
-  setHintsEnabled,
-  setHealthEnabled,
-  sendClaudemdGet,
-  sendClaudemdSave,
-  type ChatMessage,
-} from './chatStore'
+import * as ccStore from './chatStore'
+import * as apiStore from './apiChat'
+import type { ChatMessage } from './chatStore'
 
 const SWIPE_THRESHOLD = 60
 const MAX_CONTEXT_TOKENS = 750_000
@@ -527,14 +517,16 @@ function VoiceBubble({ text }: { text: string }) {
 
 const STYLES_KEY = 'sea-userstyles'
 
-export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate: (p: Page) => void }) {
+export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => void; onNavigate: (p: Page) => void; channel?: 'cc' | 'api' }) {
   void onNavigate
+  const store = channel === 'api' ? apiStore : ccStore
   const {
     messages, connected, authed, ccAlive, ccBusy,
     streamingPhase, streamingElapsed, sessionState,
     hintsEnabled, healthEnabled, claudemd, visibleCount,
-  } = useChatState()
-  const visibleMessages = messages.slice(-visibleCount)
+  } = store.useChatState()
+  useEffect(() => { if (channel === 'api') apiStore.initApi() }, [channel])
+  const visibleMessages: ChatMessage[] = messages.slice(-visibleCount)
   const hasMore = messages.length > visibleCount
   const [draft, setDraft] = useState('')
   const [plusOpen, setPlusOpen] = useState(false)
@@ -564,7 +556,7 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
       if (entry.isIntersecting) {
         const prevHeight = listEl.scrollHeight
         const prevTop = listEl.scrollTop
-        loadMoreMessages()
+        store.loadMoreMessages()
         requestAnimationFrame(() => {
           const newHeight = listEl.scrollHeight
           listEl.scrollTop = prevTop + (newHeight - prevHeight)
@@ -612,9 +604,9 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
 
   useEffect(() => {
     if (!connected || !authed || !('Notification' in window)) return
-    if (Notification.permission === 'granted') { enablePush(sendRaw) }
+    if (Notification.permission === 'granted') { enablePush(store.sendRaw) }
     else if (Notification.permission === 'default') {
-      const ask = () => { document.removeEventListener('pointerdown', ask); enablePush(sendRaw) }
+      const ask = () => { document.removeEventListener('pointerdown', ask); enablePush(store.sendRaw) }
       document.addEventListener('pointerdown', ask, { once: true })
       return () => document.removeEventListener('pointerdown', ask)
     }
@@ -659,7 +651,7 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
 
   useEffect(() => {
     if (claudemdOpen && authed) {
-      sendClaudemdGet()
+      store.sendClaudemdGet()
     }
   }, [claudemdOpen, authed])
 
@@ -671,8 +663,8 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
 
   useEffect(() => {
     if (panelOpen && authed) {
-      sendRaw({ type: 'session_subscribe' })
-      return () => { sendRaw({ type: 'session_unsubscribe' }) }
+      store.sendRaw({ type: 'session_subscribe' })
+      return () => { store.sendRaw({ type: 'session_unsubscribe' }) }
     }
   }, [panelOpen, authed])
 
@@ -718,7 +710,7 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
     if (active) extra.style = active
     if (images.length) extra.images = images
     if (files.length) extra.files = files
-    sendMessage(text, Object.keys(extra).length ? extra : undefined)
+    store.sendMessage(text, Object.keys(extra).length ? extra : undefined)
     setDraft('')
     setAttachments([])
   }
@@ -726,7 +718,7 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
   const toggleThinking = (id: string, isAutoExpanded: boolean) => {
     if (isAutoExpanded) {
       // 当前因 autoExpanded 展开 → 点击应该折叠 → 清掉 autoExpanded
-      clearAutoExpanded(id)
+      store.clearAutoExpanded(id)
       return
     }
     setExpandedThinking((prev) => {
@@ -884,7 +876,7 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
                 ><FileSvg /></button>
                 <button
                   className={`cc-plus-item hints${hintsEnabled ? ' on' : ' off'}`}
-                  onClick={(e) => { e.stopPropagation(); setHintsEnabled(!hintsEnabled) }}
+                  onClick={(e) => { e.stopPropagation(); store.setHintsEnabled(!hintsEnabled) }}
                   aria-label={`命中记忆 ${hintsEnabled ? '开启' : '关闭'}`}
                   title={`命中记忆：${hintsEnabled ? '开' : '关'}`}
                 >
@@ -892,7 +884,7 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
                 </button>
                 <button
                   className={`cc-plus-item health${healthEnabled ? ' on' : ' off'}`}
-                  onClick={(e) => { e.stopPropagation(); setHealthEnabled(!healthEnabled) }}
+                  onClick={(e) => { e.stopPropagation(); store.setHealthEnabled(!healthEnabled) }}
                   aria-label={`心率注入 ${healthEnabled ? '开启' : '关闭'}`}
                   title={`心率：${healthEnabled ? '开' : '关'}`}
                 >
@@ -960,7 +952,7 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
           loading={claudemd.content === null}
           lastSave={claudemd.lastSave}
           onChange={setClaudemdDraft}
-          onSave={() => sendClaudemdSave(claudemdDraft)}
+          onSave={() => store.sendClaudemdSave(claudemdDraft)}
           onClose={() => setClaudemdOpen(false)}
         />
       )}
@@ -968,14 +960,16 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        currentSessionId={(sessionState as any)?.sessionId ?? null}
+        currentSessionId={(sessionState as any)?.sessionId ?? (sessionState as any)?.convId ?? null}
+        channel={channel}
       />
       {panelOpen && (
         <SessionPanel
+          channel={channel}
           state={sessionState}
           onClose={() => setPanelOpen(false)}
-          onAction={(a) => sendSessionAction(a)}
-          onEditClaudemd={() => { setPanelOpen(false); setClaudemdOpen(true); sendClaudemdGet() }}
+          onAction={(a) => store.sendSessionAction(a)}
+          onEditClaudemd={() => { setPanelOpen(false); setClaudemdOpen(true); store.sendClaudemdGet() }}
         />
       )}
 
@@ -1145,7 +1139,7 @@ function shortModel(m: string): string {
   ]
   for (const [k, v] of map) {
     if (m.toLowerCase().includes(k)) {
-      const match = m.match(/(\d+)-(\d+)/)
+      const match = m.match(/(\d+)[-.](\d+)/)
       if (match) return `${v} ${match[1]}.${match[2]}`
       return v
     }
@@ -1162,14 +1156,16 @@ function formatTs(ms: number | undefined): string {
   return new Date(ms).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-function SessionPanel({ state, onClose, onAction, onEditClaudemd }: {
+function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
+  channel: 'cc' | 'api'
   state: Record<string, any> | null
   onClose: () => void
   onAction: (action: string) => void
   onEditClaudemd: () => void
 }) {
+  const store = channel === 'api' ? apiStore : ccStore
   const [confirming, setConfirming] = useState<null | 'forge' | 'compact'>(null)
-  const { actionPending } = useChatState()
+  const { actionPending } = store.useChatState()
   const confirmTimerRef = useRef<number | undefined>(undefined)
   const tapAction = (a: 'forge' | 'compact') => {
     if (confirming === a) {
@@ -1200,6 +1196,7 @@ function SessionPanel({ state, onClose, onAction, onEditClaudemd }: {
           <div className="cc-panel-loading">连接中…</div>
         ) : (
           <>
+            {channel === 'cc' && (
             <div className="cc-panel-section">
               <div className="cc-panel-context-row">
                 <span className="cc-panel-context-pct">{Math.round(pct)}%</span>
@@ -1210,13 +1207,16 @@ function SessionPanel({ state, onClose, onAction, onEditClaudemd }: {
               </div>
               <div className="cc-panel-context-label">上下文</div>
             </div>
+            )}
 
             <div className="cc-panel-rows">
+              {channel === 'cc' && (
               <div className="cc-panel-bar">
                 <span>缓存命中</span>
                 <div className="cc-panel-bar-track"><div className="cc-panel-bar-fill" style={{ width: `${cacheHitPct}%` }} /></div>
                 <i>{cacheHitPct}%</i>
               </div>
+              )}
               <div className="cc-panel-row">
                 <span>模型</span>
                 <b>{shortModel(state.model)}</b>
@@ -1225,16 +1225,20 @@ function SessionPanel({ state, onClose, onAction, onEditClaudemd }: {
 
             <div className="cc-panel-section">
               <div className="cc-panel-section-title">切换模型 · 下条生效</div>
-              <select className="cc-model-select" style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', color: 'inherit' }} value={curModel} onChange={(e) => sendSessionAction('session_set_model', { model: e.target.value })}>
-                {curModel && !CC_MODELS.some((mm) => mm.value === curModel) ? <option value={curModel}>{shortModel(curModel)}（当前）</option> : null}
-                {CC_MODELS.map((mm) => <option key={mm.value} value={mm.value}>{mm.label}</option>)}
+              <select className="cc-model-select" style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', color: 'inherit' }} value={channel === 'api' ? (state.model || '') : curModel} onChange={(e) => store.sendSessionAction('session_set_model', { model: e.target.value })}>
+                {channel === 'api'
+                  ? (state.models || []).map((m: string) => <option key={m} value={m}>{shortModel(m)}</option>)
+                  : <>{curModel && !CC_MODELS.some((mm) => mm.value === curModel) ? <option value={curModel}>{shortModel(curModel)}（当前）</option> : null}{CC_MODELS.map((mm) => <option key={mm.value} value={mm.value}>{mm.label}</option>)}</>}
               </select>
             </div>
+            {channel === 'cc' && (
             <div className="cc-panel-section">
               <div className="cc-panel-section-title">苏煦 · 人设</div>
               <button className="cc-panel-action" onClick={onEditClaudemd}>编辑 CLAUDE.md</button>
             </div>
+            )}
 
+            {channel === 'cc' && (<>
             <div className="cc-panel-meta" title="本轮 token 用量：你打的输入 + 苏煦回复的输出">
               <span>你 {kFormat(state.inputTokens)} · 苏煦 {kFormat(state.outputTokens)}</span>
               <span className="cc-panel-meta-sep">·</span>
@@ -1244,11 +1248,12 @@ function SessionPanel({ state, onClose, onAction, onEditClaudemd }: {
               <span>session {state.sessionId || '—'}</span>
               {state.autoLine ? <><span className="cc-panel-meta-sep">·</span><span>续 {kFormat(state.autoLine)}</span></> : null}
               {state.dangerLine ? <><span className="cc-panel-meta-sep">·</span><span>险 {kFormat(state.dangerLine)}</span></> : null}
-            </div>
+            </div></>)}
           </>
         )}
 
         <div className="cc-modal-actions">
+          {channel === 'cc' && (<>
           <button
             className={`cc-panel-action${confirming === 'forge' ? ' confirming' : ''}`}
             onClick={() => tapAction('forge')}
@@ -1259,6 +1264,7 @@ function SessionPanel({ state, onClose, onAction, onEditClaudemd }: {
             onClick={() => tapAction('compact')}
             title="原生 /compact：同窗口压缩，保留全部脉络、上下文变小（耗时稍长）"
           >{actionPending === 'compact' ? '压缩中…' : confirming === 'compact' ? '再点确认压缩' : '压缩'}</button>
+          </>)}
           <button onClick={onClose}>关闭</button>
         </div>
       </div>

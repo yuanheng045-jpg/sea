@@ -89,13 +89,14 @@ export function App() {
         {page === 'theme' && <ThemePanel onBack={() => setPage('page2')} />}
         {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
         {page === 'cc'    && <CCPage onBack={() => setPage('home')} onNavigate={setPage} />}
-        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && (
+        {page === 'api'   && <CCPage channel="api" onBack={() => setPage('home')} onNavigate={setPage} />}
+        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>
         )}
       </div>
-      {page !== 'cc' && (
+      {page !== 'cc' && page !== 'api' && (
       <nav className="dock">
         <button
           className="dock-edge"
@@ -119,7 +120,7 @@ export function App() {
           >☰</button>
         </div>
         <button
-          className={`dock-edge${page === 'api' ? ' active' : ''}`}
+          className="dock-edge"
           onClick={() => setPage('api')}
         >
           <IconSlot iconKey="api" fallback={<span className="dock-letters">API</span>} className="img-dock" />

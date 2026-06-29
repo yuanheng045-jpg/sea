@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppearance, updateAppearance, type Appearance } from './appearance'
 import { useChatState, setTextColor } from './chatStore'
+import { switchConversation } from './apiChat'
 import { ClaudeSparkle } from './CCPage'
 
 type SessionMeta = {
@@ -23,11 +24,12 @@ const QUICK_ITEMS: QuickItem[] = [
 type ViewMsg = { role: string; ts: number; text: string }
 
 export function Sidebar({
-  open, onClose, currentSessionId,
+  open, onClose, currentSessionId, channel = 'cc',
 }: {
   open: boolean
   onClose: () => void
   currentSessionId: string | null
+  channel?: 'cc' | 'api'
 }) {
   const [sessions, setSessions] = useState<SessionMeta[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -41,9 +43,17 @@ export function Sidebar({
   useEffect(() => {
     if (!open || sessions !== null) return
     setLoading(true); setErr(null)
-    fetch('/cc-api/api/sessions', { credentials: 'include' })
+    const histUrl = channel === 'api' ? '/api/conversations' : '/cc-api/api/sessions'
+    fetch(histUrl, { credentials: 'include' })
       .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
-      .then(d => setSessions(Array.isArray(d?.sessions) ? d.sessions : []))
+      .then(d => {
+        if (channel === 'api') {
+          const arr = Array.isArray(d) ? d : (d?.conversations || [])
+          setSessions(arr.map((c: any, i: number) => ({ id: c.id, preview: c.title || '(无标题)', lastTs: c.updated_at ? new Date(c.updated_at).getTime() : (Date.now() - i * 60000), startTs: 0, count: 0 })))
+        } else {
+          setSessions(Array.isArray(d?.sessions) ? d.sessions : [])
+        }
+      })
       .catch(e => setErr(String(e?.message || e)))
       .finally(() => setLoading(false))
   }, [open, sessions])
@@ -100,6 +110,7 @@ export function Sidebar({
   }
 
   const openSession = (sid: string) => {
+    if (channel === 'api') { switchConversation(sid); onClose(); return }
     setViewing({ id: sid, loading: true, messages: [] })
     fetch('/cc-api/api/sessions/' + encodeURIComponent(sid), { credentials: 'include' })
       .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
