@@ -7,6 +7,7 @@ import { Fireplace } from './Fireplace'
 import { CCPage } from './CCPage'
 import { Page2 } from './Page2'
 import { StatusPage } from './StatusPage'
+import './appearance'  // 启动时 apply 外观偏好
 
 export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play'
 
@@ -78,13 +79,16 @@ export function App() {
         <div className="blob blob-3" />
         <div className="blob blob-4" />
       </div>
+      <div className="chat-bg-color" aria-hidden />
+      <div className="chat-bg-img" aria-hidden />
+      <div className="chat-bg-dim" aria-hidden />
       <RainSnow />
       <div className="content-scroll">
         {page === 'home'  && <Home onNavigate={setPage} />}
         {page === 'page2' && <Page2 onNavigate={setPage} />}
         {page === 'theme' && <ThemePanel onBack={() => setPage('page2')} />}
         {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
-        {page === 'cc'    && <CCPage onBack={() => setPage('home')} />}
+        {page === 'cc'    && <CCPage onBack={() => setPage('home')} onNavigate={setPage} />}
         {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>

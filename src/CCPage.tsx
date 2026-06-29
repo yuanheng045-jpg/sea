@@ -1,5 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, Fragment, type MouseEvent as ReactMouseEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { Sidebar } from './Sidebar'
+import { observeBubble } from './bubbleIO'
+import type { Page } from './App'
 import { IconSlot } from './IconSlot'
 import { enablePush } from './push'
 import {
@@ -11,7 +14,6 @@ import {
   sendSessionAction,
   setHintsEnabled,
   setHealthEnabled,
-  setTextColor,
   sendClaudemdGet,
   sendClaudemdSave,
   type ChatMessage,
@@ -66,6 +68,7 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
   const liveRef = useRef(0)
   const geomRef = useRef<{ rect: DOMRect; groundY: number; at: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const [onscreen, setOnscreen] = useState(true)
   const glints = useMemo(() => Array.from({ length: 10 }, () => ({
     x: Math.round(6 + Math.random() * 88),
     rel: Math.random(),
@@ -101,6 +104,15 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
   useEffect(() => {
     if (autoPlay && !mcAutoPlayed.has(songId)) { mcAutoPlayed.add(songId); startPlay() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 只有在视口内才让水体动画跑:滚出屏幕即冻结(看不见,纯省电)
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver((ents) => { setOnscreen(ents[0]?.isIntersecting ?? true) }, { rootMargin: '150px' })
+    io.observe(el)
+    return () => io.disconnect()
   }, [])
 
   function mcGeom() {
@@ -214,6 +226,8 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
   }
 
   const pct = dur > 0 ? Math.min(100, (cur / dur) * 100) : 0
+  // 活水动画只在「正在播放 + 在屏幕内」时跑;否则冻结成静态(浏览器缓存,近零成本,零视觉差)
+  const liveAnim = !MC_REDUCE && state === 'playing' && onscreen
   return (
     <div className="mc-card glass" ref={cardRef} onClick={tankClick}>
       <svg className={`mc-water${draining ? ' mc-water-end' : ''}`} viewBox="0 0 120 100" preserveAspectRatio="none">
@@ -224,9 +238,9 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
             <stop offset="58%" stopColor="rgba(86,150,216,0.40)" />
             <stop offset="100%" stopColor="rgba(34,98,208,0.60)" />
           </linearGradient>
-          <filter id={`turb-${songId}`} x="-15%" y="-15%" width="130%" height="130%">
+          <filter id={`turb-${songId}`} x="-15%" y="-15%" width="130%" height="130%" colorInterpolationFilters="sRGB">
             <feTurbulence type="fractalNoise" baseFrequency="0.014 0.03" numOctaves="2" seed="4" result="n">
-              {!MC_REDUCE && <animate attributeName="baseFrequency" dur="26s" values="0.014 0.03;0.02 0.041;0.014 0.03" repeatCount="indefinite" />}
+              {liveAnim && <animate attributeName="baseFrequency" dur="26s" values="0.014 0.03;0.02 0.041;0.014 0.03" repeatCount="indefinite" />}
             </feTurbulence>
             <feDisplacementMap in="SourceGraphic" in2="n" scale="4.5" xChannelSelector="R" yChannelSelector="G" />
           </filter>
@@ -234,13 +248,13 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
         <g transform={`translate(0 ${100 - pct})`}>
           <g filter={`url(#turb-${songId})`}>
           <g>
-            {!MC_REDUCE && <animateTransform attributeName="transform" type="translate" from="0 0" to="-120 0" dur="20s" repeatCount="indefinite" />}
+            {liveAnim && <animateTransform attributeName="transform" type="translate" from="0 0" to="-120 0" dur="20s" repeatCount="indefinite" />}
             <path d={WAVE_FRONT} fill={`url(#sea-${songId})`} />
           </g>
           </g>
         </g>
       </svg>
-      {state === 'playing' && (
+      {state === 'playing' && onscreen && (
         <div className="mc-glints" aria-hidden="true">
           {glints.map((g, i) => (
             <span key={i} className="mc-glint" style={{ left: g.x + '%', top: Math.min(95, (100 - pct) + g.rel * (pct * 0.5)) + '%', ['--gs' as any]: g.s + 'px', ['--gt' as any]: g.t + 's', ['--gd' as any]: g.d + 's' }} />
@@ -309,11 +323,12 @@ function renderPara(text: string, autoPlay?: boolean) {
 
 const STYLES_KEY = 'sea-userstyles'
 
-export function CCPage({ onBack }: { onBack: () => void }) {
+export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate: (p: Page) => void }) {
+  void onNavigate
   const {
     messages, connected, authed, ccAlive, ccBusy,
     streamingPhase, streamingElapsed, sessionState,
-    hintsEnabled, healthEnabled, textColors, claudemd, visibleCount,
+    hintsEnabled, healthEnabled, claudemd, visibleCount,
   } = useChatState()
   const visibleMessages = messages.slice(-visibleCount)
   const hasMore = messages.length > visibleCount
@@ -325,6 +340,7 @@ export function CCPage({ onBack }: { onBack: () => void }) {
   const [styleTexts, setStyleTexts] = useState<{ c: string; f: string }>({ c: '', f: '' })
   const [panelOpen, setPanelOpen] = useState(false)
   const [claudemdOpen, setClaudemdOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [claudemdDraft, setClaudemdDraft] = useState('')
   const photoInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -549,7 +565,7 @@ export function CCPage({ onBack }: { onBack: () => void }) {
       <header className="cc-top">
         <div className="cc-top-left">
           <span className={`cc-status-dot ${statusClass}`} />
-          <span className="cc-name" onClick={() => setClaudemdOpen(true)} title="编辑 CLAUDE.md">苏煦</span>
+          <span className="cc-name" onClick={() => setSidebarOpen(true)} title="侧边栏">苏煦</span>
           {statusClass !== 'alive' && (
             <span className={`cc-status-text ${statusClass}`}>{statusText}</span>
           )}
@@ -745,13 +761,17 @@ export function CCPage({ onBack }: { onBack: () => void }) {
         />
       )}
 
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        currentSessionId={(sessionState as any)?.sessionId ?? null}
+      />
       {panelOpen && (
         <SessionPanel
           state={sessionState}
-          textColors={textColors}
           onClose={() => setPanelOpen(false)}
           onAction={(a) => sendSessionAction(a)}
-          onColorChange={(who, c) => setTextColor(who, c)}
+          onEditClaudemd={() => { setPanelOpen(false); setClaudemdOpen(true); sendClaudemdGet() }}
         />
       )}
 
@@ -865,7 +885,7 @@ function MessageRow({ message, expanded, onToggleThinking }: {
         {text && (
           <div className="cc-text">
             {text.split(/\n{2,}/).map((para, i, arr) => (
-              <p key={i} className="cc-paragraph">
+              <p key={i} ref={observeBubble} className="cc-paragraph">
                 {renderPara(para, message.fresh)}
                 {i === arr.length - 1 && (
                   <span className="cc-msg-time">{formatTsShort(message.ts)}</span>
@@ -885,10 +905,7 @@ function formatTsShort(ms: number | undefined): string {
   const now = new Date()
   const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
   if (d.toDateString() === now.toDateString()) return hm
-  const diff = now.getTime() - ms
-  if (diff < 86400000 * 2) return `昨天 ${hm}`
-  if (diff < 86400000 * 7) return `${['日','一','二','三','四','五','六'][d.getDay()]} ${hm}`
-  return `${d.getMonth()+1}/${d.getDate()} ${hm}`
+  return `${d.getMonth() + 1}/${d.getDate()} ${hm}`
 }
 
 // 数据格式化
@@ -922,12 +939,11 @@ function formatTs(ms: number | undefined): string {
   return new Date(ms).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
+function SessionPanel({ state, onClose, onAction, onEditClaudemd }: {
   state: Record<string, any> | null
-  textColors: { su: string; you: string }
   onClose: () => void
   onAction: (action: string) => void
-  onColorChange: (who: 'su' | 'you', color: string) => void
+  onEditClaudemd: () => void
 }) {
   const [confirming, setConfirming] = useState<null | 'forge' | 'compact'>(null)
   const { actionPending } = useChatState()
@@ -987,6 +1003,10 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
                 {CC_MODELS.map((mm) => <option key={mm.value} value={mm.value}>{mm.label}</option>)}
               </select>
             </div>
+            <div className="cc-panel-section">
+              <div className="cc-panel-section-title">苏煦 · 人设</div>
+              <button className="cc-panel-action" onClick={onEditClaudemd}>编辑 CLAUDE.md</button>
+            </div>
 
             <div className="cc-panel-meta" title="本轮 token 用量：你打的输入 + 苏煦回复的输出">
               <span>你 {kFormat(state.inputTokens)} · 苏煦 {kFormat(state.outputTokens)}</span>
@@ -1000,30 +1020,6 @@ function SessionPanel({ state, textColors, onClose, onAction, onColorChange }: {
             </div>
           </>
         )}
-
-        <div className="cc-panel-divider" />
-
-        <div className="cc-panel-section">
-          <div className="cc-panel-section-title">对话颜色</div>
-          <div className="cc-color-pickers">
-            <label className="cc-color-pick">
-              <input
-                type="color"
-                value={textColors.su}
-                onChange={(e) => onColorChange('su', e.target.value)}
-              />
-              <span>苏煦</span>
-            </label>
-            <label className="cc-color-pick">
-              <input
-                type="color"
-                value={textColors.you}
-                onChange={(e) => onColorChange('you', e.target.value)}
-              />
-              <span>你</span>
-            </label>
-          </div>
-        </div>
 
         <div className="cc-modal-actions">
           <button
