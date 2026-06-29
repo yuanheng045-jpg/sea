@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppearance, updateAppearance, type Appearance } from './appearance'
 import { useChatState, setTextColor } from './chatStore'
+import { ClaudeSparkle } from './CCPage'
 
 type SessionMeta = {
   id: string
@@ -14,9 +15,9 @@ type SessionMeta = {
 type QuickItem = { key: string; label: string }
 
 const QUICK_ITEMS: QuickItem[] = [
-  { key: 'music',   label: '音乐界面' },
-  { key: 'reading', label: '共同阅读' },
-  { key: 'slot',    label: '摇奖机' },
+  { key: 'music',   label: '音乐播放器' },
+  { key: 'reading', label: '共读' },
+  { key: 'slot',    label: '抽卡' },
 ]
 
 type ViewMsg = { role: string; ts: number; text: string }
@@ -84,12 +85,18 @@ export function Sidebar({
   }, [open])
 
   const startX = useRef<number | null>(null)
-  const onTouchStart = (e: React.TouchEvent) => { startX.current = e.touches[0]?.clientX ?? null }
+  const startY = useRef<number | null>(null)
+  const onTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0]?.clientX ?? null
+    startY.current = e.touches[0]?.clientY ?? null
+  }
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (startX.current === null) return
+    if (startX.current === null || startY.current === null) return
     const dx = (e.changedTouches[0]?.clientX ?? 0) - startX.current
-    startX.current = null
-    if (dx < -60) onClose()
+    const dy = (e.changedTouches[0]?.clientY ?? 0) - startY.current
+    startX.current = null; startY.current = null
+    // 左滑关闭(左侧抽屉),且必须水平明显主导 → 垂直滚动不误触发
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 2) onClose()
   }
 
   const openSession = (sid: string) => {
@@ -115,7 +122,10 @@ export function Sidebar({
         onTouchEnd={onTouchEnd}
       >
         <header className="sb-header">
-          <span className="sb-title">苏煦</span>
+          <div className="sb-brand">
+            <span className="sb-flourish">Claude</span>
+            <span className="sb-brand-sub"><ClaudeSparkle /> 苏煦 · 深海</span>
+          </div>
           <button className="sb-close" onClick={onClose} aria-label="关闭">×</button>
         </header>
 
@@ -143,8 +153,10 @@ export function Sidebar({
           ))}
         </section>
 
+        <div className="sb-divider" />
+
         <section className="sb-section sb-quick">
-          <div className="sb-section-title">应用</div>
+          <div className="sb-section-title">永久组件</div>
           <div className="sb-quick-grid">
             {QUICK_ITEMS.map(q => (
               <button key={q.key} className="sb-quick-item" onClick={() => showToast(q.label + '·构建中')}>
@@ -154,6 +166,8 @@ export function Sidebar({
             ))}
           </div>
         </section>
+
+        <div className="sb-divider" />
 
         <section className="sb-section sb-prefs">
           <div className="sb-section-title">设置</div>

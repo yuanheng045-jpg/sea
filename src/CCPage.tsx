@@ -1191,7 +1191,10 @@ function SessionPanel({ state, onClose, onAction, onEditClaudemd }: {
   return (
     <div className="cc-modal-backdrop" onClick={onClose}>
       <div className="cc-modal cc-panel glass" onClick={(e) => e.stopPropagation()}>
-        <div className="cc-modal-title">苏煦的会话</div>
+        <div className="cc-panel-head">
+          <ClaudeSparkle />
+          <h3 className="cc-panel-h3">苏煦 <em>SESSION</em></h3>
+        </div>
 
         {!state ? (
           <div className="cc-panel-loading">连接中…</div>
@@ -1208,14 +1211,15 @@ function SessionPanel({ state, onClose, onAction, onEditClaudemd }: {
               <div className="cc-panel-context-label">上下文</div>
             </div>
 
-            <div className="cc-panel-cards">
-              <div className="cc-panel-card">
-                <div className="cc-panel-card-val">{cacheHitPct}%</div>
-                <div className="cc-panel-card-label">缓存命中</div>
+            <div className="cc-panel-rows">
+              <div className="cc-panel-bar">
+                <span>缓存命中</span>
+                <div className="cc-panel-bar-track"><div className="cc-panel-bar-fill" style={{ width: `${cacheHitPct}%` }} /></div>
+                <i>{cacheHitPct}%</i>
               </div>
-              <div className="cc-panel-card">
-                <div className="cc-panel-card-val small">{shortModel(state.model)}</div>
-                <div className="cc-panel-card-label">模型</div>
+              <div className="cc-panel-row">
+                <span>模型</span>
+                <b>{shortModel(state.model)}</b>
               </div>
             </div>
 
@@ -1280,7 +1284,7 @@ function MoonSvg({ full }: { full: boolean }) {
   )
 }
 
-function ClaudeSparkle() {
+export function ClaudeSparkle() {
   return (
     <svg viewBox="0 0 100 100" width="22" height="22" className="claude-sparkle">
       <path

@@ -4665,3 +4665,303 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card) {
   border-radius: 0 !important;
 }
 body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none !important; }
+
+
+/* ════════ 鲸鱼面板视觉提升(统一海蓝+月光,衬线标题,水感进度) ════════ */
+:root { --panel-sea: #4a8cc7; --panel-moon: #e1e5e7; }
+
+/* 标题:衬线呼应 Claude 昵称 + 一丝月光 */
+.cc-panel .cc-modal-title {
+  font-family: var(--font-display) !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 20px !important;
+  letter-spacing: 0.05em !important;
+  text-align: center !important;
+  color: var(--ink) !important;
+  margin-bottom: 4px !important;
+}
+/* section 小标题:左对齐 + 细字距(系统感),柔和不喧 */
+.cc-panel .cc-panel-section-title {
+  text-align: left !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.13em !important;
+  color: oklch(0.52 0.04 250) !important;
+  opacity: 0.72;
+  margin-bottom: 5px !important;
+}
+/* 上下文:大数字海蓝(呼应状态点/语音条),底对齐 */
+.cc-panel .cc-panel-context-row { align-items: flex-end; }
+.cc-panel .cc-panel-context-pct { color: var(--panel-sea) !important; font-size: 30px !important; }
+.cc-panel .cc-panel-context-label { text-align: left !important; letter-spacing: 0.13em; }
+/* 进度:水位感 — 圆角 + 海蓝渐变 + 极淡内阴影(无外发光,克制) */
+.cc-panel .cc-panel-progress {
+  height: 7px !important;
+  background: rgba(120, 150, 190, 0.15) !important;
+  box-shadow: inset 0 1px 2px rgba(20, 40, 80, 0.07);
+}
+.cc-panel .cc-panel-progress-fill {
+  background: linear-gradient(90deg, #6fa8d8 0%, var(--panel-sea) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+/* 数据卡:统一玻璃,间距收紧 */
+.cc-panel .cc-panel-cards { gap: 8px; }
+.cc-panel .cc-panel-card {
+  background: rgba(255, 255, 255, 0.24) !important;
+  border: 0.5px solid rgba(255, 255, 255, 0.5) !important;
+  border-radius: 13px !important;
+  padding: 11px 12px !important;
+}
+/* 切换模型下拉:玻璃统一(去原内联裸色) */
+.cc-panel .cc-model-select {
+  border: 0.5px solid rgba(255, 255, 255, 0.5) !important;
+  background: rgba(255, 255, 255, 0.26) !important;
+  border-radius: 10px !important;
+  padding: 7px 10px !important;
+  font-family: var(--font-body) !important;
+  font-size: 13px !important;
+  color: var(--ink) !important;
+}
+/* 操作按钮:海蓝系统一(换窗/压缩) */
+.cc-modal-actions button.cc-panel-action {
+  background: rgba(74, 140, 199, 0.13) !important;
+  border: 0.5px solid rgba(74, 140, 199, 0.26) !important;
+  color: var(--ink) !important;
+  border-radius: 11px !important;
+}
+.cc-modal-actions button.cc-panel-action:hover { background: rgba(74, 140, 199, 0.22) !important; }
+/* 关闭按钮:中性 */
+.cc-panel ~ * .cc-modal-actions > button:last-child,
+.cc-modal-actions > button:last-child { border-radius: 11px; }
+/* 底部 meta:更轻 */
+.cc-panel .cc-panel-meta { opacity: 0.85; }
+
+
+/* ════════ 鲸鱼面板 v2 · StatusPage 机械表语言(彩bar+sparkle标题+row) ════════ */
+.cc-panel-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
+.cc-panel-head .claude-sparkle { width: 16px; height: 16px; color: oklch(0.5 0.06 250 / 0.5); flex: 0 0 auto; }
+.cc-panel-h3 {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 19px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.cc-panel-h3 em { font-style: italic; font-size: 10.5px; color: var(--ink-faint); margin-left: 5px; letter-spacing: 0.16em; }
+/* 缓存彩色 bar(仿 st-bar) */
+.cc-panel-rows { display: flex; flex-direction: column; gap: 11px; padding: 2px 0; }
+.cc-panel-bar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ink-soft); }
+.cc-panel-bar-track { height: 5px; background: oklch(0.5 0.04 252 / 0.14); border-radius: 999px; overflow: hidden; }
+.cc-panel-bar-fill { height: 100%; background: linear-gradient(90deg, oklch(0.62 0.1 250), oklch(0.66 0.12 280)); border-radius: 999px; transition: width 600ms var(--ease-out); }
+.cc-panel-bar > i { font-style: normal; color: var(--ink-faint); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+/* 模型 row(仿 st-row) */
+.cc-panel-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.cc-panel-row > span { color: var(--ink-soft); }
+.cc-panel-row > b { font-weight: 500; color: var(--ink); font-family: var(--font-body); }
+/* 上下文:大数字回墨色 + 进度改 StatusPage 蓝紫彩(覆盖上版海蓝) */
+.cc-panel .cc-panel-context-pct { color: var(--ink) !important; }
+.cc-panel .cc-panel-progress-fill {
+  background: linear-gradient(90deg, oklch(0.62 0.1 250), oklch(0.66 0.12 280)) !important;
+  box-shadow: none !important;
+}
+
+
+/* ════════ 侧边栏 v2 · 套鲸鱼面板/StatusPage 同款语言 ════════ */
+/* header:Claude 火花 + 衬线(呼应面板标题) */
+.sb-title {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display) !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 21px !important;
+  letter-spacing: 0.03em !important;
+  color: var(--ink) !important;
+}
+.sb-title .claude-sparkle { width: 15px; height: 15px; color: oklch(0.5 0.06 250 / 0.5); flex: 0 0 auto; }
+/* 分组标题:衬线 italic(呼应 StatusPage h3),去 uppercase */
+.sb-section-title {
+  font-family: var(--font-display) !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  letter-spacing: 0.04em !important;
+  color: var(--ink-soft) !important;
+  text-transform: none !important;
+  opacity: 1 !important;
+}
+/* 行/卡 hover:蓝紫呼应(StatusPage 色系) */
+.sb-history-item:hover { background: oklch(0.62 0.1 250 / 0.08); }
+.sb-history-item.active {
+  background: oklch(0.62 0.1 250 / 0.14);
+  box-shadow: inset 2px 0 0 oklch(0.62 0.1 256);
+}
+.sb-pref-item:hover { background: oklch(0.62 0.1 250 / 0.08); }
+.sb-quick-item:hover { background: oklch(0.62 0.1 250 / 0.1); }
+/* 历史项条数徽章:蓝紫呼应 */
+.sb-h-count { background: oklch(0.62 0.1 250 / 0.1) !important; color: oklch(0.5 0.08 256) !important; }
+
+
+/* ════════ 侧边栏 v4 · ins 风右侧浮动玻璃(全透明高模糊+花体+纤细线) ════════ */
+/* 容器:靠右 + 四周留空(圆角不挨边) */
+.sb-backdrop {
+  justify-content: flex-end !important;
+  align-items: stretch !important;
+  padding: 12px !important;
+}
+.sb-drawer {
+  width: min(88vw, 358px) !important;
+  max-width: 358px !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border-radius: 28px !important;
+  /* 全透明 + 高模糊(不透出下方字) */
+  background: rgba(255, 255, 255, 0.24) !important;
+  backdrop-filter: blur(34px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(140%) !important;
+  border: 0.5px solid rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 24px 70px rgba(20, 40, 80, 0.22) !important;
+  animation: sb-slide-right 0.34s var(--ease-spring, cubic-bezier(0.4, 1.2, 0.5, 1)) !important;
+  padding-bottom: 20px;
+}
+@keyframes sb-slide-right { from { transform: translateX(112%); } to { transform: translateX(0); } }
+
+/* header:花体 Claude + 副标(排版丰富) */
+.sb-header {
+  padding: 22px 20px 14px !important;
+  align-items: flex-start !important;
+  background: none !important;
+  backdrop-filter: none !important;
+}
+.sb-brand { display: flex; flex-direction: column; gap: 1px; }
+.sb-flourish {
+  font-family: 'Pinyon Script', cursive;
+  font-size: 42px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+}
+.sb-brand-sub {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  letter-spacing: 0.14em;
+  padding-left: 4px;
+}
+.sb-brand-sub .claude-sparkle { width: 11px; height: 11px; color: var(--ink-faint); }
+
+/* 纤细装饰线 */
+.sb-divider {
+  height: 0.5px;
+  background: linear-gradient(90deg, transparent, rgba(140, 160, 195, 0.42) 18%, rgba(140, 160, 195, 0.42) 82%, transparent);
+  margin: 7px 20px;
+  flex: 0 0 auto;
+}
+
+/* 分组标题:衬线中性(不带颜色) */
+.sb-section-title {
+  color: var(--ink-faint) !important;
+}
+.sb-title .claude-sparkle, .sb-brand-sub .claude-sparkle { color: var(--ink-faint) !important; }
+
+/* 历史:占上 1/3,淡白行(去框重感+蓝紫) */
+.sb-history { max-height: 33vh !important; }
+.sb-history .sb-section-title { background: none !important; backdrop-filter: none !important; }
+.sb-history-item {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 0.5px solid rgba(255, 255, 255, 0.4) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  padding: 9px 12px !important;
+  margin-bottom: 6px;
+}
+.sb-history-item:hover { background: rgba(255, 255, 255, 0.4) !important; }
+.sb-history-item.active { background: rgba(255, 255, 255, 0.5) !important; box-shadow: none !important; }
+.sb-h-count { background: rgba(255, 255, 255, 0.45) !important; color: var(--ink-soft) !important; }
+.sb-h-time { color: var(--ink-faint) !important; }
+
+/* 永久组件:三横排 ins 卡 */
+.sb-quick-grid { gap: 10px; }
+.sb-quick-item {
+  background: rgba(255, 255, 255, 0.22) !important;
+  border: 0.5px solid rgba(255, 255, 255, 0.42) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  min-height: 74px;
+  padding: 16px 6px !important;
+}
+.sb-quick-item:hover { background: rgba(255, 255, 255, 0.4) !important; }
+.sb-q-tag { background: rgba(255, 255, 255, 0.5) !important; color: var(--ink-faint) !important; }
+
+/* 设置:垂直淡白行 */
+.sb-pref-item {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border: 0.5px solid rgba(255, 255, 255, 0.36) !important;
+  border-radius: 12px !important;
+  margin-bottom: 6px;
+}
+.sb-pref-item:hover { background: rgba(255, 255, 255, 0.36) !important; }
+.sb-pref-arrow { color: var(--ink-faint) !important; }
+
+
+/* ════════ 侧边栏 v5 · 改回左侧浮动 + 去白底裸字 ════════ */
+.sb-backdrop { justify-content: flex-start !important; }
+.sb-drawer { animation: sb-slide-left-v5 0.34s var(--ease-spring, cubic-bezier(0.4, 1.2, 0.5, 1)) !important; }
+@keyframes sb-slide-left-v5 { from { transform: translateX(-112%); } to { transform: translateX(0); } }
+
+/* 去白底:文字单独显示(历史/组件/设置都裸字) */
+.sb-history-item, .sb-quick-item, .sb-pref-item {
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.sb-history-item:hover, .sb-pref-item:hover, .sb-quick-item:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+.sb-history-item.active { background: rgba(255, 255, 255, 0.22) !important; }
+.sb-h-count { background: none !important; color: var(--ink-faint) !important; padding: 0 !important; }
+.sb-q-tag { background: none !important; color: var(--ink-faint) !important; }
+
+
+/* ════════ 侧边栏 v6 · 字加亮 + 更高模糊 + 历史标题左对齐不压字 ════════ */
+/* 模糊加大到糊成一片(底层图/字看不出) */
+.sb-drawer {
+  backdrop-filter: blur(54px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(54px) saturate(150%) !important;
+  background: rgba(255, 255, 255, 0.26) !important;
+}
+/* 小字加深(提高可读) */
+.sb-h-time { color: var(--ink-soft) !important; }
+.sb-h-count { color: var(--ink-soft) !important; }
+.sb-q-tag { color: var(--ink-soft) !important; }
+.sb-brand-sub { color: var(--ink-soft) !important; }
+.sb-section-title { color: var(--ink-soft) !important; }
+.sb-group-label { color: var(--ink-soft) !important; }
+.sb-h-preview { color: var(--ink) !important; }
+/* 历史标题:去 sticky(不再浮在滚动内容上压字) + 左对齐 */
+.sb-history .sb-section-title {
+  position: static !important;
+  text-align: left !important;
+  background: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+
+/* ════════ 侧边栏 v7(定稿) · 字调很浅(ins淡雅) + 更高模糊 ════════ */
+/* 模糊加到 72:底层彻底糊成一片 */
+.sb-drawer {
+  backdrop-filter: blur(72px) saturate(155%) !important;
+  -webkit-backdrop-filter: blur(72px) saturate(155%) !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+/* 所有字调很浅(浅蓝灰,淡雅) */
+.sb-h-preview, .sb-pref-label, .sb-q-label { color: oklch(0.56 0.025 256) !important; }
+.sb-h-time, .sb-h-count, .sb-q-tag, .sb-brand-sub,
+.sb-section-title, .sb-group-label, .sb-pref-arrow { color: oklch(0.65 0.02 256) !important; }
+/* 花体 Claude 也调浅一档(协调) */
+.sb-flourish { color: oklch(0.52 0.03 256) !important; }
