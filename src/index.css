@@ -4965,3 +4965,70 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none 
 .sb-section-title, .sb-group-label, .sb-pref-arrow { color: oklch(0.65 0.02 256) !important; }
 /* 花体 Claude 也调浅一档(协调) */
 .sb-flourish { color: oklch(0.52 0.03 256) !important; }
+
+
+/* ════════ 侧边栏 v8 · 真·毛玻璃配方(色彩弥散) ════════ */
+/* blur 适中(40,够糊且不撞 iOS 上限) + saturate 拉高(色彩弥散) + brightness 提亮压平明暗 + 釉面盖残留对比 */
+.sb-drawer {
+  backdrop-filter: blur(40px) saturate(200%) brightness(1.08) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.08) !important;
+  background: rgba(255, 255, 255, 0.36) !important;
+}
+
+
+/* ════════ 侧边栏 v9 · blur 调回 + 更弥散(加 contrast 压平明暗) ════════ */
+.sb-drawer {
+  backdrop-filter: blur(72px) saturate(220%) brightness(1.1) contrast(0.85) !important;
+  -webkit-backdrop-filter: blur(72px) saturate(220%) brightness(1.1) contrast(0.85) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+
+/* ════════ 侧边栏 v10 · 釉面降薄 + 色雾淡 + 更弥散 ════════ */
+.sb-drawer {
+  backdrop-filter: blur(72px) saturate(165%) brightness(1.05) contrast(0.7) !important;
+  -webkit-backdrop-filter: blur(72px) saturate(165%) brightness(1.05) contrast(0.7) !important;
+  background: rgba(255, 255, 255, 0.24) !important;
+}
+
+
+/* ════════ 侧边栏 v11 · 带色釉面(iOS 一定生效的弥散) ════════ */
+/* iOS backdrop-filter 只认 blur+saturate,brightness/contrast 被忽略;改用半透浅蓝灰釉面直接盖,弥散成蓝灰雾(不死白) */
+.sb-drawer {
+  backdrop-filter: blur(60px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(60px) saturate(190%) !important;
+  background: rgba(206, 219, 238, 0.48) !important;
+}
+
+
+/* ════════ 侧边栏 v12 · 盖住背景(解决乱/字不清/色不统一) ════════ */
+/* 浅蓝灰厚釉面真正盖住背景文字(blur 到顶也盖不住高对比字,必须靠釉面),不死白带海底色 */
+.sb-drawer {
+  backdrop-filter: blur(50px) saturate(175%) !important;
+  -webkit-backdrop-filter: blur(50px) saturate(175%) !important;
+  background: rgba(213, 224, 240, 0.74) !important;
+}
+/* 前景字加深一档(在盖住的釉面上清晰) + 统一蓝灰色相 */
+.sb-h-preview, .sb-pref-label, .sb-q-label { color: oklch(0.45 0.03 256) !important; }
+.sb-h-time, .sb-h-count, .sb-brand-sub,
+.sb-section-title, .sb-group-label, .sb-pref-arrow { color: oklch(0.56 0.025 256) !important; }
+.sb-flourish { color: oklch(0.46 0.035 256) !important; }
+/* 永久组件:去错位的"构建中"标签(点击有 toast 提示即可),三横排居中 */
+.sb-q-tag { display: none !important; }
+.sb-quick-item { min-height: 54px !important; justify-content: center !important; }
+
+
+/* ════════ 侧边栏 v13 · 白釉面(中性,换任何背景都协调) ════════ */
+.sb-drawer {
+  backdrop-filter: blur(50px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(50px) saturate(160%) !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+
+/* ════════ 鲸鱼面板 · 玻璃容器去色偏白磨砂(彩色进度/bar/火花/按钮全保留) ════════ */
+.cc-modal.cc-panel {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(50px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(50px) saturate(160%) !important;
+}
