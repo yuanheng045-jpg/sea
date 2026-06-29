@@ -1469,13 +1469,14 @@ button { font: inherit; cursor: pointer; color: inherit; }
   min-width: 0;
 }
 .cc-name {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 500;
-  font-size: 18px;
-  letter-spacing: 0.10em;
+  font-family: 'Pinyon Script', var(--font-display);
+  font-style: normal;
+  font-weight: 400;
+  font-size: 28px;
+  letter-spacing: 0.01em;
   color: var(--ink);
   line-height: 1;
+  padding-bottom: 2px;
 }
 .cc-status-dot {
   width: 7px;
@@ -1662,7 +1663,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
   font-family: var(--font-body);
   font-size: 12.5px;
   line-height: 1.6;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   font-style: normal;
   padding: 6px 12px;
   margin: 0 0 8px 0;
@@ -2071,7 +2072,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
   font-family: var(--font-body);
   font-size: 12.5px;
   line-height: 1.6;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   font-style: italic;
   padding: 6px 12px;
   margin: 0 0 8px 0;
@@ -2504,6 +2505,20 @@ button { font: inherit; cursor: pointer; color: inherit; }
   display: block;
   margin: 4px 0 6px 0;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  cursor: zoom-in;
+}
+.cc-lightbox {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(10, 15, 30, 0.88);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; cursor: zoom-out;
+  animation: cc-lb-in 0.18s ease;
+}
+@keyframes cc-lb-in { from { opacity: 0; } to { opacity: 1; } }
+.cc-lightbox img {
+  max-width: 100%; max-height: 100%; object-fit: contain;
+  border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.45);
 }
 .cc-msg-file {
   display: inline-flex;
@@ -2520,6 +2535,17 @@ button { font: inherit; cursor: pointer; color: inherit; }
   transition: background 0.15s;
 }
 .cc-msg-file:hover { background: rgba(150, 180, 220, 0.28); }
+.cc-msg-html {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  border: 0.5px solid oklch(1 0 0 / 0.6);
+  border-radius: 18px;
+  margin: 4px 0 6px 0;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.07), inset 0 0 20px rgba(255,255,255,0.05);
+  overflow: hidden;
+}
 
 .cc-claudemd { width: min(92vw, 480px); }
 .cc-claudemd-input {
@@ -4399,7 +4425,7 @@ body[data-chat-bubbles="on"] .cc-text {
   font-size: 14.5px !important;
 }
 body[data-chat-bubbles="on"] .cc-paragraph {
-  max-width: min(78%, 520px);
+  max-width: min(94%, 620px);
   padding: 8px 22px 9px;
   margin: 0;
   line-height: 1.5;
@@ -4499,3 +4525,143 @@ body[data-chat-bubbles="on"] .cc-thinking-body {
   mix-blend-mode: normal;
   opacity: 1;
 }
+
+
+/* ================= <voice> 语音条(玻璃风) ================= */
+.cc-voice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: min(78%, 330px);
+  padding: 8px 14px 8px 9px;
+  margin: 5px 0;
+  border-radius: 18px;
+  /* 玻璃(照 mc-card 静态,无 backdrop-filter 防发热) */
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(255,255,255,0.06) 100%),
+    rgba(150, 180, 220, 0.07);
+  border: 0.5px solid rgba(255, 255, 255, 0.42);
+  box-shadow: 0 1px 2px rgba(20, 40, 80, 0.05), inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.cc-voice-btn {
+  flex: 0 0 auto;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 0;
+  background: #4a8cc7;
+  color: #fff;
+  display: grid; place-items: center;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(74, 140, 199, 0.22);
+  transition: transform 0.1s;
+}
+.cc-voice-btn:active { transform: scale(0.92); }
+.cc-voice-btn svg { display: block; margin-left: 1px; }
+.cc-voice.fail .cc-voice-btn { background: linear-gradient(180deg, rgba(190,90,90,0.85), rgba(170,70,70,0.7)); }
+.cc-voice-wave {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  min-width: 88px;
+  cursor: pointer;
+}
+.cc-voice-bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  max-width: 3px;
+  border-radius: 2px;
+  background: rgba(120, 150, 190, 0.38);
+  transition: background 0.15s;
+}
+.cc-voice-bar.on { background: #4a8cc7; }
+.cc-voice.loading .cc-voice-wave { opacity: 0.45; }
+.cc-voice-time {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: oklch(0.5 0.04 250);
+  font-variant-numeric: tabular-nums;
+  min-width: 30px;
+  text-align: right;
+  cursor: pointer;
+  user-select: none;
+}
+.cc-voice-text {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--ink);
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 0.5px solid rgba(150, 170, 200, 0.22);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.cc-voice-spin {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: cc-voice-spin 0.7s linear infinite;
+}
+@keyframes cc-voice-spin { to { transform: rotate(360deg); } }
+/* voice 混合消息的尾部时间戳 */
+.cc-msg-time-block {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  opacity: 0.55;
+}
+/* 气泡态下语音条左对齐(苏煦) */
+body[data-chat-bubbles="on"] .cc-msg.assistant .cc-voice { align-self: flex-start; }
+body[data-chat-bubbles="on"] .cc-msg.user .cc-voice { align-self: flex-end; }
+
+
+/* 花体 Claude(头部昵称) */
+@font-face {
+  font-family: 'Pinyon Script';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/sea/fonts/pinyon-script.woff2') format('woff2');
+}
+
+
+/* ============ 修复(覆盖后续迭代) ============ */
+/* 花体 Claude:压过 1898 的 var(--font-body) 和 3247 的 14px!important */
+.cc-name {
+  font-family: var(--font-display) !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 19px !important;
+  letter-spacing: 0.06em !important;
+  line-height: 1 !important;
+  padding-bottom: 0 !important;
+  color: #e1e5e7 !important;
+  text-shadow: 0 0 7px rgba(220, 225, 235, 0.6), 0 0 14px rgba(200, 210, 230, 0.35), 0 1px 1px rgba(120, 130, 150, 0.4);
+}
+/* 顶栏三元素垂直居中对齐 */
+.cc-top { align-items: center !important; }
+.cc-top-left { align-items: center; }
+.cc-moon, .cc-whale-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+}
+/* 气泡态:音乐卡片自带框,不再套气泡 */
+body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card) {
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  border-radius: 0 !important;
+}
+body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none !important; }

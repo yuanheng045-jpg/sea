@@ -43,10 +43,18 @@ const mcListeners = new Set<() => void>()
 const mcAutoPlayed = new Set<string>()
 const WAVE_FRONT = 'M0,6 q7.5,-7 15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 t15,0 L240,110 L0,110 Z'
 const MC_REDUCE = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-const MC_FALL_V = 0.16          // 雨滴恒定下落速度(px/ms):时长=距离/速度,远近一样快(观赏速度,放慢一倍)
-const MC_RATE_LIGHT = 2.2       // 小雨:每秒到达雨滴数(歌过半起点)
+const MC_FALL_V_SLOW = 0.15     // 落雨初期下落速度(px/ms):慢,便于观赏
+const MC_FALL_V_FAST = 0.45     // 临近结束下落速度(px/ms):快,倾泻感(前慢后快)
+const MC_RATE_LIGHT = 0.8       // 雨势最弱(起步/将停):每秒雨滴数
 const MC_RATE_HEAVY = 15        // 大雨:每秒到达雨滴数(临近结束)
 const MC_MAX_LIVE = typeof window !== 'undefined' && window.innerWidth < 700 ? 60 : 90  // 并发软上限,防大雨卡顿(放慢后寿命变长,放宽上限)
+
+// 落雨强度包络:f=后半段进度0→1。起步轻 → 中段(fp)峰值 → 渐弱到停,呈「慢快慢、像一阵雨下过去」
+function mcRainEnv(f: number) {
+  const fp = 0.55
+  if (f <= fp) return 0.16 + 0.84 * (0.5 - 0.5 * Math.cos(Math.PI * (f / fp)))
+  return 0.5 + 0.5 * Math.cos(Math.PI * ((f - fp) / (1 - fp)))
+}
 function mcNotify() { mcListeners.forEach(fn => fn()) }
 
 function fmtTime(s: number) {
@@ -137,8 +145,11 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
     const s = 0.6 + Math.random() * 0.7
     const y0 = rect.bottom - 6 - Math.random() * (rect.height * 0.32)
     const fall = Math.max(60, groundY - y0)
-    // 速度恒定:时长 = 距离 / 速度(仅 ±3% 抖动),不论远近每颗看着一样快
-    const t = Math.round(Math.max(360, fall / MC_FALL_V) * (0.97 + Math.random() * 0.06))
+    // 下落速度跟随强度包络:慢→快→慢(中段最快、起步与将停最慢)
+    let pf = 0
+    if (mcAudio && mcAudio.duration) pf = Math.max(0, Math.min(1, (mcAudio.currentTime / mcAudio.duration - 0.5) / 0.5))
+    const v = MC_FALL_V_SLOW + mcRainEnv(pf) * (MC_FALL_V_FAST - MC_FALL_V_SLOW)
+    const t = Math.round(Math.max(300, fall / v) * (0.97 + Math.random() * 0.06))
     const drift = Math.round((Math.random() - 0.5) * 26)
     const spin = Math.round((Math.random() - 0.5) * 140)
     const dot = Math.random() < 0.25
@@ -154,10 +165,10 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
       f = Math.max(0, Math.min(1, (mcAudio.currentTime / mcAudio.duration - 0.5) / 0.5))
     }
     spawnOne()
-    // 泊松过程:每颗到达彼此独立、间隔服从指数分布 → 天然成簇又留空隙(真随机,无节拍、无颗数上限)
-    // 强度 rate(滴/秒)随进度二次曲线从小雨爬到大雨,渐强全靠密度,不动单颗速度
-    const rate = MC_RATE_LIGHT + (f * f) * (MC_RATE_HEAVY - MC_RATE_LIGHT)
-    const dt = -Math.log(1 - Math.random()) / (rate / 1000)
+    // 强度 rate(滴/秒)跟随包络起伏(慢快慢、临近结束渐弱到停)
+    // 间隔=「均匀基准 1000/rate + 适度抖动(±25%)」,非泊松指数 → 连续成流,不再一簇一簇地吐
+    const rate = MC_RATE_LIGHT + mcRainEnv(f) * (MC_RATE_HEAVY - MC_RATE_LIGHT)
+    const dt = (1000 / rate) * (0.75 + Math.random() * 0.5)
     emitRef.current.timer = window.setTimeout(scheduleNext, Math.max(16, dt))
   }
   function startEmit() {
@@ -320,6 +331,199 @@ function renderPara(text: string, autoPlay?: boolean) {
     </>
   )
 }
+
+// ── <voice> 语音条 ──
+function parseVoiceSegments(text: string): Array<{ type: 'text' | 'voice'; val: string }> {
+  if (text.indexOf('<voice>') === -1) return [{ type: 'text', val: text }]
+  const re = /<voice>([\s\S]*?)<\/voice>/g
+  const segs: Array<{ type: 'text' | 'voice'; val: string }> = []
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) segs.push({ type: 'text', val: text.slice(last, m.index) })
+    segs.push({ type: 'voice', val: m[1].trim() })
+    last = m.index + m[0].length
+  }
+  if (last < text.length) {
+    const rest = text.slice(last).replace(/<\/?voice>/g, '')
+    if (rest) segs.push({ type: 'text', val: rest })
+  }
+  return segs
+}
+
+function fmtVoiceTime(s: number): string {
+  if (!isFinite(s) || s < 0) s = 0
+  const mm = Math.floor(s / 60)
+  const ss = Math.floor(s % 60)
+  return mm + ':' + String(ss).padStart(2, '0')
+}
+
+function Lightbox() {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    const onOpen = (e: Event) => setUrl((e as CustomEvent).detail)
+    window.addEventListener('sea-lightbox', onOpen)
+    return () => window.removeEventListener('sea-lightbox', onOpen)
+  }, [])
+  if (!url) return null
+  return (
+    <div className="cc-lightbox" onClick={() => setUrl(null)}>
+      <img src={url} alt="" />
+    </div>
+  )
+}
+
+function ImgOrLink({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return (
+    <a className="cc-msg-file" href={absUrl(url)} target="_blank" rel="noopener">
+      <FileIconInline /> 图片（点开看）
+    </a>
+  )
+  return <img className="cc-msg-img" src={absUrl(url)} referrerPolicy="no-referrer" alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} onClick={() => window.dispatchEvent(new CustomEvent('sea-lightbox', { detail: absUrl(url) }))} />
+}
+
+function parseAttachBlocks(text: string) {
+  const blocks: Array<any> = []
+  const re = /\[\[(img|html|file):\s*([^\]]+?)\s*\]\]/g
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) {
+    if (m.index > last) {
+      const tv = text.slice(last, m.index)
+      if (tv.trim()) blocks.push({ t: 'text', v: tv })
+    }
+    const kind = m[1]
+    const raw = m[2].trim()
+    if (kind === 'file') {
+      const bar = raw.indexOf('|')
+      blocks.push({ t: 'file', url: bar >= 0 ? raw.slice(0, bar).trim() : raw, name: bar >= 0 ? raw.slice(bar + 1).trim() : undefined })
+    } else {
+      blocks.push({ t: kind, v: raw })
+    }
+    last = re.lastIndex
+  }
+  if (last < text.length) {
+    const tv = text.slice(last)
+    if (tv.trim()) blocks.push({ t: 'text', v: tv })
+  }
+  if (blocks.length === 0) blocks.push({ t: 'text', v: text })
+  return blocks
+}
+
+function TextBlock({ text, fresh }: { text: string; fresh?: boolean }) {
+  const segs = useMemo(() => parseVoiceSegments(text), [text])
+  const hasVoice = segs.some((s) => s.type === 'voice')
+  if (!hasVoice) {
+    return (
+      <>
+        {text.split(/\n{2,}/).filter((p) => p.trim()).map((para, i) => (
+          <p key={i} ref={observeBubble} className="cc-paragraph">{renderPara(para, fresh)}</p>
+        ))}
+      </>
+    )
+  }
+  return (
+    <>
+      {segs.map((seg, si) => {
+        if (seg.type === 'voice') return <VoiceBubble key={'v' + si} text={seg.val} />
+        return seg.val.split(/\n{2,}/).filter((pp) => pp.trim()).map((para, i) => (
+          <p key={'t' + si + '-' + i} ref={observeBubble} className="cc-paragraph">{renderPara(para, fresh)}</p>
+        ))
+      })}
+    </>
+  )
+}
+
+function MessageBody({ text, fresh, ts }: { text: string; fresh?: boolean; ts?: number }) {
+  const blocks = useMemo(() => parseAttachBlocks(text), [text])
+  return (
+    <div className="cc-text">
+      {blocks.map((b, bi) => {
+        if (b.t === 'img') return <ImgOrLink key={bi} url={b.v} />
+        if (b.t === 'html') return <HtmlCard key={bi} url={b.v} />
+        if (b.t === 'file') return (
+          <a key={bi} className="cc-msg-file" href={absUrl(b.url)} target="_blank" rel="noopener">
+            <FileIconInline /> {b.name ?? '文件'}
+          </a>
+        )
+        return <TextBlock key={bi} text={b.v} fresh={fresh} />
+      })}
+      <span className="cc-msg-time cc-msg-time-block">{formatTsShort(ts)}</span>
+    </div>
+  )
+}
+
+function VoiceBubble({ text }: { text: string }) {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'fail'>('idle')
+  const [dur, setDur] = useState(0)
+  const [cur, setCur] = useState(0)
+  const [open, setOpen] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const bars = useMemo(() => {
+    const n = 26
+    const out: number[] = []
+    let seed = (text.length * 131 + 7) % 233280
+    for (let i = 0; i < n; i++) { seed = (seed * 9301 + 49297) % 233280; out.push(0.3 + 0.64 * (seed / 233280)) }
+    return out
+  }, [text])
+
+  const load = async (): Promise<HTMLAudioElement | null> => {
+    if (audioRef.current) return audioRef.current
+    setStatus('loading')
+    try {
+      const r = await fetch('/api/tts', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      if (!r.ok) throw new Error('tts ' + r.status)
+      const blob = await r.blob()
+      const audio = new Audio(URL.createObjectURL(blob))
+      audio.addEventListener('loadedmetadata', () => setDur(audio.duration || 0))
+      audio.addEventListener('timeupdate', () => setCur(audio.currentTime))
+      audio.addEventListener('ended', () => { setStatus('paused'); setCur(0); if (audioRef.current) audioRef.current.currentTime = 0 })
+      audioRef.current = audio
+      return audio
+    } catch { setStatus('fail'); return null }
+  }
+  const toggle = async () => {
+    if (status === 'fail') { setStatus('idle'); audioRef.current = null }
+    const a = await load()
+    if (!a) return
+    if (!a.paused) { a.pause(); setStatus('paused') }
+    else { a.play(); setStatus('playing') }
+  }
+  const estDur = Math.max(1, Math.round(text.length * 0.26))
+  const pct = dur ? (cur / dur) * 100 : 0
+  const timeLabel = status === 'fail' ? '重试'
+    : (status === 'playing' || status === 'paused') && dur ? fmtVoiceTime(cur)
+    : fmtVoiceTime(dur || estDur)
+
+  return (
+    <div className={`cc-voice${status === 'loading' ? ' loading' : ''}${status === 'fail' ? ' fail' : ''}`}>
+      <button className="cc-voice-btn" onClick={toggle} aria-label="播放语音">
+        {status === 'loading'
+          ? <span className="cc-voice-spin" />
+          : status === 'playing'
+          ? <svg viewBox="0 0 16 16" width="14" height="14"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg>
+          : <svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 2.8 L13 8 L4 13.2 Z" fill="currentColor"/></svg>}
+      </button>
+      <div className="cc-voice-wave" onClick={() => setOpen((o) => !o)}>
+        {bars.map((h, i) => (
+          <span
+            key={i}
+            className={`cc-voice-bar${(i / bars.length) * 100 <= pct ? ' on' : ''}`}
+            style={{ height: `${Math.round(h * 100)}%` }}
+          />
+        ))}
+      </div>
+      <span className="cc-voice-time" onClick={() => setOpen((o) => !o)}>{timeLabel}</span>
+      {open && <div className="cc-voice-text">{text}</div>}
+    </div>
+  )
+}
+
 
 const STYLES_KEY = 'sea-userstyles'
 
@@ -561,11 +765,11 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
   const statusClass = ccBusy ? 'busy' : ccAlive ? 'alive' : 'offline'
 
   return (
-    <div className="cc-page">
+    <div className="cc-page"><Lightbox />
       <header className="cc-top">
         <div className="cc-top-left">
           <span className={`cc-status-dot ${statusClass}`} />
-          <span className="cc-name" onClick={() => setSidebarOpen(true)} title="侧边栏">苏煦</span>
+          <span className="cc-name" onClick={() => setSidebarOpen(true)} title="侧边栏">Claude</span>
           {statusClass !== 'alive' && (
             <span className={`cc-status-text ${statusClass}`}>{statusText}</span>
           )}
@@ -812,6 +1016,32 @@ export function CCPage({ onBack, onNavigate }: { onBack: () => void; onNavigate:
   )
 }
 
+const absUrl = (u: string) => /^https?:\/\//.test(u || '') ? (u || '') : `https://cc.atlantis-sy.blue${u || ''}`
+
+function HtmlCard({ url }: { url: string }) {
+  const ref = useRef<HTMLIFrameElement>(null)
+  const [h, setH] = useState(300)
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (ref.current && e.source === ref.current.contentWindow && e.data && e.data.t === 'h' && typeof e.data.h === 'number') {
+        setH(Math.min(Math.max(e.data.h + 4, 80), 900))
+      }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
+  return (
+    <iframe
+      ref={ref}
+      className="cc-msg-html"
+      src={absUrl(url)}
+      style={{ height: h }}
+      sandbox="allow-scripts allow-popups"
+      loading="lazy"
+    />
+  )
+}
+
 function MessageRow({ message, expanded, onToggleThinking }: {
   message: ChatMessage
   expanded: boolean
@@ -858,42 +1088,35 @@ function MessageRow({ message, expanded, onToggleThinking }: {
         {message.image && (
           <img
             className="cc-msg-img"
-            src={`https://cc.atlantis-sy.blue${message.image}`}
+            src={absUrl(message.image)}
+            referrerPolicy="no-referrer"
             alt=""
             loading="lazy"
             decoding="async"
           />
         )}
         {Array.isArray(message.images) && message.images.map((u: string, i: number) => (
-          <img key={i} className="cc-msg-img" src={`https://cc.atlantis-sy.blue${u}`} alt="" loading="lazy" decoding="async" />
+          <img key={i} className="cc-msg-img" src={absUrl(u)} referrerPolicy="no-referrer" alt="" loading="lazy" decoding="async" />
         ))}
         {Array.isArray(message.files) && message.files.map((fl: any, i: number) => (
-          <a key={i} className="cc-msg-file" href={`https://cc.atlantis-sy.blue${fl.url ?? ''}`} target="_blank" rel="noopener">
+          <a key={i} className="cc-msg-file" href={absUrl(fl.url ?? '')} target="_blank" rel="noopener">
             <FileIconInline /> {fl.name ?? '文件'}
           </a>
         ))}
         {message.file && (
           <a
             className="cc-msg-file"
-            href={`https://cc.atlantis-sy.blue${(message.file as any).url ?? ''}`}
+            href={absUrl((message.file as any).url ?? '')}
             target="_blank"
             rel="noopener"
           >
             <FileIconInline /> {(message.file as any).name ?? '文件'}
           </a>
         )}
-        {text && (
-          <div className="cc-text">
-            {text.split(/\n{2,}/).map((para, i, arr) => (
-              <p key={i} ref={observeBubble} className="cc-paragraph">
-                {renderPara(para, message.fresh)}
-                {i === arr.length - 1 && (
-                  <span className="cc-msg-time">{formatTsShort(message.ts)}</span>
-                )}
-              </p>
-            ))}
-          </div>
-        )}
+        {Array.isArray(message.htmls) && message.htmls.map((u: string, i: number) => (
+          <HtmlCard key={i} url={u} />
+        ))}
+        {text && <MessageBody text={text} fresh={message.fresh} ts={message.ts} />}
       </div>
     </div>
   )

@@ -14,6 +14,7 @@ export type ChatMessage = {
   file?: any
   images?: string[]
   files?: Array<{ url: string; name?: string }>
+  htmls?: string[]
   pending?: boolean
   autoExpanded?: boolean
   memoryHits?: any[]
@@ -201,6 +202,7 @@ function handleEvent(e: HubEvent) {
               ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
               pending: false,
               autoExpanded: true,
+              images: d.images, files: d.files, htmls: d.htmls,
             }
             replaced = true
             break
@@ -213,6 +215,7 @@ function handleEvent(e: HubEvent) {
             content: d.content ?? '',
             thinking: d.thinking ?? undefined,
             ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
+            images: d.images, files: d.files, htmls: d.htmls,
           })
         }
         return { ...s, messages: msgs }

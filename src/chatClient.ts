@@ -28,7 +28,7 @@ export type HubEvent =
   | { type: 'thinking_delta'; text: string }
   | { type: 'text_start'; reply_to?: string }
   | { type: 'text_delta'; text: string }
-  | { type: 'done'; id: string; role: string; content: string; thinking?: string; ts: string; reply_to?: string }
+  | { type: 'done'; id: string; role: string; content: string; thinking?: string; ts: string; reply_to?: string; images?: string[]; files?: Array<{ url: string; name?: string }>; htmls?: string[] }
   | { type: string; [k: string]: any }
 
 export type ChatClient = {
