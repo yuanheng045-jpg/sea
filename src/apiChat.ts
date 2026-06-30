@@ -18,6 +18,9 @@ let _s: ApiState = {
   providerId: null, model: 'anthropic/claude-opus-4.6', models: [],
   ready: false, error: null,
 }
+let _continuity = true
+let _persona = ''
+let _claudemdSave: 'ok' | 'fail' | null = null
 const subs = new Set<() => void>()
 function emit() { subs.forEach((f) => f()) }
 function set(p: Partial<ApiState>) { _s = { ..._s, ...p }; emit() }
@@ -64,6 +67,7 @@ export async function initApi() {
       } catch {}
     }
     set({ providerId: or?.id ?? null, model, models, convId, messages: msgs, ready: true })
+    try { const cc = await fetch('/api/config/chat', { credentials: 'include' }).then((r) => r.json()); _continuity = cc?.continuity_enabled ?? true; _persona = cc?.persona || ''; emit() } catch {}
   } catch (e: any) {
     set({ error: String(e?.message || e), ready: true })
   } finally { _initing = false }
@@ -131,6 +135,18 @@ export async function switchConversation(id: string) {
   } catch { set({ ready: true }) }
 }
 
+export async function newConversation() {
+  try {
+    const c = await fetch('/api/conversations', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: _s.model }) }).then((r) => r.json())
+    if (c?.id) set({ convId: c.id, messages: [] })
+  } catch {}
+}
+export async function setContinuity(on: boolean) {
+  _continuity = on
+  emit()
+  try { await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ continuity_enabled: on }) }) } catch {}
+}
+
 export function sendSessionAction(action: string, payload?: any) {
   if (action === 'session_set_model' && payload?.model) set({ model: payload.model })
 }
@@ -138,8 +154,17 @@ export function sendSessionAction(action: string, payload?: any) {
 export function sendRaw(_msg: any) {}
 export function setHintsEnabled(_v: boolean) {}
 export function setHealthEnabled(_v: boolean) {}
-export function sendClaudemdGet() {}
-export function sendClaudemdSave(_c: string) {}
+export async function sendClaudemdGet() {
+  try { const cc = await fetch('/api/config/chat', { credentials: 'include' }).then((r) => r.json()); _persona = cc?.persona || ''; _claudemdSave = null; emit() } catch {}
+}
+export async function sendClaudemdSave(c: string) {
+  _persona = c; _claudemdSave = null; emit()
+  try {
+    const r = await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ persona: c }) })
+    _claudemdSave = r.ok ? 'ok' : 'fail'
+  } catch { _claudemdSave = 'fail' }
+  emit()
+}
 export function loadMoreMessages() {}
 export function clearAutoExpanded(_id: string) {}
 
@@ -153,7 +178,7 @@ export function useChatState() {
 let _viewRef: any = null
 let _viewKey = ''
 function _viewCache() {
-  const key = _s.messages.length + '|' + _s.streaming + '|' + _s.model + '|' + _s.ready + '|' + (_s.messages[_s.messages.length - 1]?.content?.length || 0)
+  const key = _s.messages.length + '|' + _s.streaming + '|' + _s.model + '|' + _s.ready + '|' + _continuity + '|' + _persona.length + '|' + _claudemdSave + '|' + _s.convId + '|' + (_s.messages[_s.messages.length - 1]?.content?.length || 0)
   if (key === _viewKey && _viewRef) return _viewRef
   _viewKey = key
   _viewRef = {
@@ -165,12 +190,14 @@ function _viewCache() {
     ccBusy: _s.streaming,
     streamingPhase: _s.streaming ? 'typing' : null,
     streamingElapsed: null,
-    sessionState: { model: _s.model, models: _s.models, convId: _s.convId },
+    sessionState: { model: _s.model, models: _s.models, convId: _s.convId, continuity: _continuity },
     actionPending: null,
     hintsEnabled: false,
     healthEnabled: false,
     textColors: loadColors(),
-    claudemd: { content: null, lastSave: null },
+    claudemd: { content: _persona, lastSave: _claudemdSave },
+    continuity: _continuity,
+    convId: _s.convId,
   }
   return _viewRef
 }

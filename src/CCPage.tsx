@@ -948,6 +948,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
 
       {claudemdOpen && (
         <ClaudemdModal
+          channel={channel}
           draft={claudemdDraft}
           loading={claudemd.content === null}
           lastSave={claudemd.lastSave}
@@ -1231,6 +1232,23 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
                   : <>{curModel && !CC_MODELS.some((mm) => mm.value === curModel) ? <option value={curModel}>{shortModel(curModel)}（当前）</option> : null}{CC_MODELS.map((mm) => <option key={mm.value} value={mm.value}>{mm.label}</option>)}</>}
               </select>
             </div>
+            {channel === 'api' && (
+            <div className="cc-panel-section">
+              <div className="cc-panel-section-title">API 门 · 测试</div>
+              <button className="cc-panel-action" onClick={() => apiStore.newConversation()}>＋ 新建对话</button>
+              <button className="cc-panel-action" onClick={onEditClaudemd}>编辑人设</button>
+              <label className="cc-panel-toggle">
+                <span>衔接上文</span>
+                <button
+                  type="button"
+                  className={`ap-toggle${(state as any)?.continuity ? ' on' : ''}`}
+                  role="switch"
+                  aria-checked={!!(state as any)?.continuity}
+                  onClick={() => apiStore.setContinuity(!(state as any)?.continuity)}
+                ><span className="ap-toggle-knob" /></button>
+              </label>
+            </div>
+            )}
             {channel === 'cc' && (
             <div className="cc-panel-section">
               <div className="cc-panel-section-title">苏煦 · 人设</div>
@@ -1386,8 +1404,9 @@ function FileIconInline() {
 }
 
 function ClaudemdModal({
-  draft, loading, lastSave, onChange, onSave, onClose,
+  channel, draft, loading, lastSave, onChange, onSave, onClose,
 }: {
+  channel: 'cc' | 'api'
   draft: string
   loading: boolean
   lastSave: 'ok' | 'fail' | null
@@ -1398,7 +1417,7 @@ function ClaudemdModal({
   return (
     <div className="cc-modal-backdrop" onClick={onClose}>
       <div className="cc-modal cc-claudemd glass" onClick={(e) => e.stopPropagation()}>
-        <div className="cc-modal-title">编辑 苏煦 · CLAUDE.md</div>
+        <div className="cc-modal-title">{channel === 'api' ? '编辑 苏煦 · 人设 persona' : '编辑 苏煦 · CLAUDE.md'}</div>
         {loading ? (
           <div className="cc-panel-loading">加载中</div>
         ) : (
@@ -1410,7 +1429,7 @@ function ClaudemdModal({
             spellCheck={false}
           />
         )}
-        {lastSave === 'ok' && <div className="cc-claudemd-hint ok">已保存，下次开新会话生效</div>}
+        {lastSave === 'ok' && <div className="cc-claudemd-hint ok">{channel === 'api' ? '已保存' : '已保存，下次开新会话生效'}</div>}
         {lastSave === 'fail' && <div className="cc-claudemd-hint fail">保存失败</div>}
         <div className="cc-modal-actions">
           <button className="cc-panel-action" onClick={onSave} disabled={loading}>保存</button>

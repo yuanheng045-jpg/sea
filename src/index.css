@@ -5059,3 +5059,8 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none 
 .api-thinking { width: 100%; }
 .api-thinking summary { list-style: none; cursor: pointer; }
 .api-thinking summary::-webkit-details-marker { display: none; }
+
+
+/* 鲸鱼面板 API 门:衔接上文开关行 */
+.cc-panel-toggle { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
+.cc-panel-toggle .ap-toggle { flex: 0 0 auto; }
