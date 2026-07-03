@@ -4,6 +4,7 @@ import { AppCanvas, type AppDef } from './AppCanvas'
 const APPS: AppDef[] = [
   { key: 'theme', iconKey: 'theme', icon: '🎨', label: '主题', def: { x: 26, y: 22 } },
   { key: 'status', iconKey: 'status', icon: '⚙️', label: '状态', def: { x: 64, y: 30 } },
+  { key: 'memory', iconKey: 'memory', icon: '🐚', label: '记忆', def: { x: 26, y: 42 } },
 ]
 
 export function Page2({ onNavigate }: { onNavigate: (p: Page) => void }) {
