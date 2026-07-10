@@ -7,10 +7,9 @@ import { Fireplace } from './Fireplace'
 import { CCPage } from './CCPage'
 import { Page2 } from './Page2'
 import { StatusPage } from './StatusPage'
-import { MemoryPage } from './MemoryPage'
 import './appearance'  // 启动时 apply 外观偏好
 
-export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory'
+export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play'
 
 export function App() {
   const [page, setPage] = useState<Page>('home')
@@ -89,10 +88,9 @@ export function App() {
         {page === 'page2' && <Page2 onNavigate={setPage} />}
         {page === 'theme' && <ThemePanel onBack={() => setPage('page2')} />}
         {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
-        {page === 'memory' && <MemoryPage onBack={() => setPage('page2')} />}
         {page === 'cc'    && <CCPage onBack={() => setPage('home')} onNavigate={setPage} />}
         {page === 'api'   && <CCPage channel="api" onBack={() => setPage('home')} onNavigate={setPage} />}
-        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'memory' && (
+        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>
