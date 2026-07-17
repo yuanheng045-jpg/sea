@@ -8,6 +8,11 @@ const HOME_APPS: AppDef[] = [
   { key: 'voice',   iconKey: 'voice',   icon: '🐚', label: '海螺', def: { x: 28, y: 10 } },
   { key: 'reading', iconKey: 'reading', icon: '📖', label: '书',   def: { x: 67, y: 30 } },
   { key: 'play',    iconKey: 'play',    icon: '🍎', label: '苹果', def: { x: 39, y: 62 } },
+  { key: 'memory',  iconKey: 'memory',  icon: '🌙', label: '记忆', def: { x: 72, y: 76 } },
+  { key: 'garden',  iconKey: 'garden',  icon: '🌿', label: '花园', def: { x: 12, y: 40 } },
+  { key: 'projects', iconKey: 'projects', icon: '📁', label: '项目', def: { x: 12, y: 76 } },
+  { key: 'group',   iconKey: 'group',   icon: '🛋️', label: '客厅', def: { x: 88, y: 14 } },
+  { key: 'tide',    iconKey: 'tide',    icon: '🌊', label: '潮汐', def: { x: 85, y: 48 } },
 ]
 
 const CAL = [

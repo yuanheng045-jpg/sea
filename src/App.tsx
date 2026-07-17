@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+
 import { Home } from './Home'
 import { ThemePanel } from './ThemePanel'
 import { IconSlot } from './IconSlot'
@@ -7,9 +8,15 @@ import { Fireplace } from './Fireplace'
 import { CCPage } from './CCPage'
 import { Page2 } from './Page2'
 import { StatusPage } from './StatusPage'
+import { MemoryFrame } from './MemoryFrame'
+import { GardenFrame } from './GardenFrame'
+import { ProjectsFrame } from './ProjectsFrame'
+import { GroupPage } from './GroupPage'
+import { TidesPage } from './TidesPage'
+import { MoonPage } from './MoonPage'
 import './appearance'  // 启动时 apply 外观偏好
 
-export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play'
+export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon'
 
 export function App() {
   const [page, setPage] = useState<Page>('home')
@@ -85,18 +92,24 @@ export function App() {
       <RainSnow />
       <div className="content-scroll">
         {page === 'home'  && <Home onNavigate={setPage} />}
+        {page === 'memory' && <MemoryFrame onBack={setPage} />}
+        {page === 'garden' && <GardenFrame onBack={setPage} />}
+        {page === 'projects' && <ProjectsFrame onBack={setPage} />}
+        {page === 'group' && <GroupPage onBack={setPage} />}
+        {page === 'tide' && <TidesPage onBack={setPage} />}
+        {page === 'moon' && <MoonPage onBack={setPage} />}
         {page === 'page2' && <Page2 onNavigate={setPage} />}
         {page === 'theme' && <ThemePanel onBack={() => setPage('page2')} />}
         {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
         {page === 'cc'    && <CCPage onBack={() => setPage('home')} onNavigate={setPage} />}
         {page === 'api'   && <CCPage channel="api" onBack={() => setPage('home')} onNavigate={setPage} />}
-        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && (
+        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>
         )}
       </div>
-      {page !== 'cc' && page !== 'api' && (
+      {page !== 'cc' && page !== 'api' && page !== 'group' && (
       <nav className="dock">
         <button
           className="dock-edge"
