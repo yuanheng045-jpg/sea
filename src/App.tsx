@@ -4,6 +4,7 @@ import { Home } from './Home'
 import { ThemePanel } from './ThemePanel'
 import { IconSlot } from './IconSlot'
 import { RainSnow } from './RainSnow'
+import { CallOverlay } from './CallOverlay'
 import { Fireplace } from './Fireplace'
 import { CCPage } from './CCPage'
 import { Page2 } from './Page2'
@@ -14,9 +15,10 @@ import { ProjectsFrame } from './ProjectsFrame'
 import { GroupPage } from './GroupPage'
 import { TidesPage } from './TidesPage'
 import { MoonPage } from './MoonPage'
+import { CallHistoryPage } from './CallHistoryPage'
 import './appearance'  // 启动时 apply 外观偏好
 
-export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon'
+export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon' | 'callhistory'
 
 export function App() {
   const [page, setPage] = useState<Page>('home')
@@ -90,6 +92,7 @@ export function App() {
       <div className="chat-bg-img" aria-hidden />
       <div className="chat-bg-dim" aria-hidden />
       <RainSnow />
+      <CallOverlay />
       <div className="content-scroll">
         {page === 'home'  && <Home onNavigate={setPage} />}
         {page === 'memory' && <MemoryFrame onBack={setPage} />}
@@ -98,12 +101,13 @@ export function App() {
         {page === 'group' && <GroupPage onBack={setPage} />}
         {page === 'tide' && <TidesPage onBack={setPage} />}
         {page === 'moon' && <MoonPage onBack={setPage} />}
+        {page === 'callhistory' && <CallHistoryPage onBack={setPage} />}
         {page === 'page2' && <Page2 onNavigate={setPage} />}
         {page === 'theme' && <ThemePanel onBack={() => setPage('page2')} />}
         {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
         {page === 'cc'    && <CCPage onBack={() => setPage('home')} onNavigate={setPage} />}
         {page === 'api'   && <CCPage channel="api" onBack={() => setPage('home')} onNavigate={setPage} />}
-        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && (
+        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && page !== 'callhistory' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>

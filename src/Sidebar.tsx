@@ -4,6 +4,7 @@ import { useAppearance, updateAppearance, type Appearance } from './appearance'
 import { useChatState, setTextColor } from './chatStore'
 import { switchConversation } from './apiChat'
 import { ClaudeSparkle } from './CCPage'
+import { MusicHall } from './MusicHall'
 
 type SessionMeta = {
   id: string
@@ -13,12 +14,13 @@ type SessionMeta = {
   preview: string
 }
 
-type QuickItem = { key: string; label: string }
+type QuickItem = { key: string; label: string; url?: string }
 
 const QUICK_ITEMS: QuickItem[] = [
-  { key: 'music',   label: '音乐播放器' },
+  { key: 'music',   label: '音乐播放器', url: '#music-hall' },
   { key: 'reading', label: '共读' },
   { key: 'slot',    label: '抽卡' },
+  { key: 'arcade',  label: '游戏厅', url: 'https://toy.cedarstar.org/' },
 ]
 
 type ViewMsg = { role: string; ts: number; text: string }
@@ -37,6 +39,10 @@ export function Sidebar({
   const [viewing, setViewing] = useState<{ id: string; loading: boolean; messages: ViewMsg[] } | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [appearanceOpen, setAppearanceOpen] = useState(false)
+  const [overlay, setOverlay] = useState<{ url: string; title: string } | null>(null)
+  const [musicOpen, setMusicOpen] = useState(false)
+  const [dndCc, setDndCc] = useState<boolean | null>(null)
+  const [dndApi, setDndApi] = useState<boolean | null>(null)
   const appearance = useAppearance()
   const { textColors } = useChatState()
 
@@ -93,6 +99,43 @@ export function Sidebar({
       window.scrollTo(0, scrollY)
     }
   }, [open])
+
+  // 勿扰模式：打开侧栏时读当前状态；切换时乐观更新 + POST
+  useEffect(() => {
+    if (!open) return
+    let alive = true
+    fetch('/api/call/flags', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (alive && d) { if (typeof d.dnd_cc === 'boolean') setDndCc(d.dnd_cc); if (typeof d.dnd_api === 'boolean') setDndApi(d.dnd_api) } })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [open])
+
+  const toggleDndCc = () => {
+    const next = !dndCc
+    setDndCc(next)
+    fetch('/api/call/flags', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: 'cc', dnd: next }),
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d) { if (typeof d.dnd_cc === 'boolean') setDndCc(d.dnd_cc); if (typeof d.dnd_api === 'boolean') setDndApi(d.dnd_api) } })
+      .catch(() => { setDndCc(!next) })
+  }
+
+  const toggleDndApi = () => {
+    const next = !dndApi
+    setDndApi(next)
+    fetch('/api/call/flags', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: 'api', dnd: next }),
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d) { if (typeof d.dnd_cc === 'boolean') setDndCc(d.dnd_cc); if (typeof d.dnd_api === 'boolean') setDndApi(d.dnd_api) } })
+      .catch(() => { setDndApi(!next) })
+  }
 
   const startX = useRef<number | null>(null)
   const startY = useRef<number | null>(null)
@@ -170,9 +213,9 @@ export function Sidebar({
           <div className="sb-section-title">永久组件</div>
           <div className="sb-quick-grid">
             {QUICK_ITEMS.map(q => (
-              <button key={q.key} className="sb-quick-item" onClick={() => showToast(q.label + '·构建中')}>
+              <button key={q.key} className="sb-quick-item" onClick={() => q.url === '#music-hall' ? setMusicOpen(true) : q.url ? setOverlay({ url: q.url, title: q.label }) : showToast(q.label + '·构建中')}>
                 <span className="sb-q-label">{q.label}</span>
-                <span className="sb-q-tag">构建中</span>
+                <span className="sb-q-tag">{q.url ? '进入' : '构建中'}</span>
               </button>
             ))}
           </div>
@@ -195,6 +238,28 @@ export function Sidebar({
               <AppearancePanel appearance={appearance} textColors={textColors} />
             </div>
           </div>
+          <div className="sb-pref-item" style={{ cursor: 'default' }}>
+            <span className="sb-pref-label">🔕 勿扰模式 · 主聊天</span>
+            <button
+              className={`ap-toggle${dndCc ? ' on' : ''}`}
+              onClick={toggleDndCc}
+              role="switch"
+              aria-checked={!!dndCc}
+              aria-label="勿扰模式 · 主聊天"
+            ><span className="ap-toggle-knob" /></button>
+          </div>
+          <div className="ap-hint" style={{ padding: '0 10px 6px' }}>开启后苏煦不会主动打电话找你</div>
+          <div className="sb-pref-item" style={{ cursor: 'default' }}>
+            <span className="sb-pref-label">🔕 勿扰模式 · API 频道</span>
+            <button
+              className={`ap-toggle${dndApi ? ' on' : ''}`}
+              onClick={toggleDndApi}
+              role="switch"
+              aria-checked={!!dndApi}
+              aria-label="勿扰模式 · API 频道"
+            ><span className="ap-toggle-knob" /></button>
+          </div>
+          <div className="ap-hint" style={{ padding: '0 10px 6px' }}>开启后这边的苏煦不会主动开口或打电话</div>
           <button className="sb-pref-item" onClick={() => showToast('语音设置·构建中')}>
             <span className="sb-pref-label">语音设置</span>
             <span className="sb-pref-arrow">›</span>
@@ -235,6 +300,19 @@ export function Sidebar({
         </div>
       )}
 
+      {overlay && (
+        <div className="sb-viewer-backdrop" onClick={() => setOverlay(null)}>
+          <div className="sb-arcade" onClick={e => e.stopPropagation()}>
+            <header className="sb-viewer-head">
+              <span className="sb-viewer-title">{overlay.title}</span>
+              <button className="sb-close" onClick={() => setOverlay(null)} aria-label="关闭">×</button>
+            </header>
+            <iframe className="sb-arcade-frame" src={overlay.url} title="游戏厅" allow="clipboard-write" />
+          </div>
+        </div>
+      )}
+
+      {musicOpen && <MusicHall onClose={() => setMusicOpen(false)} />}
       {toast && <div className="sb-toast">{toast}</div>}
     </div>,
     document.body,

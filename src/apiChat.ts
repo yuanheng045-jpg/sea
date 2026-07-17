@@ -20,6 +20,7 @@ let _s: ApiState = {
 }
 let _continuity = true
 let _persona = ''
+let _voiceReply = false
 let _claudemdSave: 'ok' | 'fail' | null = null
 const subs = new Set<() => void>()
 function emit() { subs.forEach((f) => f()) }
@@ -68,6 +69,7 @@ export async function initApi() {
     }
     set({ providerId: or?.id ?? null, model, models, convId, messages: msgs, ready: true })
     try { const cc = await fetch('/api/config/chat', { credentials: 'include' }).then((r) => r.json()); _continuity = cc?.continuity_enabled ?? true; _persona = cc?.persona || ''; emit() } catch {}
+    try { const tc = await fetch('/api/config/tts', { credentials: 'include' }).then((r) => r.json()); _voiceReply = tc?.voice_reply_enabled ?? false; emit() } catch {}
   } catch (e: any) {
     set({ error: String(e?.message || e), ready: true })
   } finally { _initing = false }
@@ -146,6 +148,11 @@ export async function setContinuity(on: boolean) {
   emit()
   try { await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ continuity_enabled: on }) }) } catch {}
 }
+export async function setVoiceReply(on: boolean) {
+  _voiceReply = on
+  emit()
+  try { await fetch('/api/config/tts', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ voice_reply_enabled: on }) }) } catch {}
+}
 
 export function sendSessionAction(action: string, payload?: any) {
   if (action === 'session_set_model' && payload?.model) set({ model: payload.model })
@@ -178,7 +185,7 @@ export function useChatState() {
 let _viewRef: any = null
 let _viewKey = ''
 function _viewCache() {
-  const key = _s.messages.length + '|' + _s.streaming + '|' + _s.model + '|' + _s.ready + '|' + _continuity + '|' + _persona.length + '|' + _claudemdSave + '|' + _s.convId + '|' + (_s.messages[_s.messages.length - 1]?.content?.length || 0)
+  const key = _s.messages.length + '|' + _s.streaming + '|' + _s.model + '|' + _s.ready + '|' + _continuity + '|' + _voiceReply + '|' + _persona.length + '|' + _claudemdSave + '|' + _s.convId + '|' + (_s.messages[_s.messages.length - 1]?.content?.length || 0)
   if (key === _viewKey && _viewRef) return _viewRef
   _viewKey = key
   _viewRef = {
@@ -190,7 +197,7 @@ function _viewCache() {
     ccBusy: _s.streaming,
     streamingPhase: _s.streaming ? 'typing' : null,
     streamingElapsed: null,
-    sessionState: { model: _s.model, models: _s.models, convId: _s.convId, continuity: _continuity },
+    sessionState: { model: _s.model, models: _s.models, convId: _s.convId, continuity: _continuity, voiceReply: _voiceReply },
     actionPending: null,
     hintsEnabled: false,
     healthEnabled: false,

@@ -7,6 +7,8 @@ import { IconSlot } from './IconSlot'
 import { enablePush } from './push'
 import * as ccStore from './chatStore'
 import * as apiStore from './apiChat'
+import { startCall } from './callStore'
+import { SongPicker } from './SongPicker'
 import type { ChatMessage } from './chatStore'
 
 const SWIPE_THRESHOLD = 60
@@ -526,10 +528,25 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
     hintsEnabled, healthEnabled, claudemd, visibleCount,
   } = store.useChatState()
   useEffect(() => { if (channel === 'api') apiStore.initApi() }, [channel])
-  const visibleMessages: ChatMessage[] = messages.slice(-visibleCount)
+  // 通话功能发的合成提示(通话摘要请求/未接来电留言请求)走正常发消息管线,
+  // 好让回复正常生成、但这几条指令本身不该被当成她打的字显示出来——按内容前缀过滤,纯前端渲染层隐藏,不改存储。
+  const isSyntheticCallPrompt = (m: ChatMessage) =>
+    m.role === 'user' && typeof m.content === 'string' &&
+    (m.content.startsWith('〔通话结束〕') || m.content.startsWith('〔未接来电〕'))
+  // 通话里她说的话会带 [语音通话 · 语气] 前缀方便他理解语气,但显示时只留她实际说的话
+  const VOICE_CALL_PREFIX_RE = /^\[语音通话(?:\s*·[^\]]*)?\]\s*/
+  const displayContent = (m: ChatMessage): any =>
+    m.role === 'user' && typeof m.content === 'string' && VOICE_CALL_PREFIX_RE.test(m.content)
+      ? m.content.replace(VOICE_CALL_PREFIX_RE, '')
+      : m.content
+  const visibleMessages: ChatMessage[] = messages
+    .filter((m: ChatMessage) => !isSyntheticCallPrompt(m))
+    .map((m: ChatMessage) => (m.role === 'user' && typeof m.content === 'string' && VOICE_CALL_PREFIX_RE.test(m.content) ? { ...m, content: displayContent(m) } : m))
+    .slice(-visibleCount)
   const hasMore = messages.length > visibleCount
   const [draft, setDraft] = useState('')
   const [plusOpen, setPlusOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [moonFull, setMoonFull] = useState(false)
   const [styleEditorOpen, setStyleEditorOpen] = useState(false)
   const [editingStyle, setEditingStyle] = useState<'c' | 'f'>('c')
@@ -775,13 +792,22 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
         >
           <MoonSvg full={moonFull} />
         </button>
-        <button
-          className="cc-whale-btn"
-          onClick={() => setPanelOpen(true)}
-          aria-label="面板"
-        >
-          <WhaleSvg />
-        </button>
+        <div className="cc-top-right">
+          <button
+            className="cc-call-btn"
+            onClick={() => startCall(channel, channel === 'api' ? ((sessionState as any)?.convId ?? null) : null)}
+            aria-label="打电话"
+          >
+            <PhoneSvg />
+          </button>
+          <button
+            className="cc-whale-btn"
+            onClick={() => setPanelOpen(true)}
+            aria-label="面板"
+          >
+            <WhaleSvg />
+          </button>
+        </div>
       </header>
       <div className="cc-waterline" />
 
@@ -844,6 +870,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
           finally { setUploading(null); e.target.value = '' }
         }}
       />
+      {pickerOpen && <SongPicker onClose={() => setPickerOpen(false)} onPick={(tag) => { store.sendMessage(tag); setPickerOpen(false) }} />}
       <div className="cc-input-bar">
         <div className="cc-input-col">
         {attachments.length > 0 && (
@@ -874,6 +901,12 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
                   disabled={uploading !== null}
                   onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}
                 ><FileSvg /></button>
+                <button
+                  className="cc-plus-item"
+                  aria-label="点歌"
+                  onClick={(e) => { e.stopPropagation(); setPickerOpen(true); setPlusOpen(false) }}
+                  style={{ fontSize: 20, lineHeight: 1 }}
+                >♪</button>
                 <button
                   className={`cc-plus-item hints${hintsEnabled ? ' on' : ' off'}`}
                   onClick={(e) => { e.stopPropagation(); store.setHintsEnabled(!hintsEnabled) }}
@@ -1166,7 +1199,7 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
 }) {
   const store = channel === 'api' ? apiStore : ccStore
   const [confirming, setConfirming] = useState<null | 'forge' | 'compact'>(null)
-  const { actionPending } = store.useChatState()
+  const { actionPending, actionResult } = store.useChatState()
   const confirmTimerRef = useRef<number | undefined>(undefined)
   const tapAction = (a: 'forge' | 'compact') => {
     if (confirming === a) {
@@ -1232,6 +1265,19 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
                   : <>{curModel && !CC_MODELS.some((mm) => mm.value === curModel) ? <option value={curModel}>{shortModel(curModel)}（当前）</option> : null}{CC_MODELS.map((mm) => <option key={mm.value} value={mm.value}>{mm.label}</option>)}</>}
               </select>
             </div>
+            {channel !== 'api' && (
+            <div className="cc-panel-section">
+              <div className="cc-panel-section-title">思考强度 · 下条生效</div>
+              <select className="cc-model-select" style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', color: 'inherit' }} value={(state as any).effort || 'default'} onChange={(e) => store.sendSessionAction('session_set_effort', { effort: e.target.value })}>
+                <option value="max">max · 想得最深</option>
+                <option value="xhigh">xhigh · 加深</option>
+                <option value="high">high · 官方默认</option>
+                <option value="medium">medium</option>
+                <option value="low">low</option>
+                <option value="default">跟随 CLI 默认</option>
+              </select>
+            </div>
+            )}
             {channel === 'api' && (
             <div className="cc-panel-section">
               <div className="cc-panel-section-title">API 门 · 测试</div>
@@ -1245,6 +1291,16 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
                   role="switch"
                   aria-checked={!!(state as any)?.continuity}
                   onClick={() => apiStore.setContinuity(!(state as any)?.continuity)}
+                ><span className="ap-toggle-knob" /></button>
+              </label>
+              <label className="cc-panel-toggle">
+                <span>语音回复</span>
+                <button
+                  type="button"
+                  className={`ap-toggle${(state as any)?.voiceReply ? ' on' : ''}`}
+                  role="switch"
+                  aria-checked={!!(state as any)?.voiceReply}
+                  onClick={() => apiStore.setVoiceReply(!(state as any)?.voiceReply)}
                 ><span className="ap-toggle-knob" /></button>
               </label>
             </div>
@@ -1270,6 +1326,11 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
           </>
         )}
 
+        {actionResult ? (
+          <div className="cc-panel-meta" style={{ margin: '4px 0 6px', opacity: 0.8 }}>
+            {(actionResult.action === 'forge' ? '换窗' : '压缩') + (actionResult.ok ? '已完成' : '：' + (actionResult.note || '失败'))}
+          </div>
+        ) : null}
         <div className="cc-modal-actions">
           {channel === 'cc' && (<>
           <button
@@ -1360,6 +1421,14 @@ function HeartSvg() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round">
       <path d="M12 21s-7-4.5-9.5-9.5C0.5 7 4 3 7.5 3c2 0 3.5 1 4.5 2.5C13 4 14.5 3 16.5 3 20 3 23.5 7 21.5 11.5 19 16.5 12 21 12 21z" />
+    </svg>
+  )
+}
+
+function PhoneSvg() {
+  return (
+    <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="call-phone-svg">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
     </svg>
   )
 }

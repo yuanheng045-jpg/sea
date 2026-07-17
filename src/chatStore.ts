@@ -32,6 +32,7 @@ type State = {
   authed: boolean
   sessionState: Record<string, any> | null
   actionPending: 'forge' | 'compact' | null
+  actionResult: { action: string; ok: boolean; note?: string; ts: number } | null
   hintsEnabled: boolean
   healthEnabled: boolean
   textColors: { su: string; you: string }
@@ -86,6 +87,7 @@ let state: State = {
   authed: false,
   sessionState: null,
   actionPending: null,
+  actionResult: null,
   hintsEnabled: loadHints(),
   healthEnabled: loadHealth(),
   textColors: loadTextColors(),
@@ -250,7 +252,8 @@ function handleEvent(e: HubEvent) {
       break
     }
     case 'session_action_result': {
-      setState((s) => ({ ...s, actionPending: null }))
+      const r = e as any
+      setState((s) => ({ ...s, actionPending: null, actionResult: { action: r.action, ok: !!r.ok, note: r.note, ts: Date.now() } }))
       break
     }
     case 'claudemd': {
