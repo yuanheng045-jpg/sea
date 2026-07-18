@@ -8,6 +8,7 @@ import { enablePush } from './push'
 import * as ccStore from './chatStore'
 import * as apiStore from './apiChat'
 import { startCall } from './callStore'
+import { getPin } from './chatClient'
 import { SongPicker } from './SongPicker'
 import type { ChatMessage } from './chatStore'
 
@@ -522,6 +523,7 @@ const STYLES_KEY = 'sea-userstyles'
 export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => void; onNavigate: (p: Page) => void; channel?: 'cc' | 'api' }) {
   void onNavigate
   const store = channel === 'api' ? apiStore : ccStore
+  const stylesKey = channel === 'api' ? 'sea-userstyles-api' : STYLES_KEY
   const {
     messages, connected, authed, ccAlive, ccBusy,
     streamingPhase, streamingElapsed, sessionState,
@@ -587,30 +589,30 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   // 加载 user styles：先 localStorage 即时显示，再 fetch /api/status 拉服务端最新值覆盖
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STYLES_KEY)
+      const raw = localStorage.getItem(stylesKey)
       if (raw) setStyleTexts(JSON.parse(raw))
     } catch {}
     fetch('/api/status', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        const v = data?.['sea-userstyles']?.value
+        const v = data?.[stylesKey]?.value
         if (v && typeof v === 'object') {
           const next = { c: typeof v.c === 'string' ? v.c : '', f: typeof v.f === 'string' ? v.f : '' }
           setStyleTexts(next)
-          try { localStorage.setItem(STYLES_KEY, JSON.stringify(next)) } catch {}
+          try { localStorage.setItem(stylesKey, JSON.stringify(next)) } catch {}
         }
       })
       .catch(() => {})
-  }, [])
+  }, [stylesKey])
 
   const styleSaveTimer = useRef<number | undefined>(undefined)
   const saveStyle = (k: 'c' | 'f', text: string) => {
     const next = { ...styleTexts, [k]: text }
     setStyleTexts(next)
-    try { localStorage.setItem(STYLES_KEY, JSON.stringify(next)) } catch {}
+    try { localStorage.setItem(stylesKey, JSON.stringify(next)) } catch {}
     if (styleSaveTimer.current) window.clearTimeout(styleSaveTimer.current)
     styleSaveTimer.current = window.setTimeout(() => {
-      fetch('/api/status/sea-userstyles', {
+      fetch('/api/status/' + stylesKey, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -823,7 +825,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
               expanded={expandedThinking.has(m.id) || !!m.autoExpanded}
               onToggleThinking={() => toggleThinking(m.id, !!m.autoExpanded)}
             />
-            {m.role === 'user' && m.memoryHits && m.memoryHits.length > 0 && (
+            {m.memoryHits && m.memoryHits.length > 0 && (
               <details className="cc-memory-hits">
                 <summary>💡 命中 {m.memoryHits.length} 条记忆</summary>
                 <ul>
@@ -837,6 +839,12 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
                 </ul>
               </details>
             )}
+            {m.role === 'assistant' && m.memSaved && (
+              <div className="ap-msg-meta">🧠 {m.memSaved.ok ? '已记住' : '没记上'}{m.memSaved.content ? '：' + m.memSaved.content : ''}</div>
+            )}
+            {m.role === 'assistant' && m.usage && m.usage.input ? (
+              <div className="ap-msg-meta">缓存命中 {Math.round(((m.usage.cached || 0) / m.usage.input) * 100)}%{typeof m.usage.cost === 'number' && m.usage.cost > 0 ? ' · $' + m.usage.cost.toFixed(4) : ''}</div>
+            ) : null}
           </Fragment>
         ))}
       </div>
@@ -1199,6 +1207,7 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
 }) {
   const store = channel === 'api' ? apiStore : ccStore
   const [confirming, setConfirming] = useState<null | 'forge' | 'compact'>(null)
+  const [deletingConv, setDeletingConv] = useState<string | null>(null)
   const { actionPending, actionResult } = store.useChatState()
   const confirmTimerRef = useRef<number | undefined>(undefined)
   const tapAction = (a: 'forge' | 'compact') => {
@@ -1303,6 +1312,44 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
                   onClick={() => apiStore.setVoiceReply(!(state as any)?.voiceReply)}
                 ><span className="ap-toggle-knob" /></button>
               </label>
+              <label className="cc-panel-toggle">
+                <span>缓存 TTL</span>
+                <select className="ap-mini-select" value={(state as any)?.cacheTtl || '1h'} onChange={(e) => apiStore.setCacheTtl(e.target.value)}>
+                  <option value="1h">1小时</option>
+                  <option value="5m">5分钟</option>
+                </select>
+              </label>
+              <label className="cc-panel-toggle">
+                <span>换窗衔接条数</span>
+                <input type="number" min={2} max={20} className="ap-mini-select" style={{ width: 56 }} value={(state as any)?.continuityCount ?? 6} onChange={(e) => apiStore.setContinuityCount(Math.max(2, Math.min(20, Number(e.target.value) || 6)))} />
+              </label>
+              <label className="cc-panel-toggle">
+                <span>夜间压缩</span>
+                <button
+                  type="button"
+                  className={`ap-toggle${(state as any)?.nightRoll ? ' on' : ''}`}
+                  role="switch"
+                  aria-checked={!!(state as any)?.nightRoll}
+                  onClick={() => apiStore.setNightRoll(!(state as any)?.nightRoll)}
+                ><span className="ap-toggle-knob" /></button>
+              </label>
+              <label className="cc-panel-toggle">
+                <span>保留原文(轮)</span>
+                <input type="number" min={0} max={50} className="ap-mini-select" style={{ width: 56 }} value={(state as any)?.rollKeepRounds ?? 4} onChange={(e) => { const v = Number(e.target.value); apiStore.setRollKeepRounds(Math.max(0, Math.min(50, Number.isFinite(v) ? v : 4))) }} />
+              </label>
+            </div>
+            )}
+            {channel === 'api' && (
+            <div className="cc-panel-section">
+              <div className="cc-panel-section-title">对话 · 今日 ${Number((state as any)?.todayCost?.cost || 0).toFixed(2)}（{(state as any)?.todayCost?.turns || 0} 轮）</div>
+              <div className="ap-conv-list">
+                {(((state as any)?.convList || []) as any[]).map((c: any) => (
+                  <div key={c.id} className={'ap-conv-row' + (c.id === (state as any)?.convId ? ' cur' : '')}>
+                    <span className="ap-conv-title" onClick={() => apiStore.switchConversation(c.id)}>{c.title || '对话 ' + String(c.id).slice(0, 8)}</span>
+                    <button className="ap-conv-del" onClick={() => { if (deletingConv === c.id) { setDeletingConv(null); apiStore.deleteConversation(c.id) } else setDeletingConv(c.id) }}>{deletingConv === c.id ? '确认删除' : '✕'}</button>
+                  </div>
+                ))}
+              </div>
             </div>
             )}
             {channel === 'cc' && (
@@ -1448,7 +1495,7 @@ async function uploadToHub(file: File): Promise<{ url: string; name: string }> {
     r.onerror = () => reject(new Error('FileReader failed'))
     r.readAsDataURL(file)
   })
-  const pin = localStorage.getItem('sea-channel-pin') ?? ''
+  const pin = getPin()
   const res = await fetch('/cc-api/api/upload', {
     method: 'POST',
     credentials: 'include',
@@ -1550,7 +1597,7 @@ async function uploadBlobToHub(blob: Blob | File, mime: string, filename: string
     r.onerror = () => reject(new Error('FileReader'))
     r.readAsDataURL(blob)
   })
-  const pin = localStorage.getItem('sea-channel-pin') ?? ''
+  const pin = getPin()
   const res = await fetch('/cc-api/api/upload', {
     method: 'POST',
     credentials: 'include',

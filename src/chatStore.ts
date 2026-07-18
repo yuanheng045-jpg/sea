@@ -19,6 +19,8 @@ export type ChatMessage = {
   autoExpanded?: boolean
   memoryHits?: any[]
   fresh?: boolean
+  usage?: any
+  memSaved?: { ok: boolean; content: string }
 }
 
 type State = {

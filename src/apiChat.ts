@@ -21,6 +21,15 @@ let _s: ApiState = {
 let _continuity = true
 let _persona = ''
 let _voiceReply = false
+let _convList: any[] = []
+let _todayCost: any = null
+let _cacheTtl = '1h'
+let _hints = true
+let _health = false
+let _rollKeepRounds = 4
+let _nightRoll = true
+let _contCount = 6
+let _panelVer = 0
 let _claudemdSave: 'ok' | 'fail' | null = null
 const subs = new Set<() => void>()
 function emit() { subs.forEach((f) => f()) }
@@ -51,6 +60,7 @@ export async function initApi() {
     try {
       const convs = await fetch('/api/conversations', { credentials: 'include' }).then((r) => r.json())
       const cl = Array.isArray(convs) ? convs : (convs?.conversations || [])
+      _convList = cl
       convId = cl[0]?.id ?? null
     } catch {}
     if (!convId) {
@@ -68,8 +78,10 @@ export async function initApi() {
       } catch {}
     }
     set({ providerId: or?.id ?? null, model, models, convId, messages: msgs, ready: true })
-    try { const cc = await fetch('/api/config/chat', { credentials: 'include' }).then((r) => r.json()); _continuity = cc?.continuity_enabled ?? true; _persona = cc?.persona || ''; emit() } catch {}
+    refreshCost()
+    try { const cc = await fetch('/api/config/chat', { credentials: 'include' }).then((r) => r.json()); _continuity = cc?.continuity_enabled ?? true; _persona = cc?.persona || ''; _cacheTtl = cc?.cache_ttl || '1h'; _contCount = cc?.continuity_count ?? 6; _health = cc?.health_enabled ?? false; _rollKeepRounds = cc?.roll_keep_rounds ?? 4; _nightRoll = cc?.night_roll_enabled ?? true; emit() } catch {}
     try { const tc = await fetch('/api/config/tts', { credentials: 'include' }).then((r) => r.json()); _voiceReply = tc?.voice_reply_enabled ?? false; emit() } catch {}
+    try { const mc = await fetch('/api/config/memory', { credentials: 'include' }).then((r) => r.json()); _hints = mc?.inject_enabled ?? true; emit() } catch {}
   } catch (e: any) {
     set({ error: String(e?.message || e), ready: true })
   } finally { _initing = false }
@@ -92,13 +104,15 @@ export function sendMessage(text: string, _extra?: any) {
     try {
       const res = await fetch('/api/chat/completions', {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, model: _s.model, provider_id: _s.providerId, conversation_id: _s.convId, temperature: 0.7 }),
+        body: JSON.stringify({ messages: history, model: _s.model, provider_id: _s.providerId, conversation_id: _s.convId, temperature: 0.7, style: (_extra && typeof _extra.style === 'string' && _extra.style.trim()) ? _extra.style : undefined }),
       })
       if (!res.ok || !res.body) throw new Error('HTTP ' + res.status)
       const reader = res.body.getReader()
       const dec = new TextDecoder()
       let buf = '', content = '', thinking = ''
       let hits: any[] | undefined
+      let usage: any = undefined
+      let memSaved: any = undefined
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
@@ -113,6 +127,8 @@ export function sendMessage(text: string, _extra?: any) {
           try { p = JSON.parse(data) } catch { continue }
           if (p.error) { content += '\n[错误] ' + p.error; continue }
           if (p.type === 'memory_hits') hits = p.hits
+          if (p.type === 'msg_saved') usage = p.usage
+          if (p.type === 'memory_saved') memSaved = { ok: !!p.ok, content: p.content || '' }
           const delta = p.choices?.[0]?.delta
           if (delta?.thinking) thinking += delta.thinking
           if (delta?.content) content += delta.content
@@ -120,6 +136,8 @@ export function sendMessage(text: string, _extra?: any) {
         }
       }
       updateAi(aiId, content, thinking, hits, false)
+      if (usage || memSaved) { _s = { ..._s, messages: _s.messages.map((m) => m.id === aiId ? { ...m, usage, memSaved } : m) }; _panelVer++; emit() }
+      refreshCost(); refreshConvs()
     } catch (e: any) {
       updateAi(aiId, '[连接失败] ' + (e?.message || e), '', undefined, false)
     } finally { set({ streaming: false }) }
@@ -154,13 +172,51 @@ export async function setVoiceReply(on: boolean) {
   try { await fetch('/api/config/tts', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ voice_reply_enabled: on }) }) } catch {}
 }
 
+export async function refreshConvs() {
+  try { const l = await fetch('/api/conversations', { credentials: 'include' }).then((r) => r.json()); _convList = Array.isArray(l) ? l : (l?.conversations || []); _panelVer++; emit() } catch {}
+}
+export async function refreshCost() {
+  try { _todayCost = await fetch('/api/chat/cost-today', { credentials: 'include' }).then((r) => r.json()); _panelVer++; emit() } catch {}
+}
+export async function setCacheTtl(v: string) {
+  _cacheTtl = v; _panelVer++; emit()
+  try { await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cache_ttl: v }) }) } catch {}
+}
+export async function setContinuityCount(n: number) {
+  _contCount = n; _panelVer++; emit()
+  try { await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ continuity_count: n }) }) } catch {}
+}
+export async function deleteConversation(id: string) {
+  try { await fetch('/api/conversations/' + id, { method: 'DELETE', credentials: 'include' }) } catch {}
+  await refreshConvs()
+  if (_s.convId === id) {
+    const next = _convList.find((c: any) => c.id !== id)
+    if (next) { const cur = _s.convId; _s = { ..._s, convId: null }; void cur; await switchConversation(next.id) }
+    else await newConversation()
+  }
+}
+
 export function sendSessionAction(action: string, payload?: any) {
   if (action === 'session_set_model' && payload?.model) set({ model: payload.model })
 }
 // hub-print 特有,API 门无对应 → 空实现(不崩)
 export function sendRaw(_msg: any) {}
-export function setHintsEnabled(_v: boolean) {}
-export function setHealthEnabled(_v: boolean) {}
+export async function setHintsEnabled(v: boolean) {
+  _hints = v; _panelVer++; emit()
+  try { await fetch('/api/config/memory', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inject_enabled: v }) }) } catch {}
+}
+export async function setHealthEnabled(v: boolean) {
+  _health = v; _panelVer++; emit()
+  try { await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ health_enabled: v }) }) } catch {}
+}
+export async function setNightRoll(v: boolean) {
+  _nightRoll = v; _panelVer++; emit()
+  try { await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ night_roll_enabled: v }) }) } catch {}
+}
+export async function setRollKeepRounds(n: number) {
+  _rollKeepRounds = n; _panelVer++; emit()
+  try { await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roll_keep_rounds: n }) }) } catch {}
+}
 export async function sendClaudemdGet() {
   try { const cc = await fetch('/api/config/chat', { credentials: 'include' }).then((r) => r.json()); _persona = cc?.persona || ''; _claudemdSave = null; emit() } catch {}
 }
@@ -185,7 +241,7 @@ export function useChatState() {
 let _viewRef: any = null
 let _viewKey = ''
 function _viewCache() {
-  const key = _s.messages.length + '|' + _s.streaming + '|' + _s.model + '|' + _s.ready + '|' + _continuity + '|' + _voiceReply + '|' + _persona.length + '|' + _claudemdSave + '|' + _s.convId + '|' + (_s.messages[_s.messages.length - 1]?.content?.length || 0)
+  const key = _s.messages.length + '|' + _s.streaming + '|' + _s.model + '|' + _s.ready + '|' + _continuity + '|' + _voiceReply + '|' + _persona.length + '|' + _claudemdSave + '|' + _s.convId + '|' + (_s.messages[_s.messages.length - 1]?.content?.length || 0) + '|' + _panelVer + '|' + _cacheTtl + '|' + _contCount
   if (key === _viewKey && _viewRef) return _viewRef
   _viewKey = key
   _viewRef = {
@@ -197,10 +253,10 @@ function _viewCache() {
     ccBusy: _s.streaming,
     streamingPhase: _s.streaming ? 'typing' : null,
     streamingElapsed: null,
-    sessionState: { model: _s.model, models: _s.models, convId: _s.convId, continuity: _continuity, voiceReply: _voiceReply },
+    sessionState: { model: _s.model, models: _s.models, convId: _s.convId, continuity: _continuity, voiceReply: _voiceReply, cacheTtl: _cacheTtl, continuityCount: _contCount, rollKeepRounds: _rollKeepRounds, nightRoll: _nightRoll, convList: _convList, todayCost: _todayCost },
     actionPending: null,
-    hintsEnabled: false,
-    healthEnabled: false,
+    hintsEnabled: _hints,
+    healthEnabled: _health,
     textColors: loadColors(),
     claudemd: { content: _persona, lastSave: _claudemdSave },
     continuity: _continuity,

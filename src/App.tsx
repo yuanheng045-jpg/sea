@@ -16,9 +16,11 @@ import { GroupPage } from './GroupPage'
 import { TidesPage } from './TidesPage'
 import { MoonPage } from './MoonPage'
 import { CallHistoryPage } from './CallHistoryPage'
+import { ReadingPage } from './ReadingPage'
+import { EchoFrame } from './EchoFrame'
 import './appearance'  // 启动时 apply 外观偏好
 
-export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon' | 'callhistory'
+export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon' | 'callhistory' | 'echo'
 
 export function App() {
   const [page, setPage] = useState<Page>('home')
@@ -102,12 +104,14 @@ export function App() {
         {page === 'tide' && <TidesPage onBack={setPage} />}
         {page === 'moon' && <MoonPage onBack={setPage} />}
         {page === 'callhistory' && <CallHistoryPage onBack={setPage} />}
+        {page === 'reading' && <ReadingPage onBack={setPage} />}
+        {page === 'echo' && <EchoFrame onBack={setPage} />}
         {page === 'page2' && <Page2 onNavigate={setPage} />}
         {page === 'theme' && <ThemePanel onBack={() => setPage('page2')} />}
         {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
         {page === 'cc'    && <CCPage onBack={() => setPage('home')} onNavigate={setPage} />}
         {page === 'api'   && <CCPage channel="api" onBack={() => setPage('home')} onNavigate={setPage} />}
-        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && page !== 'callhistory' && (
+        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && page !== 'callhistory' && page !== 'reading' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>

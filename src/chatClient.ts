@@ -5,6 +5,22 @@
 const WS_URL = 'wss://cc.atlantis-sy.blue/'
 const PIN_KEY = 'sea-channel-pin'
 const CLIENT_ID_KEY = 'sea-client-id'
+// Server-side HttpOnly cookie: immune to iOS ITP 7-day JS storage cap
+async function fetchPinFromCookie(): Promise<string | null> {
+  try {
+    const r = await fetch('/cc-api/pin-check', { credentials: 'include' })
+    if (!r.ok) return null
+    const d = await r.json()
+    return d.ok ? d.pin : null
+  } catch { return null }
+}
+async function setPinCookie(pin: string): Promise<void> {
+  try { await fetch('/cc-api/pin-login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) }) } catch {}
+}
+
+export function getPin(): string {
+  return localStorage.getItem(PIN_KEY) || ''
+}
 
 export type HubEvent =
   | { type: 'open' }
@@ -60,12 +76,14 @@ export function createChatClient(opts?: {
 
   const authWithPin = async () => {
     let pin = localStorage.getItem(PIN_KEY)
+    if (!pin) pin = await fetchPinFromCookie()
     if (!pin) {
       const entered = await Promise.resolve(promptPin())
-      if (entered) {
-        localStorage.setItem(PIN_KEY, entered)
-        pin = entered
-      }
+      if (entered) pin = entered
+    }
+    if (pin) {
+      localStorage.setItem(PIN_KEY, pin)
+      setPinCookie(pin)
     }
     if (pin && ws?.readyState === WebSocket.OPEN) {
       let cid = localStorage.getItem(CLIENT_ID_KEY)

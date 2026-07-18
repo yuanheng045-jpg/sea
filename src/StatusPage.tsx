@@ -102,8 +102,10 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
   const [busyT, setBusyT] = useState<string | null>(null)
   const [actMsg, setActMsg] = useState<string | null>(null)
   const [guardBusy, setGuardBusy] = useState<string | null>(null)
-  const [guardEdit, setGuardEdit] = useState<{ nudge: string; nightguard: string } | null>(null)
+  const [guardEdit, setGuardEdit] = useState<{ nudge: string; nightguard: string; nightnote: string; nightpatrol: string; heartalertPrompt: string; heartalertThreshold: number } | null>(null)
   const [savingGuard, setSavingGuard] = useState(false)
+  const [heartInput, setHeartInput] = useState<string>('')
+  const [heartSaving, setHeartSaving] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true); setErr(null)
@@ -119,6 +121,21 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
   }, [])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { const t = data?.guard?.heartalert?.threshold ?? data?.guard?.heart_alert_threshold; if (t != null) setHeartInput(String(t)) }, [data?.guard?.heartalert?.threshold, data?.guard?.heart_alert_threshold])
+  const saveHeart = async (raw: string) => {
+    const n = Math.max(40, Math.min(200, Math.round(Number(raw)) || 95))
+    setHeartInput(String(n))
+    const cur = data?.guard?.heartalert?.threshold ?? data?.guard?.heart_alert_threshold
+    if (n === cur) return
+    setHeartSaving(true)
+    try {
+      const r = await fetch('/api/sysctl', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'guard-set', guard: { heartalert: { threshold: n } } }) })
+      const j = await r.json()
+      if (j.ok) { setData((d: any) => ({ ...d, guard: { ...d.guard, heartalert: { ...d.guard.heartalert, threshold: n }, heart_alert_threshold: n } })); setActMsg(`心率阈值 → ${n} bpm ✓`) }
+      else setActMsg('保存失败')
+    } catch { setActMsg('保存失败') }
+    finally { setHeartSaving(false); setTimeout(() => setActMsg(null), 2500) }
+  }
 
   const copyErr = async (it: any, i: number) => {
     const text = `[${it.time}] ${it.unit || ''}${it.location ? '  ' + it.location : ''}\n${it.full || it.summary || ''}`
@@ -141,12 +158,13 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
     }
   }
 
-  const toggleGuard = async (field: 'nudge' | 'nightguard', value: boolean) => {
+  const toggleGuard = async (field: 'nudge' | 'nightguard' | 'nightnote' | 'nightpatrol' | 'heartalert', value: boolean) => {
     setGuardBusy(field)
     try {
       const r = await fetch('/api/sysctl', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'guard-set', guard: { [field]: { enabled: value } } }) })
       const j = await r.json()
-      if (j.ok) { setData((d: any) => ({ ...d, guard: { ...d.guard, [field]: { ...d.guard[field], enabled: value } } })); setActMsg(`${field === 'nudge' ? '主动找瑶' : '凌晨守护'} 已${value ? '开启' : '关闭'}`) }
+      const label = field === 'nudge' ? '主动找瑶' : field === 'nightguard' ? '凌晨守护' : field === 'nightnote' ? '夜记' : field === 'nightpatrol' ? '夜巡' : '心率告警'
+      if (j.ok) { setData((d: any) => ({ ...d, guard: { ...d.guard, [field]: { ...d.guard[field], enabled: value } } })); setActMsg(`${label} 已${value ? '开启' : '关闭'}`) }
       else setActMsg('切换失败')
     } catch { setActMsg('切换失败') }
     finally { setGuardBusy(null); setTimeout(() => setActMsg(null), 2500) }
@@ -155,9 +173,9 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
     if (!guardEdit) return
     setSavingGuard(true)
     try {
-      const r = await fetch('/api/sysctl', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'guard-set', guard: { nudge: { prompt: guardEdit.nudge }, nightguard: { prompt: guardEdit.nightguard } } }) })
+      const r = await fetch('/api/sysctl', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'guard-set', guard: { nudge: { prompt: guardEdit.nudge }, nightguard: { prompt: guardEdit.nightguard }, nightnote: { prompt: guardEdit.nightnote }, nightpatrol: { prompt: guardEdit.nightpatrol }, heartalert: { prompt: guardEdit.heartalertPrompt, threshold: Math.max(40, Math.min(200, Math.round(guardEdit.heartalertThreshold) || 95)) } } }) })
       const j = await r.json()
-      if (j.ok) { setData((d: any) => ({ ...d, guard: { ...d.guard, nudge: { ...d.guard.nudge, prompt: guardEdit.nudge }, nightguard: { ...d.guard.nightguard, prompt: guardEdit.nightguard } } })); setGuardEdit(null); setActMsg('提示语已保存 ✓') }
+      if (j.ok) { const clamped = Math.max(40, Math.min(200, Math.round(guardEdit.heartalertThreshold) || 95)); setData((d: any) => ({ ...d, guard: { ...d.guard, nudge: { ...d.guard.nudge, prompt: guardEdit.nudge }, nightguard: { ...d.guard.nightguard, prompt: guardEdit.nightguard }, nightnote: { ...d.guard.nightnote, prompt: guardEdit.nightnote }, nightpatrol: { ...d.guard.nightpatrol, prompt: guardEdit.nightpatrol }, heartalert: { ...d.guard.heartalert, prompt: guardEdit.heartalertPrompt, threshold: clamped }, heart_alert_threshold: clamped } })); setGuardEdit(null); setActMsg('已保存 ✓') }
       else setActMsg('保存失败')
     } catch { setActMsg('保存失败') }
     finally { setSavingGuard(false); setTimeout(() => setActMsg(null), 2500) }
@@ -237,11 +255,23 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
           <div className="st-cardhead">
             <Gear size={26} teeth={21} reverse className="st-ico" />
             <h3>守护 <em>nudge · nightguard</em></h3>
-            <button className="st-act st-act-edit" onClick={() => setGuardEdit({ nudge: guard?.nudge?.prompt || '', nightguard: guard?.nightguard?.prompt || '' })}>编辑提示语</button>
+            <button className="st-act st-act-edit" onClick={() => setGuardEdit({ nudge: guard?.nudge?.prompt || '', nightguard: guard?.nightguard?.prompt || '', nightnote: guard?.nightnote?.prompt || '', nightpatrol: guard?.nightpatrol?.prompt || '', heartalertPrompt: guard?.heartalert?.prompt || '', heartalertThreshold: guard?.heartalert?.threshold ?? guard?.heart_alert_threshold ?? 95 })}>编辑提示语</button>
           </div>
           <div className="st-row"><span>主动找瑶 nudge</span>{guard ? <Switch on={!!guard.nudge?.enabled} busy={guardBusy === 'nudge'} onClick={() => toggleGuard('nudge', !guard.nudge?.enabled)} /> : <b>—</b>}</div>
           <div className="st-row"><span>凌晨守护 nightguard</span>{guard ? <Switch on={!!guard.nightguard?.enabled} busy={guardBusy === 'nightguard'} onClick={() => toggleGuard('nightguard', !guard.nightguard?.enabled)} /> : <b>—</b>}</div>
-          <div className="st-row"><span>心率告警阈值</span><b>{guard?.heart_alert_threshold != null ? `${guard.heart_alert_threshold} bpm` : '—'}</b></div>
+          <div className="st-row"><span>夜巡 nightpatrol</span>{guard ? <Switch on={!!guard.nightpatrol?.enabled} busy={guardBusy === 'nightpatrol'} onClick={() => toggleGuard('nightpatrol', !guard.nightpatrol?.enabled)} /> : <b>—</b>}</div>
+          <div className="st-row"><span>心率告警 heartalert</span>{guard ? <Switch on={!!guard.heartalert?.enabled} busy={guardBusy === 'heartalert'} onClick={() => toggleGuard('heartalert', !guard.heartalert?.enabled)} /> : <b>—</b>}</div>
+          <div className="st-row"><span>心率阈值</span><span><input type="number" min={40} max={200} step={1} value={heartInput} disabled={heartSaving} onChange={(e) => setHeartInput(e.target.value)} onBlur={(e) => saveHeart(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur() }} style={{ width: '3.5em', textAlign: 'right', background: 'transparent', border: 'none', outline: 'none', padding: '2px 0', color: 'inherit', font: 'inherit' }} /> bpm{heartSaving ? ' …' : ''}</span></div>
+        </section>
+
+        {/* 4.5 夜记 */}
+        <section className="glass st-card">
+          <div className="st-cardhead">
+            <Gear size={26} teeth={19} reverse className="st-ico" />
+            <h3>夜记 <em>night_note</em></h3>
+            <button className="st-act st-act-edit" onClick={() => setGuardEdit({ nudge: guard?.nudge?.prompt || '', nightguard: guard?.nightguard?.prompt || '', nightnote: guard?.nightnote?.prompt || '', nightpatrol: guard?.nightpatrol?.prompt || '', heartalertPrompt: guard?.heartalert?.prompt || '', heartalertThreshold: guard?.heartalert?.threshold ?? guard?.heart_alert_threshold ?? 95 })}>编辑提示语</button>
+          </div>
+          <div className="st-row"><span>夜记 nightnote</span>{guard ? <Switch on={!!guard.nightnote?.enabled} busy={guardBusy === 'nightnote'} onClick={() => toggleGuard('nightnote', !guard.nightnote?.enabled)} /> : <b>—</b>}</div>
         </section>
 
         {/* 5. 引擎 */}
@@ -313,10 +343,18 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
         <div className="st-modal-backdrop" onClick={() => setGuardEdit(null)}>
           <div className="glass st-modal st-modal-edit" onClick={(e) => e.stopPropagation()}>
             <h4 className="st-modal-title">编辑提示语</h4>
-            <label className="st-editlabel">主动找瑶 nudge <small>{'{idleHr}'} = 静默小时数</small></label>
-            <textarea className="st-textarea" rows={7} value={guardEdit.nudge} onChange={(e) => setGuardEdit((g) => g ? { ...g, nudge: e.target.value } : g)} />
-            <label className="st-editlabel">凌晨守护 nightguard <small>{'{app}'} = 应用名</small></label>
-            <textarea className="st-textarea" rows={3} value={guardEdit.nightguard} onChange={(e) => setGuardEdit((g) => g ? { ...g, nightguard: e.target.value } : g)} />
+            <label className="st-editlabel">主动找瑶 nudge <small>{'{idleHr}'} = 静默小时数；空 = 用默认</small><button type="button" onClick={() => setGuardEdit((g) => g ? { ...g, nudge: guard?.defaults?.nudge || '' } : g)} style={{ marginLeft: 8, fontSize: 11, padding: 0, background: 'transparent', border: 'none', color: 'inherit', opacity: 0.55, textDecoration: 'underline', cursor: 'pointer' }}>填入默认</button></label>
+            <textarea className="st-textarea" rows={7} value={guardEdit.nudge} placeholder={guard?.defaults?.nudge || ''} onChange={(e) => setGuardEdit((g) => g ? { ...g, nudge: e.target.value } : g)} />
+            <label className="st-editlabel">凌晨守护 nightguard <small>{'{app}'} = 应用名；空 = 用默认</small><button type="button" onClick={() => setGuardEdit((g) => g ? { ...g, nightguard: guard?.defaults?.nightguard || '' } : g)} style={{ marginLeft: 8, fontSize: 11, padding: 0, background: 'transparent', border: 'none', color: 'inherit', opacity: 0.55, textDecoration: 'underline', cursor: 'pointer' }}>填入默认</button></label>
+            <textarea className="st-textarea" rows={3} value={guardEdit.nightguard} placeholder={guard?.defaults?.nightguard || ''} onChange={(e) => setGuardEdit((g) => g ? { ...g, nightguard: e.target.value } : g)} />
+            <label className="st-editlabel">夜巡 nightpatrol <small>22:00–07:30 每 ~50min 一巡，她安静≥50min 才发；空 = 用默认</small><button type="button" onClick={() => setGuardEdit((g) => g ? { ...g, nightpatrol: guard?.defaults?.nightpatrol || '' } : g)} style={{ marginLeft: 8, fontSize: 11, padding: 0, background: 'transparent', border: 'none', color: 'inherit', opacity: 0.55, textDecoration: 'underline', cursor: 'pointer' }}>填入默认</button></label>
+            <textarea className="st-textarea" rows={4} value={guardEdit.nightpatrol} placeholder={guard?.defaults?.nightpatrol || ''} onChange={(e) => setGuardEdit((g) => g ? { ...g, nightpatrol: e.target.value } : g)} />
+            <label className="st-editlabel">心率告警阈值 <small>bpm，40–200</small></label>
+            <input type="number" className="st-textarea" min={40} max={200} step={1} value={guardEdit.heartalertThreshold} onChange={(e) => setGuardEdit((g) => g ? { ...g, heartalertThreshold: Number(e.target.value) } : g)} />
+            <label className="st-editlabel">心率告警 heartalert <small>{'{hr}'} = 实际心率，{'{threshold}'} = 阈值；空 = 用默认</small><button type="button" onClick={() => setGuardEdit((g) => g ? { ...g, heartalertPrompt: guard?.defaults?.heartalert || '' } : g)} style={{ marginLeft: 8, fontSize: 11, padding: 0, background: 'transparent', border: 'none', color: 'inherit', opacity: 0.55, textDecoration: 'underline', cursor: 'pointer' }}>填入默认</button></label>
+            <textarea className="st-textarea" rows={3} value={guardEdit.heartalertPrompt} placeholder={guard?.defaults?.heartalert || ''} onChange={(e) => setGuardEdit((g) => g ? { ...g, heartalertPrompt: e.target.value } : g)} />
+            <label className="st-editlabel">夜记 nightnote <small>空 = 用默认；末尾会自动附待裁决提示</small><button type="button" onClick={() => setGuardEdit((g) => g ? { ...g, nightnote: guard?.defaults?.nightnote || '' } : g)} style={{ marginLeft: 8, fontSize: 11, padding: 0, background: 'transparent', border: 'none', color: 'inherit', opacity: 0.55, textDecoration: 'underline', cursor: 'pointer' }}>填入默认</button></label>
+            <textarea className="st-textarea" rows={5} value={guardEdit.nightnote} placeholder={guard?.defaults?.nightnote || ''} onChange={(e) => setGuardEdit((g) => g ? { ...g, nightnote: e.target.value } : g)} />
             <div className="st-modal-btns">
               <button className="st-modal-cancel" onClick={() => setGuardEdit(null)}>取消</button>
               <button className="st-modal-ok" disabled={savingGuard} onClick={saveGuardEdit}>{savingGuard ? '保存中…' : '保存'}</button>
