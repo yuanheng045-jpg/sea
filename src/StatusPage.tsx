@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { StatusCharts } from './StatusCharts'
 
 type Sys = any
 
@@ -158,12 +159,12 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
     }
   }
 
-  const toggleGuard = async (field: 'nudge' | 'nightguard' | 'nightnote' | 'nightpatrol' | 'heartalert', value: boolean) => {
+  const toggleGuard = async (field: 'nudge' | 'continuetag' | 'nightguard' | 'nightnote' | 'nightpatrol' | 'heartalert', value: boolean) => {
     setGuardBusy(field)
     try {
       const r = await fetch('/api/sysctl', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'guard-set', guard: { [field]: { enabled: value } } }) })
       const j = await r.json()
-      const label = field === 'nudge' ? '主动找瑶' : field === 'nightguard' ? '凌晨守护' : field === 'nightnote' ? '夜记' : field === 'nightpatrol' ? '夜巡' : '心率告警'
+      const label = field === 'nudge' ? '主动找瑶' : field === 'continuetag' ? '续话闹钟' : field === 'nightguard' ? '凌晨守护' : field === 'nightnote' ? '夜记' : field === 'nightpatrol' ? '夜巡' : '心率告警'
       if (j.ok) { setData((d: any) => ({ ...d, guard: { ...d.guard, [field]: { ...d.guard[field], enabled: value } } })); setActMsg(`${label} 已${value ? '开启' : '关闭'}`) }
       else setActMsg('切换失败')
     } catch { setActMsg('切换失败') }
@@ -237,6 +238,8 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
           <div className="st-row"><span>数据源</span><b>{pulse ? <><Dot ok={!!pulse.online} /> {pulse.online ? '在线' : '离线'}</> : '—'} <span className="st-faint">{pulse?.date || ''}</span></b></div>
         </section>
 
+        <StatusCharts />
+
         {/* 3. 记忆 */}
         <section className="glass st-card st-card-wide">
           <div className="st-cardhead"><Gear size={26} teeth={24} className="st-ico" /><h3>记忆 <em>puppy</em></h3></div>
@@ -258,6 +261,7 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
             <button className="st-act st-act-edit" onClick={() => setGuardEdit({ nudge: guard?.nudge?.prompt || '', nightguard: guard?.nightguard?.prompt || '', nightnote: guard?.nightnote?.prompt || '', nightpatrol: guard?.nightpatrol?.prompt || '', heartalertPrompt: guard?.heartalert?.prompt || '', heartalertThreshold: guard?.heartalert?.threshold ?? guard?.heart_alert_threshold ?? 95 })}>编辑提示语</button>
           </div>
           <div className="st-row"><span>主动找瑶 nudge</span>{guard ? <Switch on={!!guard.nudge?.enabled} busy={guardBusy === 'nudge'} onClick={() => toggleGuard('nudge', !guard.nudge?.enabled)} /> : <b>—</b>}</div>
+          <div className="st-row"><span>续话闹钟 continue</span>{guard ? <Switch on={guard.continuetag?.enabled !== false} busy={guardBusy === 'continuetag'} onClick={() => toggleGuard('continuetag', guard.continuetag?.enabled === false)} /> : <b>—</b>}</div>
           <div className="st-row"><span>凌晨守护 nightguard</span>{guard ? <Switch on={!!guard.nightguard?.enabled} busy={guardBusy === 'nightguard'} onClick={() => toggleGuard('nightguard', !guard.nightguard?.enabled)} /> : <b>—</b>}</div>
           <div className="st-row"><span>夜巡 nightpatrol</span>{guard ? <Switch on={!!guard.nightpatrol?.enabled} busy={guardBusy === 'nightpatrol'} onClick={() => toggleGuard('nightpatrol', !guard.nightpatrol?.enabled)} /> : <b>—</b>}</div>
           <div className="st-row"><span>心率告警 heartalert</span>{guard ? <Switch on={!!guard.heartalert?.enabled} busy={guardBusy === 'heartalert'} onClick={() => toggleGuard('heartalert', !guard.heartalert?.enabled)} /> : <b>—</b>}</div>

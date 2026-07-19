@@ -3667,6 +3667,45 @@ body[data-power-save] .gear, body[data-power-save] .butterfly, body[data-power-s
 .st-textarea { width: 100%; box-sizing: border-box; background: oklch(1 0 0 / 0.5); border: 1px solid oklch(1 0 0 / 0.6); border-radius: 12px; padding: 9px 11px; font-family: var(--font-body); font-size: 12.5px; color: var(--ink); line-height: 1.55; resize: vertical; }
 .st-textarea:focus { outline: none; border-color: oklch(0.62 0.1 250 / 0.55); background: oklch(1 0 0 / 0.62); }
 
+/* ===== 状态页：情绪曲线 / 心率回放 ===== */
+.st-chart-card { gap: 9px; }
+.st-chart-icon {
+  width: 26px; height: 26px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-style: italic; font-size: 25px; color: oklch(0.5 0.1 250 / 0.72);
+}
+.st-chart-icon.heart { font-size: 17px; color: oklch(0.58 0.14 25 / 0.72); }
+.st-chart-range {
+  margin-left: auto; appearance: none; -webkit-appearance: none; border: 0.5px solid oklch(1 0 0 / 0.58);
+  border-radius: 999px; padding: 4px 22px 4px 10px; color: var(--ink-soft); font-family: var(--font-body); font-size: 11px;
+  background: oklch(1 0 0 / 0.42) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%236b7280' stroke-width='1.2'/%3E%3C/svg%3E") no-repeat right 9px center;
+}
+.st-chart-range:focus { outline: none; border-color: oklch(0.62 0.1 250 / 0.52); }
+.st-chart-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; color: var(--ink-soft); font-size: 10.5px; }
+.st-chart-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.st-chart-legend i { width: 13px; height: 2px; border-radius: 99px; }
+.st-chart-wrap {
+  position: relative; width: 100%; overflow: hidden; border-radius: 12px;
+  background: oklch(1 0 0 / 0.17); border: 0.5px solid oklch(1 0 0 / 0.38);
+}
+.st-chart-canvas { display: block; width: 100%; height: 220px; touch-action: pan-y; }
+.st-chart-tip {
+  position: absolute; z-index: 4; top: 8px; transform: translateX(8px); min-width: 118px; max-width: 210px;
+  display: flex; flex-direction: column; gap: 2px; padding: 7px 9px; pointer-events: none;
+  border-radius: 9px; border: 0.5px solid oklch(1 0 0 / 0.62); color: var(--ink-soft);
+  background: oklch(0.97 0.01 250 / 0.88); box-shadow: 0 8px 22px oklch(0.3 0.04 252 / 0.14);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 10.5px; line-height: 1.35;
+}
+.st-chart-tip.left { transform: translateX(calc(-100% - 8px)); }
+.st-chart-tip b { color: var(--ink); font-size: 11px; font-weight: 600; }
+.st-chart-tip strong { color: oklch(0.52 0.12 235); font-size: 16px; font-weight: 500; }
+.st-chart-tip em { color: oklch(0.54 0.12 25); font-style: normal; word-break: break-word; }
+.st-chart-note { color: var(--ink-faint); font-size: 10.5px; line-height: 1.45; }
+.st-chart-error { min-height: 120px; display: flex; align-items: center; justify-content: center; color: oklch(0.58 0.14 25); font-size: 12px; }
+@media (max-width: 420px) {
+  .st-chart-canvas { height: 205px; }
+  .st-chart-card { padding-left: 12px; padding-right: 12px; }
+}
+
 /* ── Music card — glass tank with seawater progress (matches .glass) ── */
 .mc-card {
   position: relative;
@@ -5573,4 +5612,3 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none 
 .rd-result-lang { font-size: 12px; color: var(--text-soft, #a09888); margin-bottom: 10px; opacity: .7; }
 .rd-import-btn { border: 1px solid #b0543f; border-radius: 8px; padding: 8px 20px; background: none; color: #b0543f; font-size: 13px; cursor: pointer; font-family: inherit; }
 .rd-import-btn:disabled { opacity: .5; }
-
