@@ -378,6 +378,12 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
               <div className="rd-chat-msg rd-chat-ai" style={{ opacity: 0.6 }}>选一段文字，聊聊这本书。</div>
             ) : recentMsgs.map((m: ChatMessage, i: number) => (
               <div key={m.id || i} className={`rd-chat-msg rd-chat-${m.role === 'user' ? 'me' : 'ai'}${m.pending ? ' pending' : ''}`}>
+                {m.role === 'assistant' && m.thinking && (
+                  <details className="rd-chat-thinking" open={m.pending || undefined}>
+                    <summary>思考</summary>
+                    <div>{m.thinking}</div>
+                  </details>
+                )}
                 {typeof m.content === 'string' ? m.content : ''}
               </div>
             ))}
