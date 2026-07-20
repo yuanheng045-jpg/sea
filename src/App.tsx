@@ -117,7 +117,7 @@ export function App() {
           </div>
         )}
       </div>
-      {page !== 'cc' && page !== 'api' && page !== 'group' && (
+      {page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'reading' && (
       <nav className="dock">
         <button
           className="dock-edge"
