@@ -2878,6 +2878,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
 /* ====== v13: 对话文字颜色用 CSS var（重写覆盖之前两份硬写） ====== */
 .cc-msg.assistant .cc-text { color: var(--text-su, oklch(0.42 0.07 256)) !important; }
 .cc-msg.user .cc-text { color: var(--text-you, oklch(0.50 0.13 78)) !important; }
+.cc-thinking-toggle, .cc-thinking-body { color: var(--text-thinking, var(--ink-soft)) !important; }
 
 /* ====== v16: 物理打光感 —— specular + rim + 底部压重 ====== */
 .glass {
@@ -5559,7 +5560,7 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none 
 .rd-chat-msg { max-width: 82%; padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .rd-chat-me { align-self: flex-end; background: #b0543f; color: #faf8f5; }
 .rd-chat-ai { align-self: flex-start; background: var(--card, rgba(0,0,0,.04)); }
-.rd-chat-thinking { margin-bottom: 6px; color: var(--text-soft, #8a8071); font-size: 12px; }
+.rd-chat-thinking { margin-bottom: 6px; color: var(--text-thinking, var(--text-soft, #8a8071)); font-size: 12px; }
 .rd-chat-thinking summary { cursor: pointer; font-style: italic; user-select: none; }
 .rd-chat-thinking div { margin-top: 6px; padding: 5px 8px; border-left: 1.5px solid rgba(176,160,200,.45); line-height: 1.55; white-space: pre-wrap; }
 .rd-chat-input { display: flex; gap: 8px; padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px); border-top: 1px solid var(--border, rgba(0,0,0,.06)); }

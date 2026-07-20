@@ -473,6 +473,10 @@ function AppearancePanel({ appearance: a, textColors }: {
           <input type="color" value={textColors.you} onChange={e => setTextColor('you', e.target.value)} aria-label="原瑶颜色" />
           <span>原瑶</span>
         </label>
+        <label className="ap-color-row">
+          <input type="color" value={a.thinkingColor} onChange={e => updateAppearance({ thinkingColor: e.target.value })} aria-label="思考颜色" />
+          <span>思考</span>
+        </label>
       </div>
     </div>
   )

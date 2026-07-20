@@ -12,6 +12,7 @@ export type Appearance = {
   bgCurrent: number
   bgDim: number
   bubbles: boolean
+  thinkingColor: string
 }
 
 const DEFAULT_APPEARANCE: Appearance = {
@@ -21,6 +22,7 @@ const DEFAULT_APPEARANCE: Appearance = {
   bgCurrent: 0,
   bgDim: 18,
   bubbles: false,
+  thinkingColor: '#6f7888',
 }
 
 let cache: Appearance | null = null
@@ -51,6 +53,7 @@ export function apply(a?: Appearance) {
   body.setAttribute('data-chat-bubbles', v.bubbles ? 'on' : 'off')
   body.style.setProperty('--chat-bg-color', v.bgColor)
   body.style.setProperty('--chat-bg-dim', String(v.bgDim / 100))
+  body.style.setProperty('--text-thinking', v.thinkingColor)
   const img = v.bgImages[v.bgCurrent]
   if (img) body.style.setProperty('--chat-bg-image', `url("${img.replace(/"/g, '\\"')}")`)
   else body.style.removeProperty('--chat-bg-image')
