@@ -1121,7 +1121,12 @@ function MessageRow({ message, expanded, onToggleThinking }: {
             aria-expanded={thinkingExpanded}
           >
             <span className="cc-thinking-flower" aria-hidden="true"><ClaudeSparkle /></span>
-            <span>{thinkingActive ? '思考中' : 'Undercurrent'}</span>
+            <span className="cc-undercurrent-label">Undercurrent</span>
+            {thinkingActive && (
+              <span className="cc-undercurrent-dots" aria-hidden="true">
+                <i>.</i><i>.</i><i>.</i>
+              </span>
+            )}
           </button>
         )}
         {hasThinking && thinkingExpanded && (
