@@ -2075,6 +2075,10 @@ button { font: inherit; cursor: pointer; color: inherit; }
   transform-origin: center;
   opacity: 0.82;
 }
+.cc-thinking-flower .claude-sparkle {
+  width: 16px;
+  height: 16px;
+}
 .cc-thinking-toggle.active .cc-thinking-flower {
   animation: cc-thinking-bloom 1.35s ease-in-out infinite;
 }

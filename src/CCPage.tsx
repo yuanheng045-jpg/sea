@@ -1120,8 +1120,8 @@ function MessageRow({ message, expanded, onToggleThinking }: {
             onClick={hasThinking ? onToggleThinking : undefined}
             aria-expanded={thinkingExpanded}
           >
-            <span className="cc-thinking-flower" aria-hidden="true">✻</span>
-            <span>{thinkingActive ? '思考中' : '思考过程'}</span>
+            <span className="cc-thinking-flower" aria-hidden="true"><ClaudeSparkle /></span>
+            <span>{thinkingActive ? '思考中' : 'Undercurrent'}</span>
           </button>
         )}
         {hasThinking && thinkingExpanded && (
