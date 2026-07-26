@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Page } from './App'
+import { startCall } from './callStore'
 
 // 通话记录页:读 /api/call/history,列出已结束 / 未接的通话
 interface CallRecord {
@@ -76,9 +77,17 @@ export function CallHistoryPage({ onBack }: { onBack: (p: Page) => void }) {
       <style>{CH_CSS}</style>
       <header className="ch-header">
         <button className="ch-back" onClick={() => onBack('home')}>‹</button>
-        <span className="ch-title">通话记录</span>
+        <span className="ch-title">通话</span>
         <span />
       </header>
+
+      <section className="ch-dial">
+        <button className="ch-dial-btn" onClick={() => { void startCall('cc', null) }}>
+          <CallPhoneSvg />
+        </button>
+        <div className="ch-dial-label">打给苏煦</div>
+      </section>
+      <div className="ch-section-title">通话记录</div>
 
       {error ? (
         <div className="ch-empty">还连不上,稍后再看</div>
@@ -116,11 +125,29 @@ export function CallHistoryPage({ onBack }: { onBack: (p: Page) => void }) {
   )
 }
 
+function CallPhoneSvg() {
+  return (
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  )
+}
+
 const CH_CSS = `
 .ch-page { padding: 20px 16px 60px; max-width: 480px; margin: 0 auto; min-height: 100%; }
 .ch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .ch-back { background: none; border: none; font-size: 24px; color: var(--ink-soft); cursor: pointer; padding: 4px 8px; line-height: 1; }
 .ch-title { font-family: var(--font-display); font-size: 20px; color: var(--ink); letter-spacing: 0.02em; }
+.ch-dial { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 8px 0 24px; }
+.ch-dial-btn {
+  width: 62px; height: 62px; border-radius: 50%; border: 1px solid oklch(0.62 0.13 256 / 0.35);
+  display: flex; align-items: center; justify-content: center; color: #5f8fe6; cursor: pointer;
+  background: linear-gradient(160deg, rgba(120,165,235,0.24), rgba(90,135,215,0.10)), var(--glass-bg);
+  box-shadow: var(--shadow-glass); transition: transform 0.16s ease, opacity 0.16s ease;
+}
+.ch-dial-btn:active { transform: scale(0.94); }
+.ch-dial-label { font-family: var(--font-body); font-size: 13px; color: var(--ink-soft); }
+.ch-section-title { margin: 0 2px 8px; font-family: var(--font-display); font-size: 14px; color: var(--ink-faint); letter-spacing: 0.06em; }
 .ch-empty { text-align: center; color: var(--ink-faint); font-size: 13px; padding: 40px 0; }
 .ch-list { display: flex; flex-direction: column; gap: 8px; }
 .ch-item {

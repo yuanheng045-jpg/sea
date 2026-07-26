@@ -796,13 +796,6 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
         </button>
         <div className="cc-top-right">
           <button
-            className="cc-call-btn"
-            onClick={() => startCall(channel, channel === 'api' ? ((sessionState as any)?.convId ?? null) : null)}
-            aria-label="打电话"
-          >
-            <PhoneSvg />
-          </button>
-          <button
             className="cc-whale-btn"
             onClick={() => setPanelOpen(true)}
             aria-label="面板"
@@ -915,6 +908,16 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
                   onClick={(e) => { e.stopPropagation(); setPickerOpen(true); setPlusOpen(false) }}
                   style={{ fontSize: 20, lineHeight: 1 }}
                 >♪</button>
+                <button
+                  className="cc-plus-item"
+                  aria-label="打电话"
+                  title="打电话"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setPlusOpen(false)
+                    void startCall(channel, channel === 'api' ? ((sessionState as any)?.convId ?? null) : null)
+                  }}
+                ><PhoneSvg /></button>
                 <button
                   className={`cc-plus-item hints${hintsEnabled ? ' on' : ' off'}`}
                   onClick={(e) => { e.stopPropagation(); store.setHintsEnabled(!hintsEnabled) }}
