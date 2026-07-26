@@ -1998,7 +1998,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
 }
 
 .cc-msg { display: flex; gap: 10px; align-items: flex-start; }
-.cc-msg.pending { opacity: 0.55; }
+.cc-msg.pending { opacity: 1; }
 
 .cc-avatar-col { flex: 0 0 28px; padding-top: 2px; }
 .cc-avatar {
@@ -2056,18 +2056,32 @@ button { font: inherit; cursor: pointer; color: inherit; }
   cursor: pointer;
   padding: 0 0 4px 0;
   letter-spacing: 0.04em;
-  font-style: italic;
+  font-style: normal;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .cc-thinking-toggle:hover { color: var(--ink-soft); }
-.cc-thinking-arrow {
-  display: inline-block;
-  transition: transform 0.2s var(--ease-spring);
-  font-style: normal;
+.cc-thinking-flower {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: #5f8fe6;
+  font-size: 16px;
+  line-height: 1;
+  transform: scale(0.88);
+  transform-origin: center;
+  opacity: 0.82;
 }
-.cc-thinking-toggle.open .cc-thinking-arrow { transform: rotate(90deg); }
+.cc-thinking-toggle.active .cc-thinking-flower {
+  animation: cc-thinking-bloom 1.35s ease-in-out infinite;
+}
+@keyframes cc-thinking-bloom {
+  0%, 100% { transform: scale(0.76); opacity: 0.55; }
+  50% { transform: scale(1.14); opacity: 1; }
+}
 .cc-thinking-body {
   font-family: var(--font-body);
   font-size: 12.5px;
@@ -3235,8 +3249,8 @@ button { font: inherit; cursor: pointer; color: inherit; }
   white-space: nowrap;
 }
 
-/* v45: messages 间距 16 → 24 */
-.cc-messages { gap: 24px !important; }
+/* v45: 收紧主聊天双方消息的垂直距离 */
+.cc-messages { gap: 6px !important; }
 
 /* v46: 排版细调 —— line-height 1.75 + 段间距 9 + justify + 22em 字区宽 */
 .cc-text {

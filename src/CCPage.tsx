@@ -822,8 +822,8 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
           <Fragment key={m.id}>
             <MessageRow
               message={m}
-              expanded={expandedThinking.has(m.id) || !!m.autoExpanded}
-              onToggleThinking={() => toggleThinking(m.id, !!m.autoExpanded)}
+              expanded={expandedThinking.has(m.id)}
+              onToggleThinking={() => toggleThinking(m.id, false)}
             />
             {m.memoryHits && m.memoryHits.length > 0 && (
               <details className="cc-memory-hits">
@@ -1100,6 +1100,9 @@ function MessageRow({ message, expanded, onToggleThinking }: {
     : message.content ? JSON.stringify(message.content) : ''
   const isAssistant = message.role === 'assistant'
   const hasThinking = isAssistant && typeof message.thinking === 'string' && message.thinking.length > 0
+  const thinkingActive = isAssistant && !!message.pending && text.length === 0
+  const showThinking = thinkingActive || hasThinking
+  const thinkingExpanded = thinkingActive || expanded
   return (
     <div className={`cc-msg ${message.role}${message.pending ? ' pending' : ''}`}>
       <div className="cc-avatar-col">
@@ -1110,16 +1113,19 @@ function MessageRow({ message, expanded, onToggleThinking }: {
         />
       </div>
       <div className="cc-text-col">
-        {hasThinking && (
+        {showThinking && (
           <button
-            className={`cc-thinking-toggle${expanded ? ' open' : ''}`}
-            onClick={onToggleThinking}
+            type="button"
+            className={`cc-thinking-toggle${thinkingActive ? ' active' : ''}${thinkingExpanded ? ' open' : ''}`}
+            onClick={hasThinking ? onToggleThinking : undefined}
+            aria-expanded={thinkingExpanded}
           >
-            <span className="cc-thinking-arrow">›</span> 思考
+            <span className="cc-thinking-flower" aria-hidden="true">✻</span>
+            <span>{thinkingActive ? '思考中' : '思考过程'}</span>
           </button>
         )}
-        {hasThinking && expanded && (
-          <div className="cc-thinking-body">{message.thinking}</div>
+        {hasThinking && thinkingExpanded && (
+          <div className="cc-thinking-body" aria-live="polite">{message.thinking}</div>
         )}
         {message.image && (
           <img

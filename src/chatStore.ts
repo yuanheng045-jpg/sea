@@ -147,9 +147,16 @@ function handleEvent(e: HubEvent) {
       const streamId = `stream-${t.reply_to ?? Date.now()}`
       setState((s) => {
         if (s.messages.some((m) => m.id === streamId)) return s
+        const messages = [...s.messages]
+        for (let i = messages.length - 1; i >= 0; i--) {
+          if (messages[i].role === 'assistant' && messages[i].pending && messages[i].id.startsWith('stream-wait-')) {
+            messages[i] = { ...messages[i], id: streamId, autoExpanded: true }
+            return { ...s, messages }
+          }
+        }
         return {
           ...s,
-          messages: [...s.messages, {
+          messages: [...messages, {
             id: streamId,
             role: 'assistant',
             content: '',
@@ -239,9 +246,37 @@ function handleEvent(e: HubEvent) {
     case 'cc_status':
       setState((s) => ({ ...s, ccAlive: !!(e as any).alive }))
       break
-    case 'cc_busy':
-      setState((s) => ({ ...s, ccBusy: !!(e as any).busy }))
+    case 'cc_busy': {
+      const busy = !!(e as any).busy
+      setState((s) => {
+        if (!busy) {
+          return {
+            ...s,
+            ccBusy: false,
+            messages: s.messages.filter((m) =>
+              !(m.role === 'assistant' && m.pending && !m.content && !m.thinking)
+            ),
+          }
+        }
+        if (s.messages.some((m) => m.role === 'assistant' && m.pending)) {
+          return { ...s, ccBusy: busy }
+        }
+        return {
+          ...s,
+          ccBusy: true,
+          messages: [...s.messages, {
+            id: `stream-wait-${Date.now()}`,
+            role: 'assistant',
+            content: '',
+            thinking: '',
+            ts: Date.now(),
+            pending: true,
+            autoExpanded: true,
+          }],
+        }
+      })
       break
+    }
     case 'streaming_status':
       setState((s) => ({
         ...s,
