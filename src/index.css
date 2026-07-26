@@ -4711,9 +4711,24 @@ body[data-chat-bubbles="on"] .cc-thinking-body {
 /* voice 混合消息的尾部时间戳 */
 .cc-msg-time-block {
   display: block;
-  margin-top: 3px;
+  margin: 3px 0 0;
   font-size: 10.5px;
   opacity: 0.55;
+}
+.cc-msg.assistant .cc-msg-time-block { text-align: left; }
+.cc-msg.user .cc-msg-time-block { text-align: right; }
+body[data-chat-bubbles="on"] .cc-msg-time-block {
+  position: static;
+  inset: auto;
+  bottom: auto;
+}
+body[data-chat-bubbles="on"] .cc-msg.assistant .cc-msg-time-block {
+  align-self: flex-start;
+  margin-left: 22px;
+}
+body[data-chat-bubbles="on"] .cc-msg.user .cc-msg-time-block {
+  align-self: flex-end;
+  margin-right: 22px;
 }
 /* 气泡态下语音条左对齐(苏煦) */
 body[data-chat-bubbles="on"] .cc-msg.assistant .cc-voice { align-self: flex-start; }
