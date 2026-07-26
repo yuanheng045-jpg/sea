@@ -97,9 +97,16 @@ export function sendMessage(text: string, _extra?: any) {
   if (_s.streaming || !text.trim()) return
   const userMsg: ChatMessage = { id: 'u' + Date.now(), role: 'user', content: text, ts: Date.now() }
   const aiId = 'a' + Date.now()
-  const aiMsg: ChatMessage = { id: aiId, role: 'assistant', content: '', pending: true, ts: Date.now() }
+  const aiMsg: ChatMessage = { id: aiId, role: 'assistant', content: '', pending: true, autoExpanded: true, ts: Date.now() }
   const history = [..._s.messages, userMsg].map((m) => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '' }))
-  set({ messages: [..._s.messages, userMsg, aiMsg], streaming: true })
+  set({
+    messages: [
+      ..._s.messages.map((m) => m.autoExpanded ? { ...m, autoExpanded: false } : m),
+      userMsg,
+      aiMsg,
+    ],
+    streaming: true,
+  })
   ;(async () => {
     try {
       const res = await fetch('/api/chat/completions', {
@@ -229,7 +236,9 @@ export async function sendClaudemdSave(c: string) {
   emit()
 }
 export function loadMoreMessages() {}
-export function clearAutoExpanded(_id: string) {}
+export function clearAutoExpanded(id: string) {
+  set({ messages: _s.messages.map((m) => m.id === id ? { ...m, autoExpanded: false } : m) })
+}
 
 export function useChatState() {
   return useSyncExternalStore(

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, Fragment, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, Fragment, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Sidebar } from './Sidebar'
 import { observeBubble } from './bubbleIO'
@@ -428,10 +428,49 @@ function TextBlock({ text, fresh }: { text: string; fresh?: boolean }) {
   )
 }
 
-function MessageBody({ text, fresh, ts }: { text: string; fresh?: boolean; ts?: number }) {
+function MessageBody({ text, fresh, ts, onDoubleTap }: {
+  text: string
+  fresh?: boolean
+  ts?: number
+  onDoubleTap?: () => void
+}) {
   const blocks = useMemo(() => parseAttachBlocks(text), [text])
+  const pointerDownRef = useRef<{ x: number; y: number; at: number } | null>(null)
+  const lastTapRef = useRef<{ x: number; y: number; at: number } | null>(null)
+  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!onDoubleTap) return
+    pointerDownRef.current = { x: e.clientX, y: e.clientY, at: Date.now() }
+  }
+  const handlePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!onDoubleTap) return
+    const target = e.target as HTMLElement
+    if (target.closest('a, button, audio, input, textarea')) {
+      lastTapRef.current = null
+      return
+    }
+    const down = pointerDownRef.current
+    pointerDownRef.current = null
+    const now = Date.now()
+    if (!down || now - down.at > 400 || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) {
+      lastTapRef.current = null
+      return
+    }
+    const previous = lastTapRef.current
+    if (previous && now - previous.at < 360 && Math.hypot(e.clientX - previous.x, e.clientY - previous.y) < 28) {
+      lastTapRef.current = null
+      e.preventDefault()
+      onDoubleTap()
+      return
+    }
+    lastTapRef.current = { x: e.clientX, y: e.clientY, at: now }
+  }
   return (
-    <div className="cc-text">
+    <div
+      className="cc-text"
+      onPointerDown={onDoubleTap ? handlePointerDown : undefined}
+      onPointerUp={onDoubleTap ? handlePointerUp : undefined}
+      style={onDoubleTap ? { touchAction: 'manipulation' } : undefined}
+    >
       {blocks.map((b, bi) => {
         if (b.t === 'img') return <ImgOrLink key={bi} url={b.v} />
         if (b.t === 'html') return <HtmlCard key={bi} url={b.v} />
@@ -564,9 +603,18 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const [attachments, setAttachments] = useState<Array<{ kind: 'image' | 'file'; url: string; name?: string }>>([])
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [expandedThinking, setExpandedThinking] = useState<Set<string>>(new Set())
+  const latestUserMessageRef = useRef<string | null | undefined>(undefined)
   const listRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const latestUser = [...messages].reverse().find((m) => m.role === 'user')?.id ?? null
+    if (latestUserMessageRef.current !== undefined && latestUser !== latestUserMessageRef.current) {
+      setExpandedThinking(new Set())
+    }
+    latestUserMessageRef.current = latestUser
+  }, [messages])
 
   useEffect(() => {
     if (!sentinelRef.current || !listRef.current || !hasMore) return
@@ -815,8 +863,8 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
           <Fragment key={m.id}>
             <MessageRow
               message={m}
-              expanded={expandedThinking.has(m.id)}
-              onToggleThinking={() => toggleThinking(m.id, false)}
+              expanded={expandedThinking.has(m.id) || !!m.autoExpanded}
+              onToggleThinking={() => toggleThinking(m.id, !!m.autoExpanded)}
             />
             {m.memoryHits && m.memoryHits.length > 0 && (
               <details className="cc-memory-hits">
@@ -1166,7 +1214,14 @@ function MessageRow({ message, expanded, onToggleThinking }: {
         {Array.isArray(message.htmls) && message.htmls.map((u: string, i: number) => (
           <HtmlCard key={i} url={u} />
         ))}
-        {text && <MessageBody text={text} fresh={message.fresh} ts={message.ts} />}
+        {text && (
+          <MessageBody
+            text={text}
+            fresh={message.fresh}
+            ts={message.ts}
+            onDoubleTap={isAssistant && hasThinking ? onToggleThinking : undefined}
+          />
+        )}
       </div>
     </div>
   )
