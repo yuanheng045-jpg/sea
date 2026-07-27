@@ -18,9 +18,10 @@ import { MoonPage } from './MoonPage'
 import { CallHistoryPage } from './CallHistoryPage'
 import { ReadingPage } from './ReadingPage'
 import { EchoFrame } from './EchoFrame'
+import { WindowsillPage } from './WindowsillPage'
 import './appearance'  // 启动时 apply 外观偏好
 
-export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon' | 'callhistory' | 'echo'
+export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon' | 'callhistory' | 'echo' | 'windowsill'
 
 export function App() {
   const [page, setPage] = useState<Page>('home')
@@ -101,6 +102,7 @@ export function App() {
         {page === 'garden' && <GardenFrame onBack={setPage} />}
         {page === 'projects' && <ProjectsFrame onBack={setPage} />}
         {page === 'group' && <GroupPage onBack={setPage} />}
+        {page === 'windowsill' && <WindowsillPage onBack={() => setPage('home')} />}
         {page === 'tide' && <TidesPage onBack={setPage} />}
         {page === 'moon' && <MoonPage onBack={setPage} />}
         {page === 'callhistory' && <CallHistoryPage onBack={setPage} />}
@@ -111,13 +113,13 @@ export function App() {
         {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
         {page === 'cc'    && <CCPage onBack={() => setPage('home')} onNavigate={setPage} />}
         {page === 'api'   && <CCPage channel="api" onBack={() => setPage('home')} onNavigate={setPage} />}
-        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && page !== 'callhistory' && page !== 'reading' && (
+        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && page !== 'callhistory' && page !== 'reading' && page !== 'windowsill' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>
         )}
       </div>
-      {page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'reading' && (
+      {page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'reading' && page !== 'windowsill' && (
       <nav className="dock">
         <button
           className="dock-edge"

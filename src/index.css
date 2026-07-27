@@ -5676,3 +5676,98 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none 
 .rd-result-lang { font-size: 12px; color: var(--text-soft, #a09888); margin-bottom: 10px; opacity: .7; }
 .rd-import-btn { border: 1px solid #b0543f; border-radius: 8px; padding: 8px 20px; background: none; color: #b0543f; font-size: 13px; cursor: pointer; font-family: inherit; }
 .rd-import-btn:disabled { opacity: .5; }
+
+
+/* ─── 窗台：不是图库，是一条留有呼吸的时间线 ─── */
+.ws-page {
+  min-height: 100dvh;
+  color: var(--text, #514b43);
+  background:
+    linear-gradient(112deg, rgba(255,248,222,.18) 0 24%, transparent 42%),
+    linear-gradient(180deg, rgba(244,239,224,.28), transparent 42%);
+}
+.ws-header {
+  position: sticky; top: 0; z-index: 3;
+  display: grid; grid-template-columns: 42px 1fr 42px; align-items: center;
+  padding: 18px 18px 14px;
+  background: color-mix(in srgb, var(--bg, #f5f2eb) 84%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(110,96,72,.09);
+}
+.ws-header h1 { margin: 0; font: 500 24px/1.2 "LXGW WenKai", serif; letter-spacing: .12em; }
+.ws-header p { margin: 5px 0 0; font-size: 11px; opacity: .48; letter-spacing: .08em; }
+.ws-back, .ws-refresh, .ws-close {
+  border: 0; background: transparent; color: inherit; cursor: pointer; font-family: inherit;
+}
+.ws-back { justify-self: start; font-size: 30px; font-weight: 200; opacity: .62; }
+.ws-refresh { justify-self: end; font-size: 19px; opacity: .4; }
+.ws-refresh:disabled { opacity: .18; }
+.ws-timeline { position: relative; max-width: 680px; margin: 0 auto; padding: 30px 22px 100px 44px; }
+.ws-timeline::before {
+  content: ""; position: absolute; left: 25px; top: 42px; bottom: 70px; width: 1px;
+  background: linear-gradient(rgba(119,103,77,.06), rgba(119,103,77,.24), rgba(119,103,77,.03));
+}
+.ws-state { padding: 90px 12px; text-align: center; font-size: 13px; opacity: .45; }
+.ws-error { color: #9d655f; opacity: .78; }
+.ws-empty { padding: 95px 18px; text-align: center; }
+.ws-empty-light {
+  display: block; width: 94px; height: 1px; margin: 0 auto 35px;
+  background: linear-gradient(90deg, transparent, rgba(215,179,87,.75), transparent);
+  box-shadow: 0 -18px 42px 18px rgba(248,221,142,.12);
+}
+.ws-empty p { margin: 0 0 10px; font: 16px "LXGW WenKai", serif; letter-spacing: .12em; opacity: .7; }
+.ws-empty small { font-size: 11px; opacity: .38; }
+.ws-row { position: relative; margin: 0 0 44px; }
+.ws-day { margin: 0 0 15px 4px; font-size: 12px; letter-spacing: .08em; opacity: .46; }
+.ws-dot {
+  position: absolute; left: -24px; top: 4px; width: 5px; height: 5px; border-radius: 50%;
+  background: #b6a47d; box-shadow: 0 0 0 5px rgba(182,164,125,.08);
+}
+.ws-row:has(.ws-day) .ws-dot { top: 35px; }
+.ws-card {
+  width: 100%; padding: 0; overflow: hidden; text-align: left; cursor: pointer;
+  border: 1px solid rgba(112,101,80,.10); border-radius: 5px 18px 18px 18px;
+  background: rgba(255,255,255,.20); color: inherit;
+  box-shadow: 0 14px 42px rgba(73,62,42,.055);
+}
+.ws-thumb { display: block; width: 100%; min-height: 210px; max-height: 480px; object-fit: cover; background: rgba(130,119,97,.06); }
+.ws-photo-loading { background: linear-gradient(105deg, rgba(130,119,97,.04), rgba(255,255,255,.16), rgba(130,119,97,.04)); }
+.ws-photo-fallback { display: grid; place-items: center; font-size: 12px; opacity: .4; }
+.ws-copy { padding: 15px 18px 18px; }
+.ws-copy time, .ws-detail-copy time { font-size: 11px; opacity: .42; }
+.ws-copy p { margin: 10px 0 0; font: 15px/1.75 "LXGW WenKai", serif; white-space: pre-wrap; }
+.ws-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.ws-tags span {
+  padding: 3px 9px; border-radius: 999px; font-size: 10px; letter-spacing: .04em;
+  color: color-mix(in srgb, currentColor 68%, transparent);
+  background: rgba(142,127,95,.09);
+}
+.ws-overlay {
+  position: fixed; inset: 0; z-index: 90; display: grid; place-items: center;
+  padding: 18px; background: rgba(26,24,20,.78); backdrop-filter: blur(13px);
+}
+.ws-detail {
+  position: relative; width: min(760px, 100%); max-height: 92dvh; overflow: auto;
+  border-radius: 20px; background: color-mix(in srgb, var(--bg, #f4f0e7) 94%, #fff);
+  box-shadow: 0 24px 80px rgba(0,0,0,.28);
+}
+.ws-close {
+  position: absolute; right: 10px; top: 8px; z-index: 2; width: 36px; height: 36px;
+  border-radius: 50%; font-size: 24px; color: white; background: rgba(20,18,15,.35);
+}
+.ws-full { display: block; width: 100%; max-height: 68dvh; object-fit: contain; background: #171612; border-radius: 20px 20px 0 0; }
+.ws-detail-copy { padding: 20px 22px 24px; }
+.ws-detail-copy p { margin: 12px 0 0; font: 16px/1.8 "LXGW WenKai", serif; white-space: pre-wrap; }
+.ws-save {
+  display: block; margin: 22px 0 0 auto; padding: 8px 13px;
+  border: 1px solid rgba(118,103,75,.18); border-radius: 10px;
+  background: transparent; color: inherit; font: 12px inherit; cursor: pointer; opacity: .68;
+}
+@media (max-width: 520px) {
+  .ws-header { padding-top: max(16px, env(safe-area-inset-top)); }
+  .ws-timeline { padding-right: 16px; padding-left: 38px; }
+  .ws-timeline::before { left: 21px; }
+  .ws-dot { left: -20px; }
+  .ws-row { margin-bottom: 36px; }
+  .ws-thumb { min-height: 180px; }
+}

@@ -1086,7 +1086,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
                   const blob = await compressImage(f, lv.q, lv.dim)
                   if (blob) { toUpload = blob; mime = 'image/jpeg'; filename = f.name.replace(/\.\w+$/, '.jpg') }
                 }
-                const { url } = await uploadBlobToHub(toUpload, mime, filename)
+                const { url } = await uploadBlobToHub(toUpload, mime, filename, new Date(f.lastModified).toISOString())
                 setAttachments((prev) => [...prev, { kind: 'image', url }])
                 setUploadProgress({ done: i + 1, total: files.length })
               }
@@ -1573,6 +1573,7 @@ async function uploadToHub(file: File): Promise<{ url: string; name: string }> {
       data: dataB64,
       mime: file.type || 'application/octet-stream',
       filename: file.name,
+      captured_at: file.type.startsWith('image/') ? new Date(file.lastModified).toISOString() : undefined,
     }),
   })
   if (!res.ok) throw new Error('upload HTTP ' + res.status)
@@ -1659,7 +1660,7 @@ function compressImage(file: File, quality: number, maxDim: number): Promise<Blo
   })
 }
 
-async function uploadBlobToHub(blob: Blob | File, mime: string, filename: string): Promise<{ url: string; name: string }> {
+async function uploadBlobToHub(blob: Blob | File, mime: string, filename: string, capturedAt?: string): Promise<{ url: string; name: string }> {
   const dataB64 = await new Promise<string>((resolve, reject) => {
     const r = new FileReader()
     r.onload = () => resolve((r.result as string).split(',')[1] ?? '')
@@ -1671,7 +1672,7 @@ async function uploadBlobToHub(blob: Blob | File, mime: string, filename: string
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', 'X-Channel-Pin': pin },
-    body: JSON.stringify({ data: dataB64, mime: mime || 'application/octet-stream', filename }),
+    body: JSON.stringify({ data: dataB64, mime: mime || 'application/octet-stream', filename, captured_at: capturedAt }),
   })
   if (!res.ok) throw new Error('upload HTTP ' + res.status)
   return res.json()

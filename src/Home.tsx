@@ -15,6 +15,7 @@ const HOME_APPS: AppDef[] = [
   { key: 'tide',    iconKey: 'tide',    icon: '🌊', label: '潮汐', def: { x: 85, y: 48 } },
   { key: 'callhistory', iconKey: 'callhistory', icon: '📞', label: '通话', def: { x: 44, y: 90 } },
   { key: 'echo',        iconKey: 'echo',        icon: '🫧', label: '回声', def: { x: 60, y: 52 } },
+  { key: 'windowsill',  iconKey: 'windowsill',  icon: '🌱', label: '窗台',    def: { x: 50, y: 24 } },
 ]
 
 const CAL = [
