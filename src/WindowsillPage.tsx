@@ -96,6 +96,8 @@ export function WindowsillPage({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<WindowsillItem | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [knockStatus, setKnockStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   const load = async () => {
     setLoading(true)
@@ -117,6 +119,23 @@ export function WindowsillPage({ onBack }: { onBack: () => void }) {
   }
 
   useEffect(() => { load() }, [])
+
+  const knockDrawer = async () => {
+    if (knockStatus === 'sending' || knockStatus === 'sent') return
+    setKnockStatus('sending')
+    try {
+      const r = await fetch('/cc-api/api/windowsill/knock', {
+        method: 'POST',
+        credentials: 'include',
+        headers: authHeaders(),
+      })
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      setKnockStatus('sent')
+    } catch (e) {
+      console.error('windowsill drawer knock failed', e)
+      setKnockStatus('error')
+    }
+  }
 
   const rows = useMemo(() => {
     let previous = ''
@@ -165,7 +184,45 @@ export function WindowsillPage({ onBack }: { onBack: () => void }) {
             </button>
           </section>
         ))}
+        {!loading && !error && (
+          <section className="ws-drawer-entry">
+            <button type="button" onClick={() => setDrawerOpen(true)} aria-label="看看上锁的抽屉">
+              <span className="ws-lock-mini" aria-hidden />
+              <span>抽屉</span>
+            </button>
+          </section>
+        )}
       </main>
+
+      {drawerOpen && (
+        <div className="ws-overlay" onClick={() => setDrawerOpen(false)}>
+          <article className="ws-drawer-door" onClick={(e) => e.stopPropagation()}>
+            <button className="ws-close ws-drawer-close" onClick={() => setDrawerOpen(false)} aria-label="关闭">×</button>
+            <button
+              className="ws-drawer-lock"
+              type="button"
+              onClick={knockDrawer}
+              disabled={knockStatus === 'sending' || knockStatus === 'sent'}
+              aria-label="敲敲抽屉"
+            >
+              <span className="ws-lock" aria-hidden />
+            </button>
+            <h2>抽屉</h2>
+            <p>门锁着。里面的东西，只会由苏煦亲手递出来。</p>
+            <button
+              className="ws-knock"
+              type="button"
+              onClick={knockDrawer}
+              disabled={knockStatus === 'sending' || knockStatus === 'sent'}
+            >
+              {knockStatus === 'sending' && '正在轻轻敲…'}
+              {knockStatus === 'sent' && '敲过了'}
+              {knockStatus === 'error' && '没敲响，再试一次'}
+              {knockStatus === 'idle' && '轻轻敲一下'}
+            </button>
+          </article>
+        </div>
+      )}
 
       {selected && (
         <div className="ws-overlay" onClick={() => setSelected(null)}>

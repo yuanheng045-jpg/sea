@@ -5763,6 +5763,59 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none 
   border: 1px solid rgba(118,103,75,.18); border-radius: 10px;
   background: transparent; color: inherit; font: 12px inherit; cursor: pointer; opacity: .68;
 }
+.ws-drawer-entry {
+  display: flex; justify-content: flex-end; margin: 58px 4px 0;
+}
+.ws-drawer-entry > button {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border: 1px solid rgba(112,101,80,.10); border-radius: 13px;
+  background: rgba(255,255,255,.12); color: inherit; cursor: pointer;
+  font: 12px "LXGW WenKai", serif; letter-spacing: .1em; opacity: .48;
+}
+.ws-lock-mini {
+  position: relative; display: inline-block; width: 10px; height: 8px;
+  border: 1px solid currentColor; border-radius: 2px;
+}
+.ws-lock-mini::before {
+  content: ""; position: absolute; left: 2px; top: -6px; width: 4px; height: 5px;
+  border: 1px solid currentColor; border-bottom: 0; border-radius: 5px 5px 0 0;
+}
+.ws-drawer-door {
+  position: relative; width: min(360px, 100%); padding: 50px 30px 32px; text-align: center;
+  border: 1px solid rgba(171,154,122,.16); border-radius: 24px;
+  color: var(--text, #514b43);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.25), transparent 48%),
+    color-mix(in srgb, var(--bg, #f4f0e7) 96%, #8c795d);
+  box-shadow: 0 24px 80px rgba(0,0,0,.3);
+}
+.ws-drawer-close { color: inherit; background: transparent; opacity: .42; }
+.ws-drawer-lock {
+  display: grid; place-items: center; width: 82px; height: 82px; margin: 0 auto;
+  border: 1px solid rgba(127,109,78,.13); border-radius: 50%;
+  background: rgba(255,255,255,.14); color: inherit; cursor: pointer;
+}
+.ws-drawer-lock:disabled { cursor: default; }
+.ws-lock {
+  position: relative; display: block; width: 26px; height: 22px;
+  border: 2px solid currentColor; border-radius: 4px; opacity: .52;
+}
+.ws-lock::before {
+  content: ""; position: absolute; left: 5px; top: -16px; width: 12px; height: 14px;
+  border: 2px solid currentColor; border-bottom: 0; border-radius: 10px 10px 0 0;
+}
+.ws-drawer-door h2 {
+  margin: 22px 0 0; font: 500 21px "LXGW WenKai", serif; letter-spacing: .18em;
+}
+.ws-drawer-door p {
+  margin: 13px auto 0; max-width: 250px; font: 13px/1.8 "LXGW WenKai", serif; opacity: .48;
+}
+.ws-knock {
+  margin-top: 25px; padding: 8px 14px; min-width: 112px;
+  border: 1px solid rgba(118,103,75,.16); border-radius: 999px;
+  background: transparent; color: inherit; font: 12px inherit; cursor: pointer; opacity: .58;
+}
+.ws-knock:disabled { cursor: default; opacity: .38; }
 @media (max-width: 520px) {
   .ws-header { padding-top: max(16px, env(safe-area-inset-top)); }
   .ws-timeline { padding-right: 16px; padding-left: 38px; }
