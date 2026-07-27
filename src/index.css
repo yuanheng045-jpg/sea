@@ -4493,17 +4493,17 @@ body[data-chat-bg-mode="image"] .bg-layer { display: none; }
    - 圆角 999px(单行 pill、多行椭圆形端)
    - padding 瘦扁(7/16),line-height 1.45 紧凑
    - 时间 absolute 贴气泡下方外侧,不挤气泡也不占行
-   - 同发 6px 紧贴,异发 22px 留时间位
+   - 消息间距沿用无气泡模式的 16px，时间放在间隙里
    - 零 backdrop-filter / 零动画 / 零渐变 防发热 */
 body[data-chat-bubbles="on"] .cc-avatar-col { display: none; }
 body[data-chat-bubbles="on"] .cc-msg {
   display: block;
-  margin: 22px 0;
+  margin: 0;
   padding: 0 10px;
 }
 body[data-chat-bubbles="on"] .cc-msg.assistant + .cc-msg.assistant,
 body[data-chat-bubbles="on"] .cc-msg.user + .cc-msg.user {
-  margin-top: 6px;
+  margin-top: 0;
 }
 body[data-chat-bubbles="on"] .cc-text-col {
   display: flex;
