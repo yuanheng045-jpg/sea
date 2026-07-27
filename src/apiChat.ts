@@ -94,8 +94,13 @@ function updateAi(id: string, content: string, thinking: string, hits: any[] | u
 
 // === chatStore 兼容接口 ===
 export function sendMessage(text: string, _extra?: any) {
-  if (_s.streaming || !text.trim()) return
-  const userMsg: ChatMessage = { id: 'u' + Date.now(), role: 'user', content: text, ts: Date.now() }
+  const images = Array.isArray(_extra?.images)
+    ? _extra.images.filter((url: unknown) => typeof url === 'string' && url.startsWith('/uploads/')).slice(0, 8)
+    : []
+  if (_s.streaming || (!text.trim() && images.length === 0)) return
+  const userMsg: ChatMessage = {
+    id: 'u' + Date.now(), role: 'user', content: text, images, ts: Date.now(),
+  }
   const aiId = 'a' + Date.now()
   const aiMsg: ChatMessage = { id: aiId, role: 'assistant', content: '', pending: true, autoExpanded: true, ts: Date.now() }
   const history = [..._s.messages, userMsg].map((m) => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '' }))
@@ -111,7 +116,15 @@ export function sendMessage(text: string, _extra?: any) {
     try {
       const res = await fetch('/api/chat/completions', {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, model: _s.model, provider_id: _s.providerId, conversation_id: _s.convId, temperature: 0.7, style: (_extra && typeof _extra.style === 'string' && _extra.style.trim()) ? _extra.style : undefined }),
+        body: JSON.stringify({
+          messages: history,
+          images,
+          model: _s.model,
+          provider_id: _s.providerId,
+          conversation_id: _s.convId,
+          temperature: 0.7,
+          style: (_extra && typeof _extra.style === 'string' && _extra.style.trim()) ? _extra.style : undefined,
+        }),
       })
       if (!res.ok || !res.body) throw new Error('HTTP ' + res.status)
       const reader = res.body.getReader()
@@ -136,6 +149,7 @@ export function sendMessage(text: string, _extra?: any) {
           if (p.type === 'memory_hits') hits = p.hits
           if (p.type === 'msg_saved') usage = p.usage
           if (p.type === 'memory_saved') memSaved = { ok: !!p.ok, content: p.content || '' }
+          if (p.type === 'content_final') content = typeof p.content === 'string' ? p.content : content
           const delta = p.choices?.[0]?.delta
           if (delta?.thinking) thinking += delta.thinking
           if (delta?.content) content += delta.content
