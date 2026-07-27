@@ -3279,8 +3279,8 @@ button { font: inherit; cursor: pointer; color: inherit; }
   white-space: nowrap;
 }
 
-/* v45: 收紧主聊天双方消息的垂直距离 */
-.cc-messages { gap: 6px !important; }
+/* v45: 无气泡消息留一点呼吸感 */
+.cc-messages { gap: 8px !important; }
 
 /* v46: 排版细调 —— line-height 1.75 + 段间距 9 + justify + 22em 字区宽 */
 .cc-text {
@@ -4493,9 +4493,10 @@ body[data-chat-bg-mode="image"] .bg-layer { display: none; }
    - 圆角 999px(单行 pill、多行椭圆形端)
    - padding 瘦扁(7/16),line-height 1.45 紧凑
    - 时间 absolute 贴气泡下方外侧,不挤气泡也不占行
-   - 消息间距沿用无气泡模式的 16px，时间放在间隙里
+   - 气泡消息固定 6px，时间放在间隙里
    - 零 backdrop-filter / 零动画 / 零渐变 防发热 */
 body[data-chat-bubbles="on"] .cc-avatar-col { display: none; }
+body[data-chat-bubbles="on"] .cc-messages { gap: 6px !important; }
 body[data-chat-bubbles="on"] .cc-msg {
   display: block;
   margin: 0;
