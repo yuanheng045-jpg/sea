@@ -3296,7 +3296,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
   word-break: break-word;
 }
 .cc-paragraph + .cc-paragraph {
-  margin-top: 9px;
+  margin-top: 12px;
 }
 
 /* v47: 字号 15 → 13 */
@@ -4518,7 +4518,7 @@ body[data-chat-bubbles="on"] .cc-msg.user .cc-text-col { align-items: flex-end; 
 body[data-chat-bubbles="on"] .cc-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   background: transparent !important;
   padding: 0 !important;
   border: 0 !important;
