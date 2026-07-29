@@ -67,6 +67,7 @@
 * { -webkit-tap-highlight-color: transparent; font-synthesis: none; }
 button { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 html, body, #root { height: 100%; width: 100%; }
+html, body { overflow: hidden; overscroll-behavior: none; }
 body {
   font-family: var(--font-body);
   color: var(--ink);
@@ -680,7 +681,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
 .empty-page {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  height: calc(100vh - 110px); gap: 16px;
+  height: calc(100dvh - 110px); gap: 16px;
   padding: 0 24px;
 }
 .empty-label {
@@ -1552,7 +1553,6 @@ button { font: inherit; cursor: pointer; color: inherit; }
   flex-direction: column;
   gap: 16px;
   padding: 14px 6px 8px 6px;
-  scroll-behavior: smooth;
 }
 .cc-messages::-webkit-scrollbar { width: 4px; }
 .cc-messages::-webkit-scrollbar-thumb { background: oklch(0.5 0.04 252 / 0.18); border-radius: 2px; }
@@ -1980,8 +1980,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 14px 6px 110px 6px;
-  scroll-behavior: smooth;
+  padding: 14px 6px calc(110px + var(--kb, 0px)) 6px;
 }
 .cc-messages::-webkit-scrollbar { width: 4px; }
 .cc-messages::-webkit-scrollbar-thumb { background: oklch(0.5 0.04 252 / 0.18); border-radius: 2px; }
@@ -2129,12 +2128,12 @@ button { font: inherit; cursor: pointer; color: inherit; }
 /* —— input bar：fixed bottom 仿 dock —— */
 .cc-input-bar {
   position: fixed;
-  bottom: 0; left: 0; right: 0;
+  bottom: var(--kb, 0px); left: 0; right: 0;
   z-index: 10;
   max-width: 480px;
   margin: 0 auto;
   padding: 14px 28px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(20px + max(env(safe-area-inset-bottom, 0px) - var(--kb, 0px), 0px));
   display: flex;
   align-items: center;
 }
@@ -3935,7 +3934,7 @@ body[data-power-save] .gear, body[data-power-save] .butterfly, body[data-power-s
   position: relative;
   width: min(86vw, 340px);
   max-width: 340px;
-  height: 100vh;
+  height: 100dvh;
   display: flex; flex-direction: column;
   touch-action: pan-y;
   background:
@@ -5677,6 +5676,57 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none 
 .rd-import-btn { border: 1px solid #b0543f; border-radius: 8px; padding: 8px 20px; background: none; color: #b0543f; font-size: 13px; cursor: pointer; font-family: inherit; }
 .rd-import-btn:disabled { opacity: .5; }
 
+
+/* ─── 中间地带 MidRoomPage (2026-07-23) ─── */
+.mr-page { display: flex; flex-direction: column; height: calc(100dvh - var(--kb, 0px)); background: var(--bg, transparent); color: var(--text, inherit); }
+.mr-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; }
+.mr-back { background: transparent; border: 0; color: inherit; font-size: 22px; cursor: pointer; padding: 4px 8px; }
+.mr-title { font-size: 17px; font-weight: 500; letter-spacing: 0.02em; }
+.mr-dot { margin-left: auto; font-size: 10px; }
+.mr-dot.on { color: #6bd08a; }
+.mr-dot.off { color: #b0b0b0; }
+.mr-hint { padding: 0 20px 8px; font-size: 12px; opacity: 0.55; }
+.mr-log { flex: 1; overflow-y: auto; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.mr-empty { opacity: 0.4; text-align: center; margin-top: 40px; font-size: 13px; }
+.mr-msg { max-width: 78%; padding: 8px 12px 9px; border-radius: 14px; font-size: 14px; line-height: 1.55; word-break: break-word; white-space: pre-wrap; }
+.mr-who { font-size: 11px; opacity: 0.6; margin-bottom: 2px; letter-spacing: 0.04em; }
+.mr-body { }
+.mr-yuanyao { align-self: flex-end; background: rgba(180, 210, 255, 0.28); }
+.mr-xuxu    { align-self: flex-start; background: rgba(200, 230, 210, 0.28); }
+.mr-chatgpt { align-self: flex-start; background: rgba(230, 210, 240, 0.28); }
+.mr-yanchen { align-self: flex-start; background: rgba(230, 210, 240, 0.28); }
+.mr-input { display: flex; gap: 8px; padding: 10px 16px 14px; border-top: 1px solid rgba(128,128,128,0.15); }
+.mr-input textarea { flex: 1; resize: none; border: 1px solid rgba(128,128,128,0.25); border-radius: 12px; padding: 8px 10px; background: rgba(255,255,255,0.04); color: inherit; font: inherit; font-size: 14px; }
+.mr-input textarea:focus { outline: none; border-color: rgba(140, 170, 210, 0.6); }
+.mr-send { padding: 0 16px; border: 0; border-radius: 12px; background: rgba(120, 150, 200, 0.75); color: white; cursor: pointer; font: inherit; font-size: 14px; }
+.mr-send:disabled { opacity: 0.4; cursor: default; }
+
+.mr-topicbar { display: flex; gap: 8px; padding: 0 16px 6px; align-items: center; }
+.mr-topic-sel { flex: 1; padding: 6px 8px; border: 1px solid rgba(128,128,128,0.25); border-radius: 10px; background: rgba(255,255,255,0.04); color: inherit; font: inherit; font-size: 13px; }
+.mr-topic-sel:focus { outline: none; border-color: rgba(140, 170, 210, 0.6); }
+.mr-topic-new { width: 32px; height: 32px; border: 1px dashed rgba(128,128,128,0.35); border-radius: 10px; background: transparent; color: inherit; cursor: pointer; font-size: 18px; line-height: 1; }
+.mr-topic-new:hover { background: rgba(255,255,255,0.05); }
+
+.mr-gear { background: transparent; border: 0; color: inherit; font-size: 18px; cursor: pointer; padding: 4px 8px; opacity: 0.65; margin-left: 4px; }
+.mr-gear:hover { opacity: 1; }
+.mr-settings { padding: 12px 16px; margin: 0 12px 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(128,128,128,0.2); border-radius: 12px; font-size: 13px; }
+.mr-set-row { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
+.mr-set-row label { min-width: 140px; opacity: 0.85; }
+.mr-set-row input[type=number] { width: 70px; padding: 4px 6px; border: 1px solid rgba(128,128,128,0.3); border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+.mr-set-hint { font-size: 11px; opacity: 0.5; }
+.mr-set-note { font-size: 11px; opacity: 0.6; margin-top: 8px; line-height: 1.5; }
+
+.mr-summary { margin: 6px 4px 12px; border: 1px solid rgba(200,180,230,0.35); border-radius: 12px; background: rgba(200,180,230,0.08); overflow: hidden; }
+.mr-summary-head { width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: transparent; border: 0; color: inherit; cursor: pointer; text-align: left; font-size: 12px; }
+.mr-summary-head:hover { background: rgba(200,180,230,0.12); }
+.mr-summary-icon { font-size: 14px; opacity: 0.7; }
+.mr-summary-title { flex: 1; opacity: 0.85; }
+.mr-summary-time { opacity: 0.5; font-size: 11px; }
+.mr-summary-caret { opacity: 0.5; }
+.mr-summary-body { padding: 4px 14px 12px; font-size: 13px; line-height: 1.7; opacity: 0.88; white-space: pre-wrap; }
+.mr-loadmore { margin: 2px 4px 10px; padding: 8px 12px; border: 1px dashed rgba(128,128,128,0.35); border-radius: 10px; background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: 12px; opacity: 0.7; }
+.mr-loadmore:hover:not(:disabled) { opacity: 1; background: rgba(255,255,255,0.04); }
+.mr-loadmore:disabled { cursor: default; opacity: 0.4; }
 
 /* ─── 窗台：不是图库，是一条留有呼吸的时间线 ─── */
 .ws-page {

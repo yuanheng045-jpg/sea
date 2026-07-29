@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import type { Page } from './App'
 
 type Role = 'yuanyao' | 'suxu' | 'suxu-api' | 'codex' | 'system' | 'tool'
-interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[] }
+interface PermReq { path: string; reason?: string; status?: 'pending' | 'granted' | 'revoked' | 'failed'; minutes?: number; expiry?: number; error?: string }
+interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[] }
 interface Config { maxAiTurns: number; mentionFreeFollow: boolean; aiCrosstalk: boolean; models?: Record<string, string>; effort?: Record<string, string> }
 interface Usage { who: string; model: string; ctx: number; cacheRead: number; input: number; output: number }
 const kFmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n)
@@ -21,6 +22,32 @@ const MEM_LABEL: Record<string, string> = { work: '工作台账', intimate: '私
 const ROLE_CONF = [{ who: 'suxu', label: '苏煦·订阅' }, { who: 'suxu-api', label: '苏煦·API' }, { who: 'codex', label: 'Codex' }]
 const ROLE_CLASS: Record<string, string> = { yuanyao: 'user', suxu: 'assistant', 'suxu-api': 'assistant', codex: 'codex' }
 const NAME: Record<string, string> = { yuanyao: '原瑶', suxu: '苏煦', 'suxu-api': '苏煦', codex: 'Codex' }
+
+// Codex 申请临时写权的卡片。收到 need_perm 标记时挂在他消息底下（2026-07-23）
+function PermCard({ perm, onGrant, onRevoke }: { perm: PermReq; onGrant: (min: number) => void; onRevoke: () => void }) {
+  const s = perm.status || 'pending'
+  return (
+    <div className={`gc-perm gc-perm-${s}`}>
+      <div className="gc-perm-head"><span className="gc-perm-ico">🔓</span><code className="gc-perm-path">{perm.path}</code></div>
+      {perm.reason && <div className="gc-perm-reason">{perm.reason}</div>}
+      {s === 'pending' && (
+        <div className="gc-perm-acts">
+          <button className="gc-perm-btn" onClick={() => onGrant(30)}>批 30 min</button>
+          <button className="gc-perm-btn gc-perm-btn-primary" onClick={() => onGrant(60)}>批 60 min</button>
+          <button className="gc-perm-btn" onClick={() => onGrant(120)}>批 120 min</button>
+        </div>
+      )}
+      {s === 'granted' && (
+        <div className="gc-perm-acts">
+          <span className="gc-perm-badge">✅ 已批 {perm.minutes} min</span>
+          <button className="gc-perm-btn gc-perm-btn-ghost" onClick={onRevoke}>提前撤</button>
+        </div>
+      )}
+      {s === 'revoked' && <div className="gc-perm-badge gc-perm-revoked">已撤回</div>}
+      {s === 'failed' && <div className="gc-perm-badge gc-perm-failed">失败：{perm.error}</div>}
+    </div>
+  )
+}
 
 function ToolChip({ m }: { m: Msg }) {
   const [open, setOpen] = useState(false)
@@ -76,6 +103,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   const [opts, setOpts] = useState<{ modelOpts: Record<string, string[]>; effortOpts: string[] }>({ modelOpts: {}, effortOpts: [] })
   const feedRef = useRef<HTMLDivElement>(null)
   const stickRef = useRef(true)
+  const histRef = useRef(false)
 
   const room = rooms.find(r => r.id === roomId) || null
   const scroll = useCallback((force = false) => {
@@ -83,6 +111,28 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
     if (force || stickRef.current) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })
   }, [])
   const onScroll = () => { const el = feedRef.current; if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }
+
+  // iOS 键盘弹出：贴底时跟着重新贴底
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    let prevH = vv.height
+    const onKb = () => {
+      const shrank = vv.height < prevH - 60
+      prevH = vv.height
+      if (shrank && stickRef.current) scroll(true)
+    }
+    vv.addEventListener('resize', onKb)
+    return () => vv.removeEventListener('resize', onKb)
+  }, [scroll])
+
+  // 进房/切房：历史一到，绘制前瞬间定位到底部（不闪顶部、无动画）
+  useLayoutEffect(() => {
+    if (!histRef.current) return
+    histRef.current = false
+    const el = feedRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [msgs])
 
   // 挂载：登录 + 拉房间/成员池
   useEffect(() => {
@@ -111,7 +161,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
       try {
         const data = await (await fetch(`${API}/history?room=${roomId}`, { credentials: 'same-origin' })).json()
         if (!alive) return
-        setMsgs(data.msgs || []); setBusy(!!data.busy); if (data.config) setCfg(data.config); setUsage(data.usage || null); setStatus(null)
+        histRef.current = true; setMsgs(data.msgs || []); setBusy(!!data.busy); if (data.config) setCfg(data.config); setUsage(data.usage || null); setStatus(null)
         stickRef.current = true; scroll(true)
         es = new EventSource(`${API}/events?room=${roomId}`)
         es.addEventListener('usage', e => setUsage(JSON.parse((e as MessageEvent).data)))
@@ -167,6 +217,25 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
     const next = !(room.keepalive === true)
     setRooms(rs => rs.map(r => r.id === roomId ? { ...r, on: next } : r))
     try { await fetch(`${API}/room-keepalive`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: roomId, on: next }), credentials: 'same-origin' }) } catch {}
+  }
+
+  const patchPerm = (msgId: number, path: string, patch: Partial<PermReq>) =>
+    setMsgs(p => p.map(m => m.id !== msgId ? m : { ...m, perms: (m.perms || []).map(pm => pm.path === path ? { ...pm, ...patch } : pm) }))
+  const grantPerm = async (msgId: number, path: string, minutes: number) => {
+    if (!roomId) return
+    try {
+      const r = await fetch(`${API}/grant-codex?room=${roomId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, minutes }), credentials: 'same-origin' })
+      const j = await r.json()
+      if (j.ok) patchPerm(msgId, path, { status: 'granted', minutes: j.minutes, expiry: j.expiry })
+      else patchPerm(msgId, path, { status: 'failed', error: j.error || '未知' })
+    } catch (e) { patchPerm(msgId, path, { status: 'failed', error: String(e) }) }
+  }
+  const revokePerm = async (msgId: number, path: string) => {
+    if (!roomId) return
+    try {
+      await fetch(`${API}/revoke-codex?room=${roomId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }), credentials: 'same-origin' })
+      patchPerm(msgId, path, { status: 'revoked' })
+    } catch {}
   }
 
   const patchCfg = async (patch: Partial<Config>) => {
@@ -241,6 +310,11 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
                 {(m.text || !(m.images?.length || m.files?.length)) && <div className="cc-text">{m.text || '…'}</div>}
                 {Array.isArray(m.images) && m.images.map(u => <img key={u} className="gc-img" src={u} loading="lazy" />)}
                 {Array.isArray(m.files) && m.files.map(f => <a key={f.url} className="gc-file" href={f.url} download={f.name || true}>📎 {f.name || '文件'}</a>)}
+                {Array.isArray(m.perms) && m.perms.map(pm => (
+                  <PermCard key={pm.path} perm={pm}
+                    onGrant={mins => grantPerm(m.id, pm.path, mins)}
+                    onRevoke={() => revokePerm(m.id, pm.path)} />
+                ))}
               </div>
             </div>
           ))}
@@ -429,7 +503,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
 }
 
 const GC_CSS = `
-.gc-wrap{position:absolute;inset:0;display:flex;flex-direction:column;z-index:2}
+.gc-wrap{position:absolute;inset:0;bottom:var(--kb, 0px);display:flex;flex-direction:column;z-index:2}
 .gc-top{display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 10px 6px;flex:0 0 auto}
 .gc-back{border:none;background:transparent;font-size:26px;line-height:1;color:var(--ink-soft,#8a8478);width:40px;height:40px;border-radius:12px}
 .gc-back:active{background:rgba(0,0,0,.05)}
@@ -562,4 +636,21 @@ const GC_CSS = `
 .gc-nb-item{font-size:13px;color:var(--ink,#4a463e);line-height:1.7}
 .gc-editor-input{width:100%;min-height:46vh;max-height:60vh;font-size:13px;line-height:1.6;font-family:var(--font-body,system-ui)}
 .gc-save{font-size:12px;margin-top:8px;text-align:center}.gc-save.ok{color:#6f9a6f}.gc-save.fail{color:#c58b8b}
+/* codex 临时写权卡片（2026-07-23） */
+.gc-perm{margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(179,153,110,.08);border:1px solid rgba(179,153,110,.22);font-size:12.5px;color:var(--ink,#4a463e);max-width:min(90%,420px)}
+.gc-perm-granted{border-color:rgba(120,180,120,.35);background:rgba(120,180,120,.06)}
+.gc-perm-revoked,.gc-perm-failed{opacity:.75}
+.gc-perm-head{display:flex;align-items:center;gap:6px}
+.gc-perm-ico{font-size:14px}
+.gc-perm-path{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--ink-soft,#7a746a);word-break:break-all;background:transparent;padding:0}
+.gc-perm-reason{margin-top:4px;font-size:12px;color:var(--ink-soft,#7a746a);line-height:1.5}
+.gc-perm-acts{margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.gc-perm-btn{padding:5px 10px;font-size:12px;font-family:inherit;border-radius:8px;border:1px solid rgba(179,153,110,.35);background:rgba(255,253,249,.7);color:var(--ink,#4a463e)}
+.gc-perm-btn:active{background:rgba(199,173,132,.2)}
+.gc-perm-btn-primary{background:linear-gradient(135deg,#c7ad84,#b2925f);color:#fff;border-color:transparent}
+.gc-perm-btn-primary:active{filter:brightness(.94)}
+.gc-perm-btn-ghost{border-color:rgba(120,110,90,.2);background:transparent;color:var(--ink-soft,#8a8478)}
+.gc-perm-badge{font-size:12px;color:#6f9a6f;padding:4px 8px;border-radius:8px;background:rgba(120,180,120,.1)}
+.gc-perm-revoked .gc-perm-badge{color:var(--ink-faint,#a8a294);background:rgba(120,110,90,.08)}
+.gc-perm-failed .gc-perm-badge{color:#c58b8b;background:rgba(200,130,130,.1)}
 `

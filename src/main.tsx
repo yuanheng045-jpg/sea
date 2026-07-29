@@ -80,6 +80,23 @@ const hubClient = getChatClientOrInit({
 })
 ;(window as any).hubClient = hubClient
 
+// —— iOS 软键盘高度 → CSS 变量 --kb ——
+// Safari 不支持 interactive-widget=resizes-content，用 visualViewport 手动补：
+// 键盘(含系统工具条)遮挡多高，--kb 就是多少；输入条/页面高度用它避让
+const vvp = window.visualViewport
+if (vvp) {
+  let kbRaf = 0
+  const syncKb = () => {
+    kbRaf = 0
+    const kb = Math.max(0, Math.round(window.innerHeight - vvp.height - vvp.offsetTop))
+    document.documentElement.style.setProperty('--kb', kb > 1 ? `${kb}px` : '0px')
+    if (kb > 1 && window.scrollY !== 0) window.scrollTo(0, 0)
+  }
+  const queueKb = () => { if (!kbRaf) kbRaf = requestAnimationFrame(syncKb) }
+  vvp.addEventListener('resize', queueKb)
+  vvp.addEventListener('scroll', queueKb)
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

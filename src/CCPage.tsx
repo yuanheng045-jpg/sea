@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, Fragment, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, Fragment, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Sidebar } from './Sidebar'
 import { observeBubble } from './bubbleIO'
@@ -588,10 +588,10 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const [draft, setDraft] = useState('')
   const [plusOpen, setPlusOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [moonFull, setMoonFull] = useState(false)
+  const [moonPhase, setMoonPhase] = useState<'c' | 'f' | 'e'>('c')
   const [styleEditorOpen, setStyleEditorOpen] = useState(false)
-  const [editingStyle, setEditingStyle] = useState<'c' | 'f'>('c')
-  const [styleTexts, setStyleTexts] = useState<{ c: string; f: string }>({ c: '', f: '' })
+  const [editingStyle, setEditingStyle] = useState<'c' | 'f' | 'e'>('c')
+  const [styleTexts, setStyleTexts] = useState<{ c: string; f: string; e: string }>({ c: '', f: '', e: '' })
   const [panelOpen, setPanelOpen] = useState(false)
   const [claudemdOpen, setClaudemdOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -645,7 +645,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
       .then((data) => {
         const v = data?.[stylesKey]?.value
         if (v && typeof v === 'object') {
-          const next = { c: typeof v.c === 'string' ? v.c : '', f: typeof v.f === 'string' ? v.f : '' }
+          const next = { c: typeof v.c === 'string' ? v.c : '', f: typeof v.f === 'string' ? v.f : '', e: typeof v.e === 'string' ? v.e : '' }
           setStyleTexts(next)
           try { localStorage.setItem(stylesKey, JSON.stringify(next)) } catch {}
         }
@@ -654,7 +654,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   }, [stylesKey])
 
   const styleSaveTimer = useRef<number | undefined>(undefined)
-  const saveStyle = (k: 'c' | 'f', text: string) => {
+  const saveStyle = (k: 'c' | 'f' | 'e', text: string) => {
     const next = { ...styleTexts, [k]: text }
     setStyleTexts(next)
     try { localStorage.setItem(stylesKey, JSON.stringify(next)) } catch {}
@@ -709,6 +709,38 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
       el.removeEventListener('touchmove', onUserScroll)
     }
   }, [messages.length])
+
+  // iOS 键盘弹出：原本贴底就跟着重新贴底（--kb 撑开的 padding 已先生效）
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    let prevH = vv.height
+    const onKb = () => {
+      const el = listRef.current
+      const shrank = vv.height < prevH - 60
+      prevH = vv.height
+      if (!shrank || !el) return
+      const kb = Math.max(0, window.innerHeight - vv.height)
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < kb + 220)
+        requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })
+    }
+    vv.addEventListener('resize', onKb)
+    return () => vv.removeEventListener('resize', onKb)
+  }, [])
+
+  // 消息里的图片加载完成：若本就在底部附近，重新贴底（防止照片撑开后底部飘走）
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    const onImgLoad = (e: Event) => {
+      const t = e.target as HTMLElement
+      if (!t || t.tagName !== 'IMG') return
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < 400)
+        el.scrollTop = el.scrollHeight
+    }
+    el.addEventListener('load', onImgLoad, true)
+    return () => el.removeEventListener('load', onImgLoad, true)
+  }, [])
 
   useEffect(() => {
     if (!taRef.current) return
@@ -769,7 +801,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
 
   const onSend = () => {
     const text = draft.trim()
-    const active = (moonFull ? styleTexts.f : styleTexts.c).trim()
+    const active = (moonPhase === 'f' ? styleTexts.f : moonPhase === 'e' ? styleTexts.e : styleTexts.c).trim()
     if (!text && attachments.length === 0) return
     const images = attachments.filter((a) => a.kind === 'image').map((a) => a.url)
     const files = attachments.filter((a) => a.kind === 'file').map((a) => ({ url: a.url, name: a.name }))
@@ -835,12 +867,12 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
         </div>
         <button
           className="cc-moon"
-          onClick={() => setMoonFull((v) => !v)}
+          onClick={() => setMoonPhase(p => p === 'c' ? 'f' : p === 'f' ? 'e' : 'c')}
           onDoubleClick={() => setStyleEditorOpen(true)}
           aria-label="单击切换 style · 双击编辑"
           title="单击切换 style · 双击编辑"
         >
-          <MoonSvg full={moonFull} />
+          <MoonSvg phase={moonPhase} />
         </button>
         <div className="cc-top-right">
           <button
@@ -1023,12 +1055,16 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
                 className={`cc-style-tab${editingStyle === 'f' ? ' active' : ''}`}
                 onClick={() => setEditingStyle('f')}
               >满月</button>
+              <button
+                className={`cc-style-tab${editingStyle === 'e' ? ' active' : ''}`}
+                onClick={() => setEditingStyle('e')}
+              >月食</button>
             </div>
             <textarea
               className="cc-modal-input"
               value={styleTexts[editingStyle]}
               onChange={(e) => saveStyle(editingStyle, e.target.value)}
-              placeholder={`${editingStyle === 'c' ? '弯月' : '满月'} 的 user style，写你想要的语气、口吻、规则…`}
+              placeholder={`${editingStyle === 'c' ? '弯月' : editingStyle === 'f' ? '满月' : '月食'} 的 user style，写你想要的语气、口吻、规则…`}
               rows={6}
             />
             <div className="cc-modal-actions">
@@ -1129,7 +1165,7 @@ function HtmlCard({ url }: { url: string }) {
   )
 }
 
-function MessageRow({ message, expanded, onToggleThinking }: {
+const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinking }: {
   message: ChatMessage
   expanded: boolean
   onToggleThinking: () => void
@@ -1225,7 +1261,7 @@ function MessageRow({ message, expanded, onToggleThinking }: {
       </div>
     </div>
   )
-}
+}, (prev, next) => prev.message === next.message && prev.expanded === next.expanded)
 
 function formatTsShort(ms: number | undefined): string {
   if (!ms) return ''
@@ -1295,6 +1331,10 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
   const pct = Math.min(100, (contextTokens / MAX_CONTEXT_TOKENS) * 100)
   const curModel = (state as any)?.desiredModel || state?.model || ''
   const cacheHitPct = contextTokens > 0 ? Math.round((cacheRead / contextTokens) * 100) : 0
+  const usage = (state as any)?.usage
+  const u5 = usage?.five_hour?.utilization != null ? Math.round(usage.five_hour.utilization) : null
+  const u7 = usage?.seven_day?.utilization != null ? Math.round(usage.seven_day.utilization) : null
+  const u7o = usage?.seven_day_opus?.utilization != null ? Math.round(usage.seven_day_opus.utilization) : null
 
   return (
     <div className="cc-modal-backdrop" onClick={onClose}>
@@ -1327,6 +1367,33 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
                 <span>缓存命中</span>
                 <div className="cc-panel-bar-track"><div className="cc-panel-bar-fill" style={{ width: `${cacheHitPct}%` }} /></div>
                 <i>{cacheHitPct}%</i>
+              </div>
+              )}
+              {channel === 'cc' && u5 != null && (
+              <div className="cc-panel-bar">
+                <span>额度 5h</span>
+                <div className="cc-panel-bar-track"><div className="cc-panel-bar-fill" style={{ width: `${Math.min(100, u5)}%` }} /></div>
+                <i>{u5}%</i>
+              </div>
+              )}
+              {channel === 'cc' && u7 != null && (
+              <div className="cc-panel-bar">
+                <span>额度 周</span>
+                <div className="cc-panel-bar-track"><div className="cc-panel-bar-fill" style={{ width: `${Math.min(100, u7)}%` }} /></div>
+                <i>{u7}%</i>
+              </div>
+              )}
+              {channel === 'cc' && u7o != null && (
+              <div className="cc-panel-bar">
+                <span>额度 Opus周</span>
+                <div className="cc-panel-bar-track"><div className="cc-panel-bar-fill" style={{ width: `${Math.min(100, u7o)}%` }} /></div>
+                <i>{u7o}%</i>
+              </div>
+              )}
+              {channel === 'cc' && usage && (u5 != null || u7 != null) && (
+              <div className="cc-panel-row">
+                <span>额度重置</span>
+                <b>{[u5 != null && usage.five_hour?.resets_text ? `5h ${usage.five_hour.resets_text}` : '', u7 != null && usage.seven_day?.resets_text ? `周 ${usage.seven_day.resets_text}` : ''].filter(Boolean).join(' · ')}</b>
               </div>
               )}
               <div className="cc-panel-row">
@@ -1470,14 +1537,17 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
 // ====== SVG ======
 
 // 倒挂弯月（凹槽朝下）：mask 下方圆减去 → 剩上方 ∩ 形月牙
-function MoonSvg({ full }: { full: boolean }) {
-  const id = full ? 'moon-mask-f' : 'moon-mask-c'
+function MoonSvg({ phase }: { phase: 'c' | 'f' | 'e' }) {
+  // c=弯月(倒挂凹槽朝下), f=满月, e=月食(环形/annular)
+  const cls = phase === 'f' ? 'full' : phase === 'e' ? 'eclipse' : 'crescent'
+  const id = `moon-mask-${phase}`
   return (
-    <svg viewBox="0 0 24 24" width="24" height="24" className={`moon-svg ${full ? 'full' : 'crescent'}`}>
+    <svg viewBox="0 0 24 24" width="24" height="24" className={`moon-svg ${cls}`}>
       <defs>
         <mask id={id}>
           <rect width="24" height="24" fill="white" />
-          {!full && <circle cx="12" cy="7" r="7.5" fill="black" />}
+          {phase === 'c' && <circle cx="12" cy="7" r="7.5" fill="black" />}
+          {phase === 'e' && <circle cx="12" cy="12" r="5" fill="black" />}
         </mask>
       </defs>
       <circle cx="12" cy="12" r="9" fill="currentColor" mask={`url(#${id})`} />
