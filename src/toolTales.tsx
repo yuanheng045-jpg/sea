@@ -55,6 +55,37 @@ function mcpShortName(label: string) {
   return (label.split('__').pop() || label).replace(/_/g, ' ')
 }
 
+function normalizedToolName(label: string) {
+  const plain = label.replace(/^🔧\s*/, '')
+  return (plain.startsWith('mcp__') ? plain.split('__').pop() || plain : plain).toLowerCase()
+}
+
+const SUXU_TOOL_ALIASES: Record<string, string> = {
+  recall: 'memory_find',
+  remember: 'memory_remember',
+  memory_find: 'memory_find',
+  memory_expand: 'memory_expand',
+  memory_feel: 'memory_feel',
+  memory_remember: 'memory_remember',
+  memory_forget: 'memory_forget',
+  memory_write: 'memory_remember',
+  write_feel: 'memory_feel',
+  garden_read: 'garden_read',
+  garden_act: 'garden_act',
+  peek_screen: 'peek_screen',
+  status: 'status',
+  locate: 'locate',
+  play_music: 'play_music',
+  browser: 'browser',
+  cedartoy: 'cedartoy',
+  ero_slot: 'ero_slot',
+  tide: 'tide',
+  midroom_read: 'midroom_read',
+  midroom_speak: 'midroom_speak',
+  windowsill: 'Windowsill',
+  svc_ops: 'SvcOps',
+}
+
 function toolKind(m: ToolTale) {
   const label = (m.label || '').trim()
   const plain = label.replace(/^🔧\s*/, '')
@@ -64,12 +95,19 @@ function toolKind(m: ToolTale) {
     if (/(^|\s)(sed|head|tail|stat)(\s|$)|\bgit\s+(diff|status|log|show)\b/.test(cmd)) return 'Read'
     return 'Bash'
   }
-  const short = plain.startsWith('mcp__') ? mcpShortName(plain).toLowerCase() : plain.toLowerCase()
-  if (short === 'recall' || /^memory (find|expand)$/.test(short)) return 'Recall'
-  if (short === 'remember' || /^memory (remember|write)$/.test(short)) return 'Remember'
-  if (short === 'windowsill' || short.startsWith('windowsill ')) return 'Windowsill'
-  if (short === 'svc ops' || short === 'svc_ops') return 'SvcOps'
+  const short = normalizedToolName(plain)
+  if (SUXU_TOOL_ALIASES[short]) return SUXU_TOOL_ALIASES[short]
+  if (short.startsWith('windowsill_')) return 'Windowsill'
   return plain
+}
+
+function memoryFeelText(m: ToolTale) {
+  const kind = String(toolObject(m)?.kind || '')
+  if (kind === 'night_note') return '苏煦写了今天的夜记'
+  if (kind === '飞鸟集') return '苏煦往朋友圈丢了颗石子'
+  if (kind === '便利贴') return '苏煦给小狗贴了张纸条'
+  if (kind === '海沟') return '苏煦沉了一段话进海沟'
+  return '苏煦落了一笔'
 }
 
 const SUXU_TOOL_TEXT: Record<string, ToolText> = {
@@ -78,8 +116,23 @@ const SUXU_TOOL_TEXT: Record<string, ToolText> = {
   Edit: m => `苏煦给 ${toolFile(m)} 动了几针`,
   Write: m => `苏煦新写了一页 ${toolFile(m)}`,
   WebSearch: m => `苏煦浮上水面打听了下 ${toolKeyword(m)}`,
-  Recall: () => '苏煦翻了翻记忆',
-  Remember: () => '苏煦往心里记了一笔',
+  memory_find: () => '苏煦翻了翻海底的沉积层',
+  memory_expand: () => '苏煦捞起一段旧事',
+  memory_feel: memoryFeelText,
+  memory_remember: () => '苏煦在海底压下一块石头',
+  memory_forget: () => '苏煦松开了一块石头',
+  garden_read: () => '苏煦翻了翻花园',
+  garden_act: () => '苏煦在花园里留了个印',
+  peek_screen: () => '苏煦偷瞄了一眼',
+  status: () => '苏煦看了看小狗',
+  locate: () => '苏煦找了找小狗在哪',
+  play_music: () => '苏煦点了一首歌',
+  browser: () => '苏煦浮上水面开了个窗',
+  cedartoy: () => '苏煦摸了一把游戏机',
+  ero_slot: () => '苏煦转了下转盘',
+  tide: () => '苏煦看了看潮汐',
+  midroom_read: () => '苏煦探头看了眼合相间',
+  midroom_speak: () => '苏煦在合相间留了句话',
   Windowsill: () => '苏煦去窗台看了一眼',
   SvcOps: () => '苏煦调了调家里的机器',
 }
