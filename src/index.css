@@ -2881,7 +2881,8 @@ body[data-chat-bubbles="off"] .cc-msg.assistant .cc-text {
   width: auto !important;
   background: transparent !important;
   border: none !important; outline: none !important; resize: none !important;
-  color: var(--ink) !important;
+  color: var(--text-you, var(--ink)) !important;
+  caret-color: var(--text-you, var(--ink));
   font-size: 15px !important;
   font-family: var(--font-body) !important;
   line-height: 1.5 !important;
@@ -2889,6 +2890,10 @@ body[data-chat-bubbles="off"] .cc-msg.assistant .cc-text {
   max-height: 160px !important;
   min-height: 22px !important;
   align-self: auto !important;
+}
+.cc-input-pill textarea::placeholder {
+  color: var(--text-you, var(--ink-faint)) !important;
+  opacity: 0.55;
 }
 .cc-input-pill .cc-plus,
 .cc-input-pill .cc-send {
