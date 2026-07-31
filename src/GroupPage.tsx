@@ -120,8 +120,11 @@ function toolFile(m: Msg) {
   const obj = toolObject(m)
   let raw = obj?.file_path || obj?.path || obj?.filePath
   if (!raw && m.who === 'codex' && m.label?.startsWith('$')) {
-    const paths = m.label.match(/(?:\/|\.\/)[^\s;&|]+|[\w.-]+\.(?:tsx?|jsx?|mjs|css|html|json|md|py|sh)/g)
-    raw = paths?.[paths.length - 1]?.replace(/['"),]+$/, '')
+    const command = m.label.slice(1).replace(/(?:^|\s)\d*(?:>>?|<)\s*(?:"[^"]*"|'[^']*'|\S+)/g, ' ')
+    const paths = command.match(/(?:\/|\.\/)[^\s;&|]+|[\w.-]+\.(?:tsx?|jsx?|mjs|css|html|json|md|py|sh)/g)
+      ?.map(path => path.replace(/['"),]+$/, ''))
+      .filter(path => !/^\/dev\/(?:null|stdin|stdout|stderr)$/.test(path))
+    raw = paths?.[paths.length - 1]
   }
   const text = shortToolText(raw, '文件')
   if (text === '文件') return text
@@ -184,17 +187,41 @@ function ToolChip({ m }: { m: Msg }) {
   )
 }
 
-function ToolGroup({ items }: { items: Msg[] }) {
+function ToolLabelGroup({ label, items }: { label: string; items: Msg[] }) {
   const [open, setOpen] = useState(false)
-  const latest = items[items.length - 1]
+  const directDetail = items.length === 1 ? items[0].detail : ''
+  const expandable = items.length >= 2 || !!directDetail
   return (
     <div className="gc-tool-group">
-      <button className="gc-tool-group-head" aria-expanded={open} onClick={() => setOpen(o => !o)}>
-        <span className="gc-tool-group-title">{friendlyToolLabel(latest)}</span>
+      <button className="gc-tool-group-head" aria-expanded={open} onClick={() => expandable && setOpen(o => !o)}>
+        <span className="gc-tool-group-title">{label}</span>
         {items.length >= 2 && <span className="gc-tool-count">·{items.length}</span>}
-        <span className="gc-tool-caret">{open ? '▾' : '▸'}</span>
+        {expandable && <span className="gc-tool-caret">{open ? '▾' : '▸'}</span>}
       </button>
-      {open && <div className="gc-tool-list">{items.map(m => <ToolChip key={m.id} m={m} />)}</div>}
+      {open && items.length >= 2 && <div className="gc-tool-list">{items.map(m => <ToolChip key={m.id} m={m} />)}</div>}
+      {open && directDetail && <pre className="gc-tool-detail">{directDetail}</pre>}
+    </div>
+  )
+}
+
+function ToolRun({ segmentId, items }: { segmentId: number; items: Msg[] }) {
+  const groups: { label: string; items: Msg[] }[] = []
+  const byLabel = new Map<string, { label: string; items: Msg[] }>()
+  for (const item of items) {
+    const label = friendlyToolLabel(item)
+    const existing = byLabel.get(label)
+    if (existing) existing.items.push(item)
+    else {
+      const group = { label, items: [item] }
+      byLabel.set(label, group)
+      groups.push(group)
+    }
+  }
+  return (
+    <div className="gc-tool-run">
+      {groups.map(group => (
+        <ToolLabelGroup key={`${segmentId}:${group.label}`} label={group.label} items={group.items} />
+      ))}
     </div>
   )
 }
@@ -465,7 +492,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
 
       <div className="gc-feed" ref={feedRef} onScroll={onScroll}>
         {feedItems.map(item => {
-          if (item.kind === 'tools') return <ToolGroup key={`tools-${item.id}`} items={item.items} />
+          if (item.kind === 'tools') return <ToolRun key={`tools-${item.id}`} segmentId={item.id} items={item.items} />
           const m = item.msg
           return m.role === 'system'
             ? <div key={m.id} className="gc-sys">{m.text}</div>
@@ -689,7 +716,8 @@ const GC_CSS = `
 .cc-msg.user .gc-who{color:#b79a63}.cc-msg.assistant .gc-who{color:#6f97b4}
 .gc-msg.codex .cc-text{color:oklch(0.48 0.06 150)}.gc-msg.codex .gc-who{color:#8a9683}
 .gc-sys{align-self:center;text-align:center;font-size:12px;color:var(--ink-faint,#aca596);margin:2px auto;letter-spacing:.05em}
-.gc-tool-group{align-self:flex-start;max-width:88%;margin:-4px 0}
+.gc-tool-run{align-self:flex-start;display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:88%;margin:-4px 0}
+.gc-tool-group{max-width:100%}
 .gc-tool-group-head{display:flex;align-items:center;gap:7px;max-width:100%;border:none;background:rgba(120,110,90,.06);border-radius:11px;padding:5px 10px;font-family:var(--font-body,inherit);font-size:12.5px;line-height:1.45;text-align:left;color:var(--ink-soft,#7a746a)}
 .gc-tool-group-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gc-tool-count{flex:0 0 auto;font-size:10.5px;color:var(--ink-faint,#b8b2a6);opacity:.72}
