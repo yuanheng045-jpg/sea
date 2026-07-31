@@ -11,6 +11,7 @@ import { startCall } from './callStore'
 import { getPin } from './chatClient'
 import { SongPicker } from './SongPicker'
 import type { ChatMessage } from './chatStore'
+import { ToolRun, type ToolTale } from './toolTales'
 
 const SWIPE_THRESHOLD = 60
 const MAX_CONTEXT_TOKENS = 750_000
@@ -1141,6 +1142,26 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
 
 const absUrl = (u: string) => /^https?:\/\//.test(u || '') ? (u || '') : `https://cc.atlantis-sy.blue${u || ''}`
 
+function activityToolTales(activities: any[] | undefined, parentId: string): ToolTale[] {
+  return (activities ?? []).map((activity, index) => {
+    const label = String(activity?.tool || activity?.name || 'tool')
+    let detail = activity?.detail
+    if (detail != null && typeof detail !== 'string') {
+      try { detail = JSON.stringify(detail) }
+      catch (e) { console.error('整理工具详情失败:', e); detail = String(detail) }
+    }
+    if (/^(Read|Edit|Write)$/.test(label) && detail && !detail.trim().startsWith('{')) {
+      detail = JSON.stringify({ file_path: detail })
+    }
+    return {
+      id: String(activity?.id || `${parentId}:tool:${activity?.ts ?? index}:${index}`),
+      who: 'suxu',
+      label,
+      detail: detail || '',
+    }
+  })
+}
+
 function HtmlCard({ url }: { url: string }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const [h, setH] = useState(300)
@@ -1170,15 +1191,12 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
   expanded: boolean
   onToggleThinking: () => void
 }) {
+  const toolTales = activityToolTales(message.activities, message.id)
   if (message.role === 'activity') {
-    const acts = message.activities ?? []
-    const tools = acts.map((a: any) => a.tool || a.name).filter(Boolean)
-    if (tools.length === 0) return null
+    if (toolTales.length === 0) return null
     return (
       <div className="cc-activity-inline">
-        {tools.map((t: string, i: number) => (
-          <span key={i} className="cc-tool-chip">{t}</span>
-        ))}
+        <ToolRun segmentId={toolTales[0]?.id ?? message.id} items={toolTales} />
       </div>
     )
   }
@@ -1218,6 +1236,9 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
         )}
         {hasThinking && thinkingExpanded && (
           <div className="cc-thinking-body" aria-live="polite">{message.thinking}</div>
+        )}
+        {isAssistant && toolTales.length > 0 && (
+          <ToolRun segmentId={toolTales[0]?.id ?? message.id} items={toolTales} />
         )}
         {message.image && (
           <img

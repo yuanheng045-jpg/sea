@@ -92,6 +92,20 @@ function updateAi(id: string, content: string, thinking: string, hits: any[] | u
   emit()
 }
 
+function appendAiActivity(id: string, activity: any) {
+  _s = {
+    ..._s,
+    messages: _s.messages.map((m) => {
+      if (m.id !== id) return m
+      const activities = m.activities ?? []
+      if (activities.some((item: any) => item.id === activity.id)) return m
+      return { ...m, activities: [...activities, activity] }
+    }),
+  }
+  _panelVer++
+  emit()
+}
+
 // === chatStore 兼容接口 ===
 export function sendMessage(text: string, _extra?: any) {
   const images = Array.isArray(_extra?.images)
@@ -130,6 +144,7 @@ export function sendMessage(text: string, _extra?: any) {
       const reader = res.body.getReader()
       const dec = new TextDecoder()
       let buf = '', content = '', thinking = ''
+      let activitySeq = 0
       let hits: any[] | undefined
       let usage: any = undefined
       let memSaved: any = undefined
@@ -150,6 +165,14 @@ export function sendMessage(text: string, _extra?: any) {
           if (p.type === 'msg_saved') usage = p.usage
           if (p.type === 'memory_saved') memSaved = { ok: !!p.ok, content: p.content || '' }
           if (p.type === 'content_final') content = typeof p.content === 'string' ? p.content : content
+          if (p.type === 'activity') {
+            appendAiActivity(aiId, {
+              id: String(p.id || `${aiId}:tool:${activitySeq++}`),
+              tool: String(p.tool || p.name || 'tool'),
+              detail: p.detail == null ? '' : p.detail,
+              ts: typeof p.ts === 'number' ? p.ts : Date.now(),
+            })
+          }
           const delta = p.choices?.[0]?.delta
           if (delta?.thinking) thinking += delta.thinking
           if (delta?.content) content += delta.content

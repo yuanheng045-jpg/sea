@@ -98,6 +98,7 @@ let state: State = {
 
 const listeners = new Set<() => void>()
 let _client: ChatClient | null = null
+let _activityIdCounter = 0
 
 function setState(updater: (s: State) => State) {
   state = updater(state)
@@ -127,7 +128,46 @@ function handleEvent(e: HubEvent) {
       const m = e as any as ChatMessage
       setState((s) => {
         if (s.messages.some((x) => x.id === m.id)) return s
-        return { ...s, messages: [...s.messages, { ...m, fresh: true }] }
+        const settled = s.messages.map(x => x.role === 'activity' && x.pending ? { ...x, pending: false } : x)
+        return { ...s, messages: [...settled, { ...m, fresh: true }] }
+      })
+      break
+    }
+    case 'activity': {
+      const a = e as any
+      const ts = typeof a.ts === 'number' ? a.ts : Date.now()
+      const activity = {
+        id: String(a.id || `activity-${ts}-${_activityIdCounter++}`),
+        tool: String(a.tool || a.name || 'tool'),
+        detail: a.detail == null ? '' : a.detail,
+        ts,
+      }
+      setState((s) => {
+        const messages = [...s.messages]
+        for (let i = messages.length - 1; i >= 0; i--) {
+          if (messages[i].role === 'assistant' && messages[i].pending) {
+            const activities = messages[i].activities ?? []
+            if (activities.some((x: any) => x.id === activity.id)) return s
+            messages[i] = { ...messages[i], activities: [...activities, activity] }
+            return { ...s, messages }
+          }
+        }
+        const last = messages[messages.length - 1]
+        if (last?.role === 'activity' && last.pending) {
+          const activities = last.activities ?? []
+          if (activities.some((x: any) => x.id === activity.id)) return s
+          messages[messages.length - 1] = { ...last, activities: [...activities, activity] }
+        } else {
+          messages.push({
+            id: `activity-run-${ts}`,
+            role: 'activity',
+            content: '',
+            activities: [activity],
+            ts,
+            pending: true,
+          })
+        }
+        return { ...s, messages }
       })
       break
     }
@@ -205,6 +245,7 @@ function handleEvent(e: HubEvent) {
         let replaced = false
         for (let i = msgs.length - 1; i >= 0; i--) {
           if (msgs[i].role === 'assistant' && msgs[i].pending && msgs[i].id.startsWith('stream-')) {
+            const activities = msgs[i].activities
             msgs[i] = {
               id: d.id,
               role: 'assistant',
@@ -214,6 +255,7 @@ function handleEvent(e: HubEvent) {
               pending: false,
               autoExpanded: true,
               images: d.images, files: d.files, htmls: d.htmls,
+              activities: d.activities ?? activities,
             }
             replaced = true
             break
@@ -227,6 +269,7 @@ function handleEvent(e: HubEvent) {
             thinking: d.thinking ?? undefined,
             ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
             images: d.images, files: d.files, htmls: d.htmls,
+            activities: d.activities,
           })
         }
         return { ...s, messages: msgs }
@@ -253,9 +296,9 @@ function handleEvent(e: HubEvent) {
           return {
             ...s,
             ccBusy: false,
-            messages: s.messages.filter((m) =>
-              !(m.role === 'assistant' && m.pending && !m.content && !m.thinking)
-            ),
+            messages: s.messages
+              .filter((m) => !(m.role === 'assistant' && m.pending && !m.content && !m.thinking && !m.activities?.length))
+              .map((m) => m.role === 'activity' && m.pending ? { ...m, pending: false } : m),
           }
         }
         if (s.messages.some((m) => m.role === 'assistant' && m.pending)) {

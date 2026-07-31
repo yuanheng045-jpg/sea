@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import type { Page } from './App'
+import { ToolRun } from './toolTales'
 
 type Role = 'yuanyao' | 'suxu' | 'suxu-api' | 'codex' | 'system' | 'tool'
 interface PermReq { path: string; reason?: string; status?: 'pending' | 'granted' | 'revoked' | 'failed'; minutes?: number; expiry?: number; error?: string }
@@ -98,130 +99,6 @@ function DecisionCard({ m, answeredChoice, onDecide }: { m: Msg; answeredChoice?
           : (d.recommend ? <button className="gc-dec-btn primary" onClick={() => pick(d.recommend!)}>按推荐（{d.recommend}）</button> : null)}
         <button className="gc-dec-btn ghost" onClick={() => onDecide('explain', '', '')}>再讲白点</button>
       </div>
-    </div>
-  )
-}
-
-type ToolText = (m: Msg) => string
-
-function toolObject(m: Msg): Record<string, unknown> | null {
-  if (!m.detail?.trim().startsWith('{')) return null
-  try {
-    const parsed = JSON.parse(m.detail)
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null
-  } catch (e) { console.error('解析客厅工具详情失败:', e); return null }
-}
-function shortToolText(value: unknown, fallback: string) {
-  const text = typeof value === 'string' ? value.trim() : ''
-  if (!text) return fallback
-  return text.length > 42 ? text.slice(0, 39) + '…' : text
-}
-function toolFile(m: Msg) {
-  const obj = toolObject(m)
-  let raw = obj?.file_path || obj?.path || obj?.filePath
-  if (!raw && m.who === 'codex' && m.label?.startsWith('$')) {
-    const command = m.label.slice(1).replace(/(?:^|\s)\d*(?:>>?|<)\s*(?:"[^"]*"|'[^']*'|\S+)/g, ' ')
-    const paths = command.match(/(?:\/|\.\/)[^\s;&|]+|[\w.-]+\.(?:tsx?|jsx?|mjs|css|html|json|md|py|sh)/g)
-      ?.map(path => path.replace(/['"),]+$/, ''))
-      .filter(path => !/^\/dev\/(?:null|stdin|stdout|stderr)$/.test(path))
-    raw = paths?.[paths.length - 1]
-  }
-  const text = shortToolText(raw, '文件')
-  if (text === '文件') return text
-  const bits = text.split('/').filter(Boolean)
-  return `「${bits.slice(-2).join('/')}」`
-}
-function toolKeyword(m: Msg) {
-  const obj = toolObject(m)
-  let raw = obj?.query || m.detail
-  if (m.who === 'codex' && m.label?.startsWith('$')) {
-    const quoted = m.label.match(/\b(?:rg|grep)\b[^"']*(?:"([^"]+)"|'([^']+)')/)
-    raw = quoted?.[1] || quoted?.[2] || '代码里的线索'
-  }
-  return `「${shortToolText(raw, '线索')}」`
-}
-function toolKind(m: Msg) {
-  const label = (m.label || '').trim()
-  const plain = label.replace(/^🔧\s*/, '')
-  if (m.who === 'codex' && label.startsWith('$')) {
-    const cmd = label.slice(1).trim()
-    if (/(^|\s)(rg|grep|find)(\s|$)/.test(cmd)) return 'Search'
-    if (/(^|\s)(sed|head|tail|stat)(\s|$)|\bgit\s+(diff|status|log|show)\b/.test(cmd)) return 'Read'
-    return 'Bash'
-  }
-  return plain
-}
-
-const SUXU_TOOL_TEXT: Record<string, ToolText> = {
-  Read: m => `苏煦潜进 ${toolFile(m)} 看了一眼`,
-  Bash: () => '苏煦伸触手戳了下终端',
-  Edit: m => `苏煦给 ${toolFile(m)} 动了几针`,
-  Write: m => `苏煦新写了一页 ${toolFile(m)}`,
-  WebSearch: m => `苏煦浮上水面打听了下 ${toolKeyword(m)}`,
-}
-const CODEX_TOOL_TEXT: Record<string, ToolText> = {
-  Read: m => `皮卡晏翻开 ${toolFile(m)} 看了看`,
-  Bash: () => '皮卡晏钻进终端拧了颗螺丝',
-  Edit: m => `皮卡晏给 ${toolFile(m)} 缝补了几针`,
-  Write: m => `皮卡晏铺开一张新稿 ${toolFile(m)}`,
-  Search: m => `皮卡晏举着放大镜找 ${toolKeyword(m)}`,
-  WebSearch: m => `皮卡晏跑出门打听 ${toolKeyword(m)}`,
-}
-function friendlyToolLabel(m: Msg) {
-  const table = m.who === 'codex' ? CODEX_TOOL_TEXT : SUXU_TOOL_TEXT
-  const mapped = table[toolKind(m)]
-  if (mapped) return mapped(m)
-  return `${m.who === 'codex' ? '皮卡晏' : '苏煦'} · ${m.label || '做了个动作'}`
-}
-
-function ToolChip({ m }: { m: Msg }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="gc-tool">
-      <button className="gc-tool-head" aria-expanded={open} onClick={() => setOpen(o => !o)}>
-        <span className="gc-tool-label">{friendlyToolLabel(m)}</span>
-        {m.detail ? <span className="gc-tool-caret">{open ? '▾' : '▸'}</span> : null}
-      </button>
-      {open && m.detail ? <pre className="gc-tool-detail">{m.detail}</pre> : null}
-    </div>
-  )
-}
-
-function ToolLabelGroup({ label, items }: { label: string; items: Msg[] }) {
-  const [open, setOpen] = useState(false)
-  const directDetail = items.length === 1 ? items[0].detail : ''
-  const expandable = items.length >= 2 || !!directDetail
-  return (
-    <div className="gc-tool-group">
-      <button className="gc-tool-group-head" aria-expanded={open} onClick={() => expandable && setOpen(o => !o)}>
-        <span className="gc-tool-group-title">{label}</span>
-        {items.length >= 2 && <span className="gc-tool-count">·{items.length}</span>}
-        {expandable && <span className="gc-tool-caret">{open ? '▾' : '▸'}</span>}
-      </button>
-      {open && items.length >= 2 && <div className="gc-tool-list">{items.map(m => <ToolChip key={m.id} m={m} />)}</div>}
-      {open && directDetail && <pre className="gc-tool-detail">{directDetail}</pre>}
-    </div>
-  )
-}
-
-function ToolRun({ segmentId, items }: { segmentId: number; items: Msg[] }) {
-  const groups: { label: string; items: Msg[] }[] = []
-  const byLabel = new Map<string, { label: string; items: Msg[] }>()
-  for (const item of items) {
-    const label = friendlyToolLabel(item)
-    const existing = byLabel.get(label)
-    if (existing) existing.items.push(item)
-    else {
-      const group = { label, items: [item] }
-      byLabel.set(label, group)
-      groups.push(group)
-    }
-  }
-  return (
-    <div className="gc-tool-run">
-      {groups.map(group => (
-        <ToolLabelGroup key={`${segmentId}:${group.label}`} label={group.label} items={group.items} />
-      ))}
     </div>
   )
 }
@@ -716,18 +593,6 @@ const GC_CSS = `
 .cc-msg.user .gc-who{color:#b79a63}.cc-msg.assistant .gc-who{color:#6f97b4}
 .gc-msg.codex .cc-text{color:oklch(0.48 0.06 150)}.gc-msg.codex .gc-who{color:#8a9683}
 .gc-sys{align-self:center;text-align:center;font-size:12px;color:var(--ink-faint,#aca596);margin:2px auto;letter-spacing:.05em}
-.gc-tool-run{align-self:flex-start;display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:88%;margin:-4px 0}
-.gc-tool-group{max-width:100%}
-.gc-tool-group-head{display:flex;align-items:center;gap:7px;max-width:100%;border:none;background:rgba(120,110,90,.06);border-radius:11px;padding:5px 10px;font-family:var(--font-body,inherit);font-size:12.5px;line-height:1.45;text-align:left;color:var(--ink-soft,#7a746a)}
-.gc-tool-group-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gc-tool-count{flex:0 0 auto;font-size:10.5px;color:var(--ink-faint,#b8b2a6);opacity:.72}
-.gc-tool-list{display:flex;flex-direction:column;align-items:flex-start;gap:5px;margin-top:5px;padding-left:7px}
-.gc-tool{max-width:100%}
-.gc-tool-head{display:flex;align-items:center;gap:7px;border:none;background:rgba(120,110,90,.06);border-radius:11px;padding:5px 10px;font-family:inherit}
-.gc-tool-label{font-size:12.5px;color:var(--ink-soft,#7a746a)}
-.gc-tool-caret{font-size:9px;color:var(--ink-faint,#b8b2a6)}
-.gc-tool-detail{margin:4px 0 0;padding:8px 10px;background:rgba(120,110,90,.06);border-radius:10px;font-size:11.5px;line-height:1.5;
-  color:var(--ink-soft,#6a655c);white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
 .gc-dots-anim{display:inline-flex;margin-left:5px;vertical-align:middle}
 .gc-dots-anim i{width:4px;height:4px;margin:0 1px;border-radius:50%;background:currentColor;opacity:.4;animation:gc-blink 1.2s infinite}
 .gc-dots-anim i:nth-child(2){animation-delay:.2s}.gc-dots-anim i:nth-child(3){animation-delay:.4s}
