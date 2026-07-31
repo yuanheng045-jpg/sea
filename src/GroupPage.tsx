@@ -1,9 +1,10 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import type { Page } from './App'
 
 type Role = 'yuanyao' | 'suxu' | 'suxu-api' | 'codex' | 'system' | 'tool'
 interface PermReq { path: string; reason?: string; status?: 'pending' | 'granted' | 'revoked' | 'failed'; minutes?: number; expiry?: number; error?: string }
-interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[] }
+interface Decision { title: string; options: { key: string; label: string }[]; recommend?: string; why?: string }
+interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[]; decision?: Decision; decideFor?: number; choice?: string }
 interface Config { maxAiTurns: number; mentionFreeFollow: boolean; aiCrosstalk: boolean; models?: Record<string, string>; effort?: Record<string, string> }
 interface Usage { who: string; model: string; ctx: number; cacheRead: number; input: number; output: number }
 const kFmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n)
@@ -22,6 +23,18 @@ const MEM_LABEL: Record<string, string> = { work: '工作台账', intimate: '私
 const ROLE_CONF = [{ who: 'suxu', label: '苏煦·订阅' }, { who: 'suxu-api', label: '苏煦·API' }, { who: 'codex', label: 'Codex' }]
 const ROLE_CLASS: Record<string, string> = { yuanyao: 'user', suxu: 'assistant', 'suxu-api': 'assistant', codex: 'codex' }
 const NAME: Record<string, string> = { yuanyao: '原瑶', suxu: '苏煦', 'suxu-api': '苏煦', codex: 'Codex' }
+const LAST_ROOM_KEY = 'gc-last-room'
+
+function readLastRoom() {
+  try { return localStorage.getItem(LAST_ROOM_KEY) }
+  catch (e) { console.error('读取上次客厅房间失败:', e); return null }
+}
+function rememberRoom(id: string | null) {
+  try {
+    if (id) localStorage.setItem(LAST_ROOM_KEY, id)
+    else localStorage.removeItem(LAST_ROOM_KEY)
+  } catch (e) { console.error('保存上次客厅房间失败:', e) }
+}
 
 // Codex 申请临时写权的卡片。收到 need_perm 标记时挂在他消息底下（2026-07-23）
 function PermCard({ perm, onGrant, onRevoke }: { perm: PermReq; onGrant: (min: number) => void; onRevoke: () => void }) {
@@ -49,19 +62,154 @@ function PermCard({ perm, onGrant, onRevoke }: { perm: PermReq; onGrant: (min: n
   )
 }
 
+// 决策卡：AI 需要原瑶拿主意时渲染的可点选卡片；选定后还能补充一句（2026-07-29）
+function DecisionCard({ m, answeredChoice, onDecide }: { m: Msg; answeredChoice?: string; onDecide: (choice: string, label: string, note: string) => void }) {
+  const d = m.decision!
+  const [sel, setSel] = useState('')
+  const [note, setNote] = useState('')
+  const [sent, setSent] = useState(false)
+  const done = answeredChoice || (sent ? (sel || d.recommend || '') : '')
+  if (done) {
+    const lab = d.options.find(o => o.key === done)?.label || ''
+    return (
+      <div className="gc-dec gc-dec-done">
+        <div className="gc-dec-title">{d.title}</div>
+        <div className="gc-dec-badge">✓ 已选 {done}{lab ? ' · ' + lab.slice(0, 26) : ''}</div>
+      </div>
+    )
+  }
+  const pick = (k: string) => { onDecide(k, d.options.find(o => o.key === k)?.label || '', note.trim()); setSent(true) }
+  return (
+    <div className="gc-dec">
+      <div className="gc-dec-title">{d.title}</div>
+      {d.options.map(o => (
+        <button key={o.key} className={`gc-dec-opt${sel === o.key ? ' sel' : ''}`} onClick={() => setSel(sel === o.key ? '' : o.key)}>
+          <span className="gc-dec-key">{o.key}</span>
+          <span className="gc-dec-label">{o.label}</span>
+          {d.recommend === o.key && <span className="gc-dec-rectag">推荐</span>}
+        </button>
+      ))}
+      {d.why && <div className="gc-dec-why">推荐 {d.recommend}：{d.why}</div>}
+      <textarea className="gc-dec-note" placeholder="想补充点什么…（可不填）" value={note} rows={1}
+        onChange={e => { setNote(e.target.value); const t = e.target; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 80) + 'px' }} />
+      <div className="gc-dec-acts">
+        {sel
+          ? <button className="gc-dec-btn primary" onClick={() => pick(sel)}>就这么定（{sel}）</button>
+          : (d.recommend ? <button className="gc-dec-btn primary" onClick={() => pick(d.recommend!)}>按推荐（{d.recommend}）</button> : null)}
+        <button className="gc-dec-btn ghost" onClick={() => onDecide('explain', '', '')}>再讲白点</button>
+      </div>
+    </div>
+  )
+}
+
+type ToolText = (m: Msg) => string
+
+function toolObject(m: Msg): Record<string, unknown> | null {
+  if (!m.detail?.trim().startsWith('{')) return null
+  try {
+    const parsed = JSON.parse(m.detail)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null
+  } catch (e) { console.error('解析客厅工具详情失败:', e); return null }
+}
+function shortToolText(value: unknown, fallback: string) {
+  const text = typeof value === 'string' ? value.trim() : ''
+  if (!text) return fallback
+  return text.length > 42 ? text.slice(0, 39) + '…' : text
+}
+function toolFile(m: Msg) {
+  const obj = toolObject(m)
+  let raw = obj?.file_path || obj?.path || obj?.filePath
+  if (!raw && m.who === 'codex' && m.label?.startsWith('$')) {
+    const paths = m.label.match(/(?:\/|\.\/)[^\s;&|]+|[\w.-]+\.(?:tsx?|jsx?|mjs|css|html|json|md|py|sh)/g)
+    raw = paths?.[paths.length - 1]?.replace(/['"),]+$/, '')
+  }
+  const text = shortToolText(raw, '文件')
+  if (text === '文件') return text
+  const bits = text.split('/').filter(Boolean)
+  return `「${bits.slice(-2).join('/')}」`
+}
+function toolKeyword(m: Msg) {
+  const obj = toolObject(m)
+  let raw = obj?.query || m.detail
+  if (m.who === 'codex' && m.label?.startsWith('$')) {
+    const quoted = m.label.match(/\b(?:rg|grep)\b[^"']*(?:"([^"]+)"|'([^']+)')/)
+    raw = quoted?.[1] || quoted?.[2] || '代码里的线索'
+  }
+  return `「${shortToolText(raw, '线索')}」`
+}
+function toolKind(m: Msg) {
+  const label = (m.label || '').trim()
+  const plain = label.replace(/^🔧\s*/, '')
+  if (m.who === 'codex' && label.startsWith('$')) {
+    const cmd = label.slice(1).trim()
+    if (/(^|\s)(rg|grep|find)(\s|$)/.test(cmd)) return 'Search'
+    if (/(^|\s)(sed|head|tail|stat)(\s|$)|\bgit\s+(diff|status|log|show)\b/.test(cmd)) return 'Read'
+    return 'Bash'
+  }
+  return plain
+}
+
+const SUXU_TOOL_TEXT: Record<string, ToolText> = {
+  Read: m => `苏煦潜进 ${toolFile(m)} 看了一眼`,
+  Bash: () => '苏煦伸触手戳了下终端',
+  Edit: m => `苏煦给 ${toolFile(m)} 动了几针`,
+  Write: m => `苏煦新写了一页 ${toolFile(m)}`,
+  WebSearch: m => `苏煦浮上水面打听了下 ${toolKeyword(m)}`,
+}
+const CODEX_TOOL_TEXT: Record<string, ToolText> = {
+  Read: m => `皮卡晏翻开 ${toolFile(m)} 看了看`,
+  Bash: () => '皮卡晏钻进终端拧了颗螺丝',
+  Edit: m => `皮卡晏给 ${toolFile(m)} 缝补了几针`,
+  Write: m => `皮卡晏铺开一张新稿 ${toolFile(m)}`,
+  Search: m => `皮卡晏举着放大镜找 ${toolKeyword(m)}`,
+  WebSearch: m => `皮卡晏跑出门打听 ${toolKeyword(m)}`,
+}
+function friendlyToolLabel(m: Msg) {
+  const table = m.who === 'codex' ? CODEX_TOOL_TEXT : SUXU_TOOL_TEXT
+  const mapped = table[toolKind(m)]
+  if (mapped) return mapped(m)
+  return `${m.who === 'codex' ? '皮卡晏' : '苏煦'} · ${m.label || '做了个动作'}`
+}
+
 function ToolChip({ m }: { m: Msg }) {
   const [open, setOpen] = useState(false)
-  const who = m.who === 'codex' ? 'Codex' : '苏煦'
   return (
     <div className="gc-tool">
-      <button className="gc-tool-head" onClick={() => setOpen(o => !o)}>
-        <span className="gc-tool-who">{who}</span>
-        <span className="gc-tool-label">{m.label}</span>
+      <button className="gc-tool-head" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <span className="gc-tool-label">{friendlyToolLabel(m)}</span>
         {m.detail ? <span className="gc-tool-caret">{open ? '▾' : '▸'}</span> : null}
       </button>
       {open && m.detail ? <pre className="gc-tool-detail">{m.detail}</pre> : null}
     </div>
   )
+}
+
+function ToolGroup({ items }: { items: Msg[] }) {
+  const [open, setOpen] = useState(false)
+  const latest = items[items.length - 1]
+  return (
+    <div className="gc-tool-group">
+      <button className="gc-tool-group-head" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <span className="gc-tool-group-title">{friendlyToolLabel(latest)}</span>
+        {items.length >= 2 && <span className="gc-tool-count">·{items.length}</span>}
+        <span className="gc-tool-caret">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && <div className="gc-tool-list">{items.map(m => <ToolChip key={m.id} m={m} />)}</div>}
+    </div>
+  )
+}
+
+type FeedItem = { kind: 'message'; msg: Msg } | { kind: 'tools'; id: number; items: Msg[] }
+function groupFeed(msgs: Msg[]): FeedItem[] {
+  const grouped: FeedItem[] = []
+  for (const msg of msgs) {
+    const last = grouped[grouped.length - 1]
+    if (msg.role === 'tool') {
+      if (last?.kind === 'tools') last.items.push(msg)
+      else grouped.push({ kind: 'tools', id: msg.id, items: [msg] })
+    } else grouped.push({ kind: 'message', msg })
+  }
+  return grouped
 }
 
 function PlusSvg() {
@@ -106,6 +254,11 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   const histRef = useRef(false)
 
   const room = rooms.find(r => r.id === roomId) || null
+  const feedItems = useMemo(() => groupFeed(msgs), [msgs])
+  const selectRoom = useCallback((id: string | null) => {
+    setRoomId(id)
+    rememberRoom(id)
+  }, [])
   const scroll = useCallback((force = false) => {
     const el = feedRef.current; if (!el) return
     if (force || stickRef.current) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })
@@ -146,12 +299,15 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
         const rd = await rr.json()
         const ro = await (await fetch(`${API}/roster`, { credentials: 'same-origin' })).json()
         if (!alive) return
-        setRooms(rd.rooms || []); setRoster(ro.roster || [])
-        setRoomId(rd.rooms?.[0]?.id || null); setGate('ok')
+        const nextRooms: Room[] = rd.rooms || []
+        const saved = readLastRoom()
+        const nextId = (saved && nextRooms.some(r => r.id === saved)) ? saved : (nextRooms[0]?.id || null)
+        setRooms(nextRooms); setRoster(ro.roster || [])
+        selectRoom(nextId); setGate('ok')
       } catch { if (alive) setGate('need') }
     })()
     return () => { alive = false }
-  }, [])
+  }, [selectRoom])
 
   // 切房间：加载历史 + 接 SSE
   useEffect(() => {
@@ -184,6 +340,14 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
     if (pendFiles.length) body.files = pendFiles
     setInput(''); setPendImgs([]); setPendFiles([]); stickRef.current = true
     try { await fetch(`${API}/say?room=${roomId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'same-origin' }) } catch {}
+  }
+  const decide = async (forId: number, choice: string, label: string, note: string) => {
+    if (!roomId) return
+    if (choice === 'explain') {
+      try { await fetch(`${API}/say?room=${roomId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: '再讲白点——刚才那张卡我没太看懂，换个比喻讲讲' }), credentials: 'same-origin' }) } catch {}
+      return
+    }
+    try { await fetch(`${API}/decide?room=${roomId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ forId, choice, label, note }), credentials: 'same-origin' }) } catch {}
   }
   const uploadOne = async (f: File): Promise<{ url: string; name: string } | null> => {
     const b64 = await new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(',')[1] || ''); r.onerror = () => reject(new Error('read')); r.readAsDataURL(f) })
@@ -246,14 +410,15 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
     if (!newRoom || !newRoom.members.length) return
     try {
       const r = await (await fetch(`${API}/rooms`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newRoom.name || '新房间', members: newRoom.members, memory: newRoom.memory }), credentials: 'same-origin' })).json()
-      if (r.room) { setRooms(p => [...p, r.room]); setRoomId(r.room.id) }
+      if (r.room) { setRooms(p => [...p, r.room]); selectRoom(r.room.id) }
     } catch {}
     setNewRoom(null); setBarOpen(false)
   }
   const delRoom = async (id: string) => {
     try { await fetch(`${API}/rooms?id=${id}`, { method: 'DELETE', credentials: 'same-origin' }) } catch {}
     const left = rooms.filter(r => r.id !== id); setRooms(left)
-    if (roomId === id) setRoomId(left[0]?.id || null)
+    const nextId = roomId === id ? (left[0]?.id || null) : roomId
+    if (roomId === id || readLastRoom() === id) selectRoom(nextId)
   }
   const openEditor = async (who: string) => {
     setEditor({ who, label: '', draft: '', loading: true, save: null })
@@ -299,15 +464,16 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
       {gate === 'need' && <div className="gc-need">先去苏煦那边登录一下就能进来了</div>}
 
       <div className="gc-feed" ref={feedRef} onScroll={onScroll}>
-        {msgs.map(m => m.role === 'system'
-          ? <div key={m.id} className="gc-sys">{m.text}</div>
-          : m.role === 'tool'
-          ? <ToolChip key={m.id} m={m} />
-          : (
+        {feedItems.map(item => {
+          if (item.kind === 'tools') return <ToolGroup key={`tools-${item.id}`} items={item.items} />
+          const m = item.msg
+          return m.role === 'system'
+            ? <div key={m.id} className="gc-sys">{m.text}</div>
+            : (
             <div key={m.id} className={`cc-msg ${ROLE_CLASS[m.role]} gc-msg`}>
               <div className="cc-text-col">
                 <div className="gc-who">{NAME[m.role]}</div>
-                {(m.text || !(m.images?.length || m.files?.length)) && <div className="cc-text">{m.text || '…'}</div>}
+                {(m.text || (!(m.images?.length || m.files?.length) && !m.decision)) && <div className="cc-text">{m.text || '…'}</div>}
                 {Array.isArray(m.images) && m.images.map(u => <img key={u} className="gc-img" src={u} loading="lazy" />)}
                 {Array.isArray(m.files) && m.files.map(f => <a key={f.url} className="gc-file" href={f.url} download={f.name || true}>📎 {f.name || '文件'}</a>)}
                 {Array.isArray(m.perms) && m.perms.map(pm => (
@@ -315,9 +481,11 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
                     onGrant={mins => grantPerm(m.id, pm.path, mins)}
                     onRevoke={() => revokePerm(m.id, pm.path)} />
                 ))}
+                {m.decision && <DecisionCard m={m} answeredChoice={msgs.find(x => x.decideFor === m.id)?.choice} onDecide={(c, l, n) => decide(m.id, c, l, n)} />}
               </div>
             </div>
-          ))}
+          )
+        })}
         {status && <div className="gc-sys">{status}<span className="gc-dots-anim"><i /><i /><i /></span></div>}
       </div>
 
@@ -362,7 +530,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
             <div className="gc-drawer-title">房间</div>
             <div className="gc-room-list">
               {rooms.map(r => (
-                <div key={r.id} className={`gc-room${r.id === roomId ? ' on' : ''}`} onClick={() => { setRoomId(r.id); setBarOpen(false) }}>
+                <div key={r.id} className={`gc-room${r.id === roomId ? ' on' : ''}`} onClick={() => { selectRoom(r.id); setBarOpen(false) }}>
                   <div className="gc-room-txt"><div className="gc-room-name">{r.name}</div><div className="gc-room-mem">{memberNames(r)} · {MEM_LABEL[r.memory || 'work']}</div></div>
                   {rooms.length > 1 && <button className="gc-room-del" onClick={e => { e.stopPropagation(); delRoom(r.id) }} aria-label="删除">×</button>}
                 </div>
@@ -521,9 +689,13 @@ const GC_CSS = `
 .cc-msg.user .gc-who{color:#b79a63}.cc-msg.assistant .gc-who{color:#6f97b4}
 .gc-msg.codex .cc-text{color:oklch(0.48 0.06 150)}.gc-msg.codex .gc-who{color:#8a9683}
 .gc-sys{align-self:center;text-align:center;font-size:12px;color:var(--ink-faint,#aca596);margin:2px auto;letter-spacing:.05em}
-.gc-tool{align-self:flex-start;max-width:88%;margin:-4px 0}
+.gc-tool-group{align-self:flex-start;max-width:88%;margin:-4px 0}
+.gc-tool-group-head{display:flex;align-items:center;gap:7px;max-width:100%;border:none;background:rgba(120,110,90,.06);border-radius:11px;padding:5px 10px;font-family:var(--font-body,inherit);font-size:12.5px;line-height:1.45;text-align:left;color:var(--ink-soft,#7a746a)}
+.gc-tool-group-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gc-tool-count{flex:0 0 auto;font-size:10.5px;color:var(--ink-faint,#b8b2a6);opacity:.72}
+.gc-tool-list{display:flex;flex-direction:column;align-items:flex-start;gap:5px;margin-top:5px;padding-left:7px}
+.gc-tool{max-width:100%}
 .gc-tool-head{display:flex;align-items:center;gap:7px;border:none;background:rgba(120,110,90,.06);border-radius:11px;padding:5px 10px;font-family:inherit}
-.gc-tool-who{font-size:10.5px;color:var(--ink-faint,#a8a294)}
 .gc-tool-label{font-size:12.5px;color:var(--ink-soft,#7a746a)}
 .gc-tool-caret{font-size:9px;color:var(--ink-faint,#b8b2a6)}
 .gc-tool-detail{margin:4px 0 0;padding:8px 10px;background:rgba(120,110,90,.06);border-radius:10px;font-size:11.5px;line-height:1.5;
@@ -591,6 +763,7 @@ const GC_CSS = `
 .gc-pick-name{font-size:14px;color:var(--ink,#4a463e)}
 .gc-pick-desc{font-size:11px;color:var(--ink-faint,#a8a294)}
 /* 设置面板 */
+.gc-settings{max-height:calc(80dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .gc-set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 2px;border-bottom:1px solid rgba(120,110,90,.1)}
 .gc-set-label{font-size:14px;color:var(--ink,#4a463e);display:flex;flex-direction:column;gap:2px}
 .gc-set-sub{font-size:11px;color:var(--ink-faint,#a8a294)}
@@ -653,4 +826,20 @@ const GC_CSS = `
 .gc-perm-badge{font-size:12px;color:#6f9a6f;padding:4px 8px;border-radius:8px;background:rgba(120,180,120,.1)}
 .gc-perm-revoked .gc-perm-badge{color:var(--ink-faint,#a8a294);background:rgba(120,110,90,.08)}
 .gc-perm-failed .gc-perm-badge{color:#c58b8b;background:rgba(200,130,130,.1)}
+.gc-dec{margin-top:8px;padding:11px 12px;border-radius:12px;background:rgba(179,153,110,.08);border:1px solid rgba(179,153,110,.22);font-size:12.5px;color:var(--ink,#4a463e);max-width:min(90%,420px)}
+.gc-dec-done{opacity:.8}
+.gc-dec-title{font-size:12.5px;font-weight:600}
+.gc-dec-opt{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;padding:8px 10px;margin-top:6px;border-radius:10px;border:1px solid rgba(179,153,110,.25);background:rgba(255,253,249,.6);color:var(--ink,#4a463e);font-size:12.5px;line-height:1.5;font-family:inherit}
+.gc-dec-opt.sel{border-color:#b2925f;background:rgba(199,173,132,.16);box-shadow:0 0 0 1px #b2925f inset}
+.gc-dec-key{flex:none;font-weight:700;color:#a8874f}
+.gc-dec-label{flex:1}
+.gc-dec-rectag{flex:none;font-size:10.5px;color:#a8874f;border:1px solid rgba(179,153,110,.4);border-radius:6px;padding:1px 5px;align-self:center}
+.gc-dec-why{margin-top:7px;font-size:12px;color:var(--ink-soft,#7a746a);line-height:1.5}
+.gc-dec-note{width:100%;margin-top:8px;padding:7px 9px;border-radius:9px;border:1px solid rgba(179,153,110,.25);background:rgba(255,253,249,.5);font-size:12.5px;font-family:inherit;color:var(--ink,#4a463e);resize:none;outline:none}
+.gc-dec-acts{margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.gc-dec-btn{padding:6px 12px;font-size:12px;font-family:inherit;border-radius:8px;border:1px solid rgba(179,153,110,.35);background:rgba(255,253,249,.7);color:var(--ink,#4a463e)}
+.gc-dec-btn.primary{background:linear-gradient(135deg,#c7ad84,#b2925f);color:#fff;border-color:transparent}
+.gc-dec-btn.primary:active{filter:brightness(.94)}
+.gc-dec-btn.ghost{border-color:rgba(120,110,90,.2);background:transparent;color:var(--ink-soft,#8a8478)}
+.gc-dec-badge{display:inline-block;margin-top:6px;font-size:12px;color:#6f9a6f;padding:4px 8px;border-radius:8px;background:rgba(120,180,120,.1)}
 `
