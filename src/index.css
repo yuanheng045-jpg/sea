@@ -2660,6 +2660,10 @@ button { font: inherit; cursor: pointer; color: inherit; }
 .cc-msg.user .cc-msg-file {
   max-width: 88%;
 }
+/* 正文放大时两侧仍用同一条安全边界：苏煦靠左、原瑶靠右，时间随各自外沿对齐。 */
+body[data-chat-bubbles="off"] .cc-msg.assistant .cc-text {
+  max-width: 88%;
+}
 .cc-msg.user .cc-thinking-body {
   border-left: none;
   border-right: 1.5px solid oklch(0.42 0.15 256 / 0.35);
@@ -4533,7 +4537,7 @@ body[data-chat-bubbles="on"] .cc-text {
   padding: 0 !important;
   border: 0 !important;
   width: 100%;
-  font-size: 14.5px !important;
+  font-size: var(--chat-text-size, 14.5px) !important;
 }
 body[data-chat-bubbles="on"] .cc-paragraph {
   max-width: min(94%, 620px);
