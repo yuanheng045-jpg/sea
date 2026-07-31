@@ -357,6 +357,8 @@ function AppearancePanel({ appearance: a, textColors }: {
   textColors: { su: string; you: string }
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const textSize = a.textSize > 0 ? a.textSize : (a.bubbles ? 14.5 : 13)
+  const thinkingSize = a.thinkingSize > 0 ? a.thinkingSize : 12.5
   const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -461,6 +463,41 @@ function AppearancePanel({ appearance: a, textColors }: {
           ><span className="ap-toggle-knob" /></button>
         </div>
         <div className="ap-hint">{a.bubbles ? '磨砂气泡 · 双方同色 · 静态防发热' : '默认 · 头像加文字'}</div>
+      </div>
+
+      <div className="ap-section">
+        <div className="ap-label">字号</div>
+        <label className="ap-dim-row ap-font-row">
+          <span className="ap-dim-label">正文</span>
+          <input
+            type="range"
+            min={11}
+            max={22}
+            step={0.5}
+            value={textSize}
+            onChange={e => updateAppearance({ textSize: Number(e.target.value) })}
+            className="ap-range"
+            style={{ '--v': ((textSize - 11) / 11) * 100 } as React.CSSProperties}
+            aria-label="正文字号"
+          />
+          <span className="ap-dim-val">{textSize}px</span>
+        </label>
+        <label className="ap-dim-row ap-font-row">
+          <span className="ap-dim-label">思考</span>
+          <input
+            type="range"
+            min={10}
+            max={18}
+            step={0.5}
+            value={thinkingSize}
+            onChange={e => updateAppearance({ thinkingSize: Number(e.target.value) })}
+            className="ap-range"
+            style={{ '--v': ((thinkingSize - 10) / 8) * 100 } as React.CSSProperties}
+            aria-label="思考字号"
+          />
+          <span className="ap-dim-val">{thinkingSize}px</span>
+        </label>
+        <div className="ap-hint">拖动后立即生效，并记住这台设备的选择</div>
       </div>
 
       <div className="ap-section">

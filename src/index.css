@@ -4375,6 +4375,9 @@ body[data-power-save] .gear, body[data-power-save] .butterfly, body[data-power-s
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
 }
+.ap-font-row { padding-top: 5px; padding-bottom: 5px; }
+.ap-font-row .ap-dim-label { min-width: 26px; }
+.ap-font-row .ap-dim-val { min-width: 42px; text-align: right; }
 .ap-range {
   appearance: none;
   -webkit-appearance: none;
@@ -4459,6 +4462,14 @@ body[data-power-save] .gear, body[data-power-save] .butterfly, body[data-power-s
 .ap-color-row span {
   font-size: 13px;
   color: var(--ink);
+}
+
+/* 聊天字号：仅在用户动过对应滑杆后覆盖，未设置时完整保留原有排版。 */
+body[data-chat-text-size="custom"] .cc-text {
+  font-size: var(--chat-text-size) !important;
+}
+body[data-chat-thinking-size="custom"] .cc-thinking-body {
+  font-size: var(--chat-thinking-size) !important;
 }
 
 /* ================= 背景层 ================= */
