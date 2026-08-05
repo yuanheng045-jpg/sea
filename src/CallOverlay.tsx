@@ -67,9 +67,11 @@ export function CallOverlay() {
   // 分句流水线朗读:作废令牌(挂断/被新回复接管即自增作废旧轮)+ 停当前句的句柄
   const playGenRef = useRef(0)
   const stopCurrentRef = useRef<null | (() => void)>(null)
+  const fallbackAudioRef = useRef<HTMLAudioElement | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [declineOpen, setDeclineOpen] = useState(false)
   const [note, setNote] = useState('')
+  const [resumeSpeech, setResumeSpeech] = useState<null | (() => void)>(null)
 
   // 通话中实时计时
   useEffect(() => {
@@ -92,6 +94,7 @@ export function CallOverlay() {
       const stop = stopCurrentRef.current
       stopCurrentRef.current = null
       if (stop) stop()
+      setResumeSpeech(null)
     }
     const active = call.phase === 'connected' || call.phase === 'lingering'
     if (!active) { primedRef.current = false; cancelSpeech(); callStore.setSpeaking(false); return }
@@ -116,7 +119,7 @@ export function CallOverlay() {
       const myGen = ++playGenRef.current    // 本轮代号;后来者自增即让本轮 loop 作废
       callStore.setSpeaking(true)           // 整段合成+播放期间持续置真,VAD 据此暂停防回声(跨句不熄)
       void (async () => {
-        const fetchOne = async (text: string): Promise<HTMLAudioElement | null> => {
+        const fetchOne = async (text: string): Promise<Blob | null> => {
           try {
             const r = await fetch('/api/tts', {
               method: 'POST', credentials: 'include',
@@ -124,37 +127,85 @@ export function CallOverlay() {
               body: JSON.stringify({ text }),
             })
             if (!r.ok) return null
-            const blob = await r.blob()
-            const audio = new Audio(URL.createObjectURL(blob))
-            try { audio.volume = callStore.getVolumeHint() } catch {}
-            return audio
-          } catch { return null }
+            return await r.blob()
+          } catch (e) {
+            console.error('[call] tts fetch failed:', e)
+            return null
+          }
         }
-        let nextP: Promise<HTMLAudioElement | null> = fetchOne(chunks[0])  // 先起第一句合成
+
+        // Web Audio 仍不能播时才回落 HTMLAudioElement；被 iOS 拦截就等她点按钮续播。
+        // 后续句复用同一个元素，她只需解锁一次。
+        const playWithTapFallback = (blob: Blob): Promise<void> => new Promise((resolve) => {
+          const audio = fallbackAudioRef.current || new Audio()
+          fallbackAudioRef.current = audio
+          const objectUrl = URL.createObjectURL(blob)
+          let settled = false
+
+          const fin = () => {
+            if (settled) return
+            settled = true
+            audio.removeEventListener('ended', fin)
+            audio.removeEventListener('error', onError)
+            if (stopCurrentRef.current === stop) stopCurrentRef.current = null
+            setResumeSpeech(null)
+            try { audio.pause() } catch {}
+            try { audio.removeAttribute('src'); audio.load() } catch {}
+            try { URL.revokeObjectURL(objectUrl) } catch {}
+            resolve()
+          }
+          const onError = () => {
+            console.error('[call] audio element playback error')
+            fin()
+          }
+          const stop = () => { fin() }
+          const tryPlay = () => {
+            if (settled) return
+            setResumeSpeech(null)
+            void audio.play().catch((e) => {
+              if (settled) return
+              console.error('[call] audio play blocked:', e)
+              if (playGenRef.current === myGen) setResumeSpeech(() => tryPlay)
+              else fin()
+            })
+          }
+
+          try { audio.pause() } catch {}
+          try { audio.volume = callStore.getVolumeHint() } catch {}
+          audio.addEventListener('ended', fin)
+          audio.addEventListener('error', onError)
+          audio.src = objectUrl
+          try { audio.load() } catch {}
+          stopCurrentRef.current = stop
+          tryPlay()
+        })
+
+        let nextP: Promise<Blob | null> = fetchOne(chunks[0])  // 先起第一句合成
         try {
           for (let i = 0; i < chunks.length; i++) {
-            if (playGenRef.current !== myGen) { void nextP.then((a) => { if (a) { try { URL.revokeObjectURL(a.src) } catch {} } }); return }
+            if (playGenRef.current !== myGen) return
             const curP = nextP
             // 播当前句前先把下一句合成发出去:N+1 合成与 N 播放重叠,句间少留空
             nextP = i + 1 < chunks.length ? fetchOne(chunks[i + 1]) : Promise.resolve(null)
-            const audio = await curP
-            if (playGenRef.current !== myGen) {
-              if (audio) { try { URL.revokeObjectURL(audio.src) } catch {} }
-              void nextP.then((a) => { if (a) { try { URL.revokeObjectURL(a.src) } catch {} } })
-              return
+            const blob = await curP
+            if (playGenRef.current !== myGen) return
+            if (!blob) continue               // 这句合成失败:跳过它继续下一句,不让整段哑掉
+
+            try {
+              const playback = await callStore.startCallAudioPlayback(blob, callStore.getVolumeHint())
+              if (playGenRef.current !== myGen) { playback.stop(); return }
+              const stop = () => { playback.stop() }
+              stopCurrentRef.current = stop
+              await playback.done
+              if (stopCurrentRef.current === stop) stopCurrentRef.current = null
+            } catch (e) {
+              console.warn('[call] Web Audio playback unavailable, using tap fallback:', e)
+              if (playGenRef.current !== myGen) return
+              await playWithTapFallback(blob)
             }
-            if (!audio) continue               // 这句合成失败:跳过它继续下一句,不让整段哑掉
-            await new Promise<void>((resolve) => {
-              let settled = false
-              const fin = () => { if (settled) return; settled = true; stopCurrentRef.current = null; try { URL.revokeObjectURL(audio.src) } catch {}; resolve() }
-              stopCurrentRef.current = () => { try { audio.pause() } catch {}; fin() }
-              audio.addEventListener('ended', fin)
-              audio.addEventListener('error', fin)
-              void audio.play().catch(() => fin())
-            })
           }
         } finally {
-          if (playGenRef.current === myGen) { stopCurrentRef.current = null; callStore.setSpeaking(false) }
+          if (playGenRef.current === myGen) { stopCurrentRef.current = null; setResumeSpeech(null); callStore.setSpeaking(false) }
         }
       })()
     } else {
@@ -270,6 +321,7 @@ export function CallOverlay() {
               {micGlyph}
             </button>
             <div className="call-mic-label">{call.recording ? '在录音…(点一下结束)' : (call.busy || call.speaking) ? '苏煦在说…' : '在听…'}</div>
+            {resumeSpeech ? <button className="call-chip" onClick={resumeSpeech}>点一下继续听</button> : null}
             {call.phase === 'lingering' ? (
               <div className="call-linger">还在…({call.lingerSecondsLeft}s,说话就不挂)</div>
             ) : null}

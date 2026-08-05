@@ -109,6 +109,8 @@ _pollTimer = setTimeout(() => { void pollTick() }, 2000)
 // ── 主动拨出 ──
 export async function startCall(channel: 'cc' | 'api', conversationId: string | null) {
   if (s.phase !== 'idle') return
+  // 必须在她点“拨出”的同一个手势栈里解锁；iOS 不认之后的异步回复。
+  unlockCallAudio()
   set({ phase: 'dialing', channel, conversationId, turns: [], error: null })
   try {
     const r = await fetch('/api/call/start', {
@@ -129,6 +131,8 @@ export async function startCall(channel: 'cc' | 'api', conversationId: string | 
 // ── 接听 ──
 export async function acceptCall() {
   if (s.phase !== 'ringing') return
+  // 接听点击是来电流程唯一次稳定的用户手势，在任何 await 之前解锁。
+  unlockCallAudio()
   const id = s.inviteId
   set({ busy: true })
   try {
@@ -287,6 +291,79 @@ let _recStartAt = 0
 let _lastTickAt = 0
 let _vadData: Uint8Array | null = null
 
+function ensureCallAudioContext(): AudioContext | null {
+  if (_audioCtx && _audioCtx.state !== 'closed') return _audioCtx
+  const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+  if (!Ctx) return null
+  _audioCtx = new Ctx()
+  return _audioCtx
+}
+
+// 拨出/接听点击内同步调用：先排一帧静音再 resume，让 iOS 把这个 context 认成已由用户解锁。
+export function unlockCallAudio() {
+  try {
+    const ctx = ensureCallAudioContext()
+    if (!ctx) return
+    const silent = ctx.createBufferSource()
+    silent.buffer = ctx.createBuffer(1, 1, ctx.sampleRate)
+    silent.connect(ctx.destination)
+    silent.addEventListener('ended', () => { try { silent.disconnect() } catch {} }, { once: true })
+    silent.start()
+    if (ctx.state !== 'running') {
+      void ctx.resume().catch((e) => console.error('[call] audio unlock failed:', e))
+    }
+  } catch (e) {
+    console.error('[call] audio unlock failed:', e)
+  }
+}
+
+export type CallAudioPlayback = {
+  done: Promise<void>
+  stop: () => void
+}
+
+// 用通话中已经在运行的 AudioContext 播放 TTS，避开 iOS 对异步 new Audio().play() 的拦截。
+// 只借用同一 context 的输出端，不改录音、VAD 或麦克风节点。
+export async function startCallAudioPlayback(blob: Blob, volume = 1): Promise<CallAudioPlayback> {
+  const ctx = _audioCtx
+  if (!ctx || ctx.state === 'closed') throw new Error('call audio context unavailable')
+  if (ctx.state !== 'running') await ctx.resume()
+
+  const encoded = await blob.arrayBuffer()
+  const decoded = await ctx.decodeAudioData(encoded)
+  if (_audioCtx !== ctx) throw new Error('call audio context ended')
+
+  const source = ctx.createBufferSource()
+  const gain = ctx.createGain()
+  source.buffer = decoded
+  gain.gain.value = Math.max(0, Math.min(1, Number.isFinite(volume) ? volume : 1))
+  source.connect(gain)
+  gain.connect(ctx.destination)
+
+  let settled = false
+  let finish!: () => void
+  const done = new Promise<void>((resolve) => {
+    finish = () => {
+      if (settled) return
+      settled = true
+      try { source.disconnect() } catch {}
+      try { gain.disconnect() } catch {}
+      resolve()
+    }
+  })
+  source.addEventListener('ended', finish, { once: true })
+  source.start()
+
+  return {
+    done,
+    stop: () => {
+      if (settled) return
+      try { source.stop() } catch {}
+      finish()
+    },
+  }
+}
+
 function nowMs(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now()
 }
@@ -364,11 +441,10 @@ export async function startVad() {
       try { stream.getTracks().forEach((t) => t.stop()) } catch {}
       return
     }
-    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
-    if (!Ctx) { try { stream.getTracks().forEach((t) => t.stop()) } catch {}; return }
-    const ctx: AudioContext = new Ctx()
+    const ctx = ensureCallAudioContext()
+    if (!ctx) { try { stream.getTracks().forEach((t) => t.stop()) } catch {}; return }
+    if (ctx.state !== 'running') await ctx.resume()
     _vadStream = stream
-    _audioCtx = ctx
     _srcNode = ctx.createMediaStreamSource(stream)
     _analyser = ctx.createAnalyser()
     _analyser.fftSize = 1024
