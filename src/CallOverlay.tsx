@@ -124,7 +124,7 @@ export function CallOverlay() {
             const r = await fetch('/api/tts', {
               method: 'POST', credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text, previous_text: previousText, next_text: nextText }),
+              body: JSON.stringify({ text, previous_text: previousText, next_text: nextText, scenario: 'call' }),
             })
             if (!r.ok) return null
             return await r.blob()
