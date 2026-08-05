@@ -119,12 +119,12 @@ export function CallOverlay() {
       const myGen = ++playGenRef.current    // 本轮代号;后来者自增即让本轮 loop 作废
       callStore.setSpeaking(true)           // 整段合成+播放期间持续置真,VAD 据此暂停防回声(跨句不熄)
       void (async () => {
-        const fetchOne = async (text: string): Promise<Blob | null> => {
+        const fetchOne = async (text: string, previousText?: string, nextText?: string): Promise<Blob | null> => {
           try {
             const r = await fetch('/api/tts', {
               method: 'POST', credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text }),
+              body: JSON.stringify({ text, previous_text: previousText, next_text: nextText }),
             })
             if (!r.ok) return null
             return await r.blob()
@@ -180,13 +180,15 @@ export function CallOverlay() {
           tryPlay()
         })
 
-        let nextP: Promise<Blob | null> = fetchOne(chunks[0])  // 先起第一句合成
+        let nextP: Promise<Blob | null> = fetchOne(chunks[0], undefined, chunks[1])  // 先起第一句合成
         try {
           for (let i = 0; i < chunks.length; i++) {
             if (playGenRef.current !== myGen) return
             const curP = nextP
             // 播当前句前先把下一句合成发出去:N+1 合成与 N 播放重叠,句间少留空
-            nextP = i + 1 < chunks.length ? fetchOne(chunks[i + 1]) : Promise.resolve(null)
+            nextP = i + 1 < chunks.length
+              ? fetchOne(chunks[i + 1], chunks[i], chunks[i + 2])
+              : Promise.resolve(null)
             const blob = await curP
             if (playGenRef.current !== myGen) return
             if (!blob) continue               // 这句合成失败:跳过它继续下一句,不让整段哑掉
