@@ -607,6 +607,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const latestUserMessageRef = useRef<string | null | undefined>(undefined)
   const listRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const typingLastPingRef = useRef(0)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -813,6 +814,20 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
     store.sendMessage(text, Object.keys(extra).length ? extra : undefined)
     setDraft('')
     setAttachments([])
+  }
+
+  const onDraftChange = (value: string) => {
+    setDraft(value)
+    if (channel !== 'cc' || !value.trim()) return
+    const now = Date.now()
+    if (now - typingLastPingRef.current < 4000) return
+    typingLastPingRef.current = now
+    fetch('/cc-api/api/typing/ping', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'X-Channel-Pin': getPin() },
+      keepalive: true,
+    }).catch(() => {})
   }
 
   const toggleThinking = (id: string, isAutoExpanded: boolean) => {
@@ -1028,7 +1043,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
           <textarea
             ref={taRef}
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => onDraftChange(e.target.value)}
             rows={1}
           />
           <button
