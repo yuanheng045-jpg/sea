@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import type { Page } from './App'
 import { ToolRun } from './toolTales'
+import { Markdown } from './miniMarkdown'
 
 type Role = 'yuanyao' | 'suxu' | 'suxu-api' | 'codex' | 'system' | 'tool'
 interface PermReq { path: string; reason?: string; status?: 'pending' | 'granted' | 'revoked' | 'failed'; minutes?: number; expiry?: number; error?: string }
@@ -377,7 +378,9 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
             <div key={m.id} className={`cc-msg ${ROLE_CLASS[m.role]} gc-msg`}>
               <div className="cc-text-col">
                 <div className="gc-who">{NAME[m.role]}</div>
-                {(m.text || (!(m.images?.length || m.files?.length) && !m.decision)) && <div className="cc-text">{m.text || '…'}</div>}
+                {(m.text || (!(m.images?.length || m.files?.length) && !m.decision)) && (
+                  <div className="cc-text">{m.text ? <Markdown text={m.text} keyBase={`m${m.id}`} /> : '…'}</div>
+                )}
                 {Array.isArray(m.images) && m.images.map(u => <img key={u} className="gc-img" src={u} loading="lazy" />)}
                 {Array.isArray(m.files) && m.files.map(f => <a key={f.url} className="gc-file" href={f.url} download={f.name || true}>📎 {f.name || '文件'}</a>)}
                 {Array.isArray(m.perms) && m.perms.map(pm => (

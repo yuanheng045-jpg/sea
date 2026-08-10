@@ -5894,3 +5894,60 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none 
   .ws-row { margin-bottom: 36px; }
   .ws-thumb { min-height: 180px; }
 }
+
+/* ── Markdown（主聊天 + 客厅共用，2026-08-10）──────────────────
+   块级元素一律裹在 .cc-md-block 里；主聊天额外带 .cc-paragraph，
+   气泡模式下才有正经气泡外观与 IO 门控。 */
+.cc-text .cc-md-block,
+body[data-chat-bubbles="on"] .cc-paragraph.cc-md-block { white-space: normal; }
+
+.cc-md-inline {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.06em 0.34em;
+  border-radius: 6px;
+  background: color-mix(in oklch, currentColor 10%, transparent);
+}
+.cc-md-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  line-height: 1.55;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: color-mix(in oklch, currentColor 7%, transparent);
+  overflow-x: auto;
+}
+.cc-md-pre code { font: inherit; background: none; padding: 0; }
+.cc-md-ul, .cc-md-ol { margin: 0; padding-left: 1.4em; }
+.cc-md-ul { list-style: disc; }
+.cc-md-ol { list-style: decimal; }
+.cc-md-ul li, .cc-md-ol li { margin: 1px 0; }
+.cc-md-ul li::marker, .cc-md-ol li::marker { opacity: 0.5; }
+.cc-md-h { font-weight: 600; line-height: 1.4; }
+.cc-md-h1 { font-size: 1.18em; }
+.cc-md-h2 { font-size: 1.1em; }
+.cc-md-h3 { font-size: 1.04em; }
+.cc-md-h4 { font-size: 1em; }
+.cc-md-quote {
+  white-space: pre-wrap;
+  border-left: 2px solid color-mix(in oklch, currentColor 32%, transparent);
+  padding-left: 10px;
+  opacity: 0.84;
+}
+.cc-md-hr {
+  border: 0;
+  border-top: 1px solid color-mix(in oklch, currentColor 22%, transparent);
+  margin: 2px 0;
+}
+.cc-md-a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in oklch, currentColor 45%, transparent);
+}
+/* 客厅没有气泡骨架，块间距在这里补；主聊天沿用 .cc-paragraph 既有间距 */
+.gc-msg .cc-text .cc-md-p { margin: 0; }
+.gc-msg .cc-text > * + * { margin-top: 0.5em; }

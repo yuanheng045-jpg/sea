@@ -2,6 +2,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, Fragment, 
 import { createPortal } from 'react-dom'
 import { Sidebar } from './Sidebar'
 import { observeBubble } from './bubbleIO'
+import { Markdown, renderInline } from './miniMarkdown'
 import type { Page } from './App'
 import { IconSlot } from './IconSlot'
 import { enablePush } from './push'
@@ -314,14 +315,14 @@ function MusicCard({ songId, name, artist, cover, autoPlay }: { songId: string; 
 
 function renderPara(text: string, autoPlay?: boolean) {
   const m = text.match(MUSIC_RE)
-  if (!m) return text
+  if (!m) return renderInline(text, 'p')
   const before = text.substring(0, m.index!).trim()
   const [, songId, name, artist, cover, note] = m
   return (
     <>
-      {before && <span>{before} </span>}
+      {before && <span>{renderInline(before, 'pb')} </span>}
       <MusicCard songId={songId} name={name} artist={artist} cover={cover} autoPlay={autoPlay} />
-      {note?.trim() && <div style={{ marginTop: 4 }}>{note.trim()}</div>}
+      {note?.trim() && <div style={{ marginTop: 4 }}>{renderInline(note.trim(), 'pn')}</div>}
     </>
   )
 }
@@ -405,26 +406,30 @@ function parseAttachBlocks(text: string) {
   return blocks
 }
 
+// 每块仍挂 cc-paragraph + observeBubble：气泡模式下清单/代码块也是一枚正经气泡
+function MdParagraphs({ text, fresh, keyBase }: { text: string; fresh?: boolean; keyBase: string }) {
+  return (
+    <Markdown
+      text={text}
+      keyBase={keyBase}
+      blockClass="cc-paragraph"
+      blockRef={observeBubble}
+      renderParagraph={(t) => renderPara(t, fresh)}
+    />
+  )
+}
+
 function TextBlock({ text, fresh }: { text: string; fresh?: boolean }) {
   const segs = useMemo(() => parseVoiceSegments(text), [text])
   const hasVoice = segs.some((s) => s.type === 'voice')
-  if (!hasVoice) {
-    return (
-      <>
-        {text.split(/\n{2,}/).filter((p) => p.trim()).map((para, i) => (
-          <p key={i} ref={observeBubble} className="cc-paragraph">{renderPara(para, fresh)}</p>
-        ))}
-      </>
-    )
-  }
+  if (!hasVoice) return <MdParagraphs text={text} fresh={fresh} keyBase="t" />
   return (
     <>
-      {segs.map((seg, si) => {
-        if (seg.type === 'voice') return <VoiceBubble key={'v' + si} text={seg.val} />
-        return seg.val.split(/\n{2,}/).filter((pp) => pp.trim()).map((para, i) => (
-          <p key={'t' + si + '-' + i} ref={observeBubble} className="cc-paragraph">{renderPara(para, fresh)}</p>
-        ))
-      })}
+      {segs.map((seg, si) => (
+        seg.type === 'voice'
+          ? <VoiceBubble key={'v' + si} text={seg.val} />
+          : <MdParagraphs key={'t' + si} text={seg.val} fresh={fresh} keyBase={'t' + si} />
+      ))}
     </>
   )
 }
