@@ -613,6 +613,8 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const listRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const typingLastPingRef = useRef(0)
+  const typingLastDelRef = useRef(0)
+  const typingPrevLenRef = useRef(0)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -818,21 +820,39 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
     if (files.length) extra.files = files
     store.sendMessage(text, Object.keys(extra).length ? extra : undefined)
     setDraft('')
+    typingPrevLenRef.current = 0   // 真发出去了，别把这次清空误当成"打了又删光"
     setAttachments([])
   }
 
+  // 只上报"某一刻发生了哪一类动作"：打字 / 删改 / 整段删光。一个字的内容都不出门。
   const onDraftChange = (value: string) => {
     setDraft(value)
-    if (channel !== 'cc' || !value.trim()) return
+    if (channel !== 'cc') return
+    const len = value.trim().length
+    const prev = typingPrevLenRef.current
+    typingPrevLenRef.current = len
     const now = Date.now()
+    const ping = (signal: 'key' | 'del' | 'clear') => {
+      fetch('/cc-api/api/typing/ping', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-Channel-Pin': getPin(), 'X-Typing-Signal': signal },
+        keepalive: true,
+      }).catch(() => {})
+    }
+    // 曾打到 6 个字又整段抹平：立刻报，不受任何节流
+    if (prev >= 6 && len === 0) { typingLastDelRef.current = 0; ping('clear'); return }
+    if (!len) return
+    // 字数回退＝一次删改动作，连续退格并作一次；单独走自己的 1.5 秒窗口，不被打字那条 4 秒节流吞掉
+    if (len < prev) {
+      if (now - typingLastDelRef.current < 1500) return
+      typingLastDelRef.current = now
+      ping('del')
+      return
+    }
     if (now - typingLastPingRef.current < 4000) return
     typingLastPingRef.current = now
-    fetch('/cc-api/api/typing/ping', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'X-Channel-Pin': getPin() },
-      keepalive: true,
-    }).catch(() => {})
+    ping('key')
   }
 
   const toggleThinking = (id: string, isAutoExpanded: boolean) => {
