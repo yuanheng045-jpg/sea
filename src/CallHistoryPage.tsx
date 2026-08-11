@@ -134,7 +134,7 @@ function CallPhoneSvg() {
 }
 
 const CH_CSS = `
-.ch-page { padding: 20px 16px 60px; max-width: 480px; margin: 0 auto; min-height: 100%; }
+.ch-page { padding: 0 16px 60px; max-width: 480px; margin: 0 auto; min-height: 100%; }
 .ch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .ch-back { background: none; border: none; font-size: 24px; color: var(--ink-soft); cursor: pointer; padding: 4px 8px; line-height: 1; }
 .ch-title { font-family: var(--font-display); font-size: 20px; color: var(--ink); letter-spacing: 0.02em; }

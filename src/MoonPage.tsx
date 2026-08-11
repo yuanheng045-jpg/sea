@@ -9,11 +9,23 @@ interface Overview {
   catch_net_pending: number
   last_gaze: { ts: string; note: string | null } | null
 }
+interface Unlockable {
+  id: string
+  threshold: number
+  title: string
+  has_content: boolean
+  opened_at: string | null
+  can_open: boolean
+}
 
 const API = '/tide'
 
-async function tideFetch(path: string) {
-  const res = await fetch(`${API}${path}`, { credentials: 'include' })
+async function tideFetch(path: string, opts: RequestInit = {}) {
+  const res = await fetch(`${API}${path}`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    ...opts,
+  })
   if (!res.ok) throw new Error(`http_${res.status}`)
   return res.json()
 }
@@ -30,6 +42,8 @@ function fmtGazeTime(iso?: string | null): string {
 
 export function MoonPage({ onBack }: { onBack: (p: Page) => void }) {
   const [data, setData] = useState<Overview | null>(null)
+  const [shells, setShells] = useState<Unlockable[]>([])
+  const [openedContent, setOpenedContent] = useState<Record<string, string>>({})
   const [error, setError] = useState(false)
   const mountedRef = useRef(true)
   useEffect(() => () => { mountedRef.current = false }, [])
@@ -41,9 +55,26 @@ export function MoonPage({ onBack }: { onBack: (p: Page) => void }) {
     } catch {
       if (mountedRef.current) setError(true)
     }
+    try {
+      const u = await tideFetch('/unlockables')
+      if (mountedRef.current) setShells(u.unlockables)
+    } catch { /* 解锁库拉不到不挡月相页 */ }
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // 亲手点开贝壳(或重看已开过的)
+  const openShell = useCallback(async (id: string) => {
+    try {
+      const row = await tideFetch(`/unlockables/${id}/open`, {
+        method: 'POST',
+        body: JSON.stringify({ request_id: `open-${id}-${Date.now()}` }),
+      })
+      if (!mountedRef.current) return
+      if (row && row.content) setOpenedContent(prev => ({ ...prev, [id]: row.content }))
+      load()
+    } catch { /* 开不了就保持原样,不弹错误 */ }
+  }, [load])
 
   return (
     <div className="mp-page">
@@ -88,12 +119,39 @@ export function MoonPage({ onBack }: { onBack: (p: Page) => void }) {
           ))}
         </div>
       )}
+
+      {shells.length > 0 && (
+        <div className="mp-shells">
+          <h3 className="mp-sec-title">海底</h3>
+          {shells.map(u => {
+            const openable = u.can_open || (u.opened_at != null && u.has_content)
+            return (
+              <div key={u.id} className={`mp-shell${openable ? ' mp-shell-open' : ''}`}>
+                <button
+                  className="mp-shell-row"
+                  disabled={!openable}
+                  onClick={() => openShell(u.id)}
+                >
+                  <span className="mp-shell-icon">{u.opened_at ? '🐚' : openable ? '🦪' : '·'}</span>
+                  <span className="mp-shell-title">{u.title}</span>
+                  <span className="mp-shell-meta">
+                    {!u.has_content ? '还沉在海底' : u.opened_at ? '看看' : u.can_open ? '打开' : `❄️ ${u.threshold}`}
+                  </span>
+                </button>
+                {openedContent[u.id] && (
+                  <p className="mp-shell-content">{openedContent[u.id]}</p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
 
 const MP_CSS = `
-.mp-page { padding: 20px 16px 60px; max-width: 480px; margin: 0 auto; min-height: 100%; }
+.mp-page { padding: 0 16px 60px; max-width: 480px; margin: 0 auto; min-height: 100%; }
 .mp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .mp-back { background: none; border: none; font-size: 24px; color: var(--ink-soft); cursor: pointer; padding: 4px 8px; }
 .mp-title { font-family: var(--font-display); font-size: 20px; color: var(--ink); letter-spacing: 0.02em; }
@@ -110,5 +168,24 @@ const MP_CSS = `
 .mp-list-item {
   background: var(--glass-bg); border: 1px solid var(--glass-edge); border-radius: 12px;
   padding: 10px 14px; font-size: 14px; color: var(--ink);
+}
+.mp-shells { margin-top: 24px; }
+.mp-sec-title { font-size: 14px; color: var(--ink-soft); font-weight: 500; margin: 0 0 10px 2px; }
+.mp-shell {
+  background: var(--glass-bg); border: 1px solid var(--glass-edge); border-radius: 12px;
+  margin-bottom: 8px; overflow: hidden;
+}
+.mp-shell-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px;
+  background: none; border: none; text-align: left; cursor: default; font-size: 14px;
+}
+.mp-shell-open .mp-shell-row { cursor: pointer; }
+.mp-shell-icon { flex-shrink: 0; width: 20px; text-align: center; color: var(--ink-faint); }
+.mp-shell-title { flex: 1; color: var(--ink); }
+.mp-shell-meta { font-size: 12px; color: var(--ink-faint); flex-shrink: 0; }
+.mp-shell-open .mp-shell-meta { color: var(--blue-deep); }
+.mp-shell-content {
+  margin: 0; padding: 4px 14px 14px 44px; font-size: 14px; color: var(--ink);
+  white-space: pre-wrap; line-height: 1.7;
 }
 `

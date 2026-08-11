@@ -15,12 +15,24 @@ export type ChatMessage = {
   images?: string[]
   files?: Array<{ url: string; name?: string }>
   htmls?: string[]
+  keepsakes?: Keepsake[]
   pending?: boolean
   autoExpanded?: boolean
   memoryHits?: any[]
   fresh?: boolean
   usage?: any
   memSaved?: { ok: boolean; content: string }
+}
+
+export type Keepsake = {
+  id: string
+  title?: string
+  words: string
+  page_url: string
+  image_url: string
+  price_snapshot?: string
+  observed_at: string
+  source: 'main-chat' | 'group-chat'
 }
 
 type State = {
@@ -254,7 +266,7 @@ function handleEvent(e: HubEvent) {
               ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
               pending: false,
               autoExpanded: true,
-              images: d.images, files: d.files, htmls: d.htmls,
+              images: d.images, files: d.files, htmls: d.htmls, keepsakes: d.keepsakes,
               activities: d.activities ?? activities,
             }
             replaced = true
@@ -268,7 +280,7 @@ function handleEvent(e: HubEvent) {
             content: d.content ?? '',
             thinking: d.thinking ?? undefined,
             ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
-            images: d.images, files: d.files, htmls: d.htmls,
+            images: d.images, files: d.files, htmls: d.htmls, keepsakes: d.keepsakes,
             activities: d.activities,
           })
         }

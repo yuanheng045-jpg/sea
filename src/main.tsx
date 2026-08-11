@@ -89,12 +89,16 @@ if (vvp) {
   const syncKb = () => {
     kbRaf = 0
     const kb = Math.max(0, Math.round(window.innerHeight - vvp.height - vvp.offsetTop))
-    document.documentElement.style.setProperty('--kb', kb > 1 ? `${kb}px` : '0px')
-    if (kb > 1 && window.scrollY !== 0) window.scrollTo(0, 0)
+    // viewport-fit=cover 后 innerHeight/vvp.height 可能带安全区残差(~34/59px)被误判成键盘；只有明显高度才算
+    const applied = kb > 70 ? kb : 0
+    document.documentElement.style.setProperty('--kb', `${applied}px`)
+    if (applied > 0 && window.scrollY !== 0) window.scrollTo(0, 0)
   }
   const queueKb = () => { if (!kbRaf) kbRaf = requestAnimationFrame(syncKb) }
   vvp.addEventListener('resize', queueKb)
   vvp.addEventListener('scroll', queueKb)
+  syncKb()
+
 }
 
 createRoot(document.getElementById('root')!).render(

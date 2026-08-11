@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
-export type IconKey = 'cc' | 'api' | 'voice' | 'reading' | 'play' | 'theme' | 'status' | 'avatar-her' | 'avatar-his' | 'avatar-su' | 'avatar-you' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'callhistory' | 'echo' | 'windowsill'
+export type IconKey = 'cc' | 'api' | 'voice' | 'reading' | 'play' | 'theme' | 'status' | 'avatar-her' | 'avatar-his' | 'avatar-su' | 'avatar-you' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'personal' | 'callhistory' | 'echo' | 'midroom' | 'windowsill' | 'wallet' | 'keepsakes'
 type Icons = Record<IconKey, string | null>
 
-const DEFAULT: Icons = { cc: null, api: null, voice: null, reading: null, play: null, theme: null, status: null, 'avatar-her': null, 'avatar-his': null, 'avatar-su': null, 'avatar-you': null, memory: null, garden: null, projects: null, group: null, tide: null, callhistory: null, echo: null, windowsill: null }
+const DEFAULT: Icons = { cc: null, api: null, voice: null, reading: null, play: null, theme: null, status: null, 'avatar-her': null, 'avatar-his': null, 'avatar-su': null, 'avatar-you': null, memory: null, garden: null, projects: null, group: null, tide: null, personal: null, callhistory: null, echo: null, midroom: null, windowsill: null, wallet: null, keepsakes: null }
 let _icons: Icons = { ...DEFAULT }
 const listeners = new Set<() => void>()
 const STORAGE_KEY = 'sea:icons:v1'

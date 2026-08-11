@@ -13,9 +13,13 @@ const HOME_APPS: AppDef[] = [
   { key: 'projects', iconKey: 'projects', icon: '📁', label: '项目', def: { x: 12, y: 76 } },
   { key: 'group',   iconKey: 'group',   icon: '🛋️', label: '客厅', def: { x: 88, y: 14 } },
   { key: 'tide',    iconKey: 'tide',    icon: '🌊', label: '潮汐', def: { x: 85, y: 48 } },
+  { key: 'personal', iconKey: 'personal', icon: '🧭', label: '随身', def: { x: 15, y: 62 } },
   { key: 'callhistory', iconKey: 'callhistory', icon: '📞', label: '通话', def: { x: 44, y: 90 } },
   { key: 'echo',        iconKey: 'echo',        icon: '🫧', label: '回声', def: { x: 60, y: 52 } },
+  { key: 'midroom',     iconKey: 'midroom',     icon: '🪟', label: '合相间',  def: { x: 26, y: 52 } },
   { key: 'windowsill',  iconKey: 'windowsill',  icon: '🌱', label: '窗台',    def: { x: 50, y: 24 } },
+  { key: 'wallet',      iconKey: 'wallet',      icon: '👛', label: '钱包',    def: { x: 88, y: 92 } },
+  { key: 'keepsakes',   iconKey: 'keepsakes',   icon: '🐚', label: '拾贝',    def: { x: 68, y: 92 } },
 ]
 
 const CAL = [

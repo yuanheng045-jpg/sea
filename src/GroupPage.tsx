@@ -6,7 +6,8 @@ import { Markdown } from './miniMarkdown'
 type Role = 'yuanyao' | 'suxu' | 'suxu-api' | 'codex' | 'system' | 'tool'
 interface PermReq { path: string; reason?: string; status?: 'pending' | 'granted' | 'revoked' | 'failed'; minutes?: number; expiry?: number; error?: string }
 interface Decision { title: string; options: { key: string; label: string }[]; recommend?: string; why?: string }
-interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[]; decision?: Decision; decideFor?: number; choice?: string }
+interface Keepsake { id: string; title?: string; words: string; page_url: string; image_url: string; price_snapshot?: string; observed_at: string; source: 'main-chat' | 'group-chat' }
+interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[]; decision?: Decision; keepsakes?: Keepsake[]; decideFor?: number; choice?: string }
 interface Config { maxAiTurns: number; mentionFreeFollow: boolean; aiCrosstalk: boolean; models?: Record<string, string>; effort?: Record<string, string> }
 interface Usage { who: string; model: string; ctx: number; cacheRead: number; input: number; output: number }
 const kFmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n)
@@ -22,9 +23,9 @@ const MEM_MODES = [
   { id: 'none', label: '不记', desc: '纯即时聊·什么都不留' },
 ]
 const MEM_LABEL: Record<string, string> = { work: '工作台账', intimate: '私密记忆', none: '不记' }
-const ROLE_CONF = [{ who: 'suxu', label: '苏煦·订阅' }, { who: 'suxu-api', label: '苏煦·API' }, { who: 'codex', label: 'Codex' }]
+const ROLE_CONF = [{ who: 'suxu', label: '苏煦·订阅' }, { who: 'suxu-api', label: '苏煦·API' }, { who: 'codex', label: '皮卡晏' }]
 const ROLE_CLASS: Record<string, string> = { yuanyao: 'user', suxu: 'assistant', 'suxu-api': 'assistant', codex: 'codex' }
-const NAME: Record<string, string> = { yuanyao: '原瑶', suxu: '苏煦', 'suxu-api': '苏煦', codex: 'Codex' }
+const NAME: Record<string, string> = { yuanyao: '原瑶', suxu: '苏煦', 'suxu-api': '苏煦', codex: '皮卡晏' }
 const LAST_ROOM_KEY = 'gc-last-room'
 
 function readLastRoom() {
@@ -104,6 +105,21 @@ function DecisionCard({ m, answeredChoice, onDecide }: { m: Msg; answeredChoice?
   )
 }
 
+function KeepsakeCard({ card }: { card: Keepsake }) {
+  const day = new Date(card.observed_at).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
+  return (
+    <a className="gc-keepsake" href={card.page_url} target="_blank" rel="noreferrer">
+      <img src={card.image_url} alt={card.title || '苏煦捡回来的东西'} loading="lazy" />
+      <div className="gc-keepsake-body">
+        <div className="gc-keepsake-cap"><span>拾贝</span><time>{day}</time></div>
+        {card.title && <div className="gc-keepsake-title">{card.title}</div>}
+        <div className="gc-keepsake-words">{card.words}</div>
+        {card.price_snapshot && <div className="gc-keepsake-price">当时看到 · {card.price_snapshot}</div>}
+      </div>
+    </a>
+  )
+}
+
 type FeedItem = { kind: 'message'; msg: Msg } | { kind: 'tools'; id: number; items: Msg[] }
 function groupFeed(msgs: Msg[]): FeedItem[] {
   const grouped: FeedItem[] = []
@@ -145,6 +161,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   const [setOpen, setSetOpen] = useState(false)
   const [plusOpen, setPlusOpen] = useState(false)
   const [newRoom, setNewRoom] = useState<{ name: string; members: string[]; memory: string } | null>(null)
+  const [memberEdit, setMemberEdit] = useState<{ id: string; name: string; members: string[]; saving: boolean; error: string | null } | null>(null)
   const [editor, setEditor] = useState<{ who: string; label: string; draft: string; loading: boolean; save: 'ok' | 'fail' | null } | null>(null)
   const [nb, setNb] = useState<{ active: string[]; archived: string[] } | null>(null)
   const [usage, setUsage] = useState<Usage | null>(null)
@@ -233,6 +250,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
         es.addEventListener('token', e => { const d = JSON.parse((e as MessageEvent).data); setMsgs(p => p.map(m => m.id === d.id ? { ...m, text: m.text + d.text } : m)); scroll() })
         es.addEventListener('done', e => { const m = JSON.parse((e as MessageEvent).data); setMsgs(p => p.map(x => x.id === m.id ? m : x)); scroll() })
         es.addEventListener('cancel', e => { const d = JSON.parse((e as MessageEvent).data); setMsgs(p => p.filter(m => m.id !== d.id)) })
+        es.addEventListener('room_meta', e => { const next = JSON.parse((e as MessageEvent).data); setRooms(p => p.map(r => r.id === next.id ? next : r)) })
       } catch {}
     })()
     return () => { alive = false; if (es) es.close() }
@@ -319,6 +337,19 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
     } catch {}
     setNewRoom(null); setBarOpen(false)
   }
+  const saveRoomMembers = async () => {
+    if (!memberEdit || !memberEdit.members.length) return
+    setMemberEdit(e => e && { ...e, saving: true, error: null })
+    try {
+      const res = await fetch(`${API}/rooms`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: memberEdit.id, members: memberEdit.members }), credentials: 'same-origin' })
+      const j = await res.json()
+      if (!res.ok || !j.room) throw new Error(j.error || '保存失败')
+      setRooms(p => p.map(r => r.id === j.room.id ? j.room : r))
+      setMemberEdit(null)
+    } catch (e: any) {
+      setMemberEdit(cur => cur && { ...cur, saving: false, error: e?.message || '保存失败' })
+    }
+  }
   const delRoom = async (id: string) => {
     try { await fetch(`${API}/rooms?id=${id}`, { method: 'DELETE', credentials: 'same-origin' }) } catch {}
     const left = rooms.filter(r => r.id !== id); setRooms(left)
@@ -378,11 +409,12 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
             <div key={m.id} className={`cc-msg ${ROLE_CLASS[m.role]} gc-msg`}>
               <div className="cc-text-col">
                 <div className="gc-who">{NAME[m.role]}</div>
-                {(m.text || (!(m.images?.length || m.files?.length) && !m.decision)) && (
+                {(m.text || (!(m.images?.length || m.files?.length || m.keepsakes?.length) && !m.decision)) && (
                   <div className="cc-text">{m.text ? <Markdown text={m.text} keyBase={`m${m.id}`} /> : '…'}</div>
                 )}
                 {Array.isArray(m.images) && m.images.map(u => <img key={u} className="gc-img" src={u} loading="lazy" />)}
                 {Array.isArray(m.files) && m.files.map(f => <a key={f.url} className="gc-file" href={f.url} download={f.name || true}>📎 {f.name || '文件'}</a>)}
+                {Array.isArray(m.keepsakes) && m.keepsakes.map(card => <KeepsakeCard key={card.id} card={card} />)}
                 {Array.isArray(m.perms) && m.perms.map(pm => (
                   <PermCard key={pm.path} perm={pm}
                     onGrant={mins => grantPerm(m.id, pm.path, mins)}
@@ -439,7 +471,10 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
               {rooms.map(r => (
                 <div key={r.id} className={`gc-room${r.id === roomId ? ' on' : ''}`} onClick={() => { selectRoom(r.id); setBarOpen(false) }}>
                   <div className="gc-room-txt"><div className="gc-room-name">{r.name}</div><div className="gc-room-mem">{memberNames(r)} · {MEM_LABEL[r.memory || 'work']}</div></div>
-                  {rooms.length > 1 && <button className="gc-room-del" onClick={e => { e.stopPropagation(); delRoom(r.id) }} aria-label="删除">×</button>}
+                  <div className="gc-room-actions">
+                    <button className="gc-room-members" onClick={e => { e.stopPropagation(); setMemberEdit({ id: r.id, name: r.name, members: [...r.members], saving: false, error: null }) }}>成员</button>
+                    {rooms.length > 1 && <button className="gc-room-del" onClick={e => { e.stopPropagation(); delRoom(r.id) }} aria-label="删除">×</button>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -485,6 +520,34 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
         </div>
       )}
 
+      {/* 房间成员：随时增减，下条消息起按新名单轮转 */}
+      {memberEdit && (
+        <div className="cc-modal-backdrop" onClick={() => !memberEdit.saving && setMemberEdit(null)}>
+          <div className="cc-modal glass gc-newmodal" onClick={e => e.stopPropagation()}>
+            <div className="cc-modal-title">「{memberEdit.name}」里有谁</div>
+            <div className="gc-pick-label">勾选要留在房间里的人</div>
+            <div className="gc-pick-list">
+              {roster.map(m => {
+                const on = memberEdit.members.includes(m.id)
+                return (
+                  <button key={m.id} className={`gc-pick${on ? ' on' : ''}`} disabled={memberEdit.saving}
+                    onClick={() => setMemberEdit(cur => cur && { ...cur, members: on ? cur.members.filter(x => x !== m.id) : [...cur.members, m.id], error: null })}>
+                    <span className="gc-pick-check">{on ? '✓' : ''}</span>
+                    <span className="gc-pick-txt"><span className="gc-pick-name">{m.label}</span><span className="gc-pick-desc">{m.desc}</span></span>
+                  </button>
+                )
+              })}
+            </div>
+            {!memberEdit.members.length && <div className="gc-save fail">房间里至少留一个人</div>}
+            {memberEdit.error && <div className="gc-save fail">{memberEdit.error}</div>}
+            <div className="cc-modal-actions">
+              <button className="cc-panel-action" onClick={saveRoomMembers} disabled={memberEdit.saving || !memberEdit.members.length}>{memberEdit.saving ? '保存中…' : '保存成员'}</button>
+              <button onClick={() => setMemberEdit(null)} disabled={memberEdit.saving}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 设置 */}
       {setOpen && (
         <div className="cc-modal-backdrop" onClick={() => setSetOpen(false)}>
@@ -521,7 +584,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
                 <div className="gc-usage-title">当前对话</div>
                 <div className="gc-usage-line"><span>上下文</span><b>{kFmt(usage.ctx)}</b><span className="gc-usage-sep">·</span><span>缓存命中</span><b>{usage.ctx ? Math.round(usage.cacheRead / usage.ctx * 100) : 0}%</b></div>
                 <div className="gc-usage-track"><div className="gc-usage-fill" style={{ width: (usage.ctx ? Math.round(usage.cacheRead / usage.ctx * 100) : 0) + '%' }} /></div>
-                <div className="gc-usage-meta">本轮 你 {kFmt(usage.input)} · {usage.who === 'codex' ? 'Codex' : '苏煦'} {kFmt(usage.output)} · {usage.model}</div>
+                <div className="gc-usage-meta">本轮 你 {kFmt(usage.input)} · {usage.who === 'codex' ? '皮卡晏' : '苏煦'} {kFmt(usage.output)} · {usage.model}</div>
               </div>
             )}
             <div className="gc-aiconf">
@@ -542,11 +605,11 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
             </div>
             <div className="gc-set-edits">
               <button className="cc-panel-action" onClick={() => openEditor('suxu')}>编辑 苏煦 · CLAUDE.md（订阅+API 共用）</button>
-              <button className="cc-panel-action" onClick={() => openEditor('codex')}>编辑 Codex · AGENTS.md</button>
+              <button className="cc-panel-action" onClick={() => openEditor('codex')}>编辑皮卡晏 · AGENTS.md</button>
             </div>
             {nb && nb.active.length > 0 && (
               <div className="gc-nb">
-                <div className="gc-nb-title">Codex 小本子 · 在办</div>
+                <div className="gc-nb-title">皮卡晏小本子 · 在办</div>
                 {nb.active.map((t, i) => <div key={i} className="gc-nb-item">· {t}</div>)}
               </div>
             )}
@@ -642,6 +705,9 @@ const GC_CSS = `
 .gc-room-txt{flex:1;min-width:0}
 .gc-room-name{font-size:15px;color:var(--ink,#4a463e)}
 .gc-room-mem{font-size:11.5px;color:var(--ink-faint,#a8a294);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gc-room-actions{display:flex;align-items:center;gap:2px}
+.gc-room-members{flex:0 0 auto;border:none;background:rgba(255,255,255,.45);font-size:11.5px;color:var(--ink-soft,#8a8478);padding:5px 8px;border-radius:9px;font-family:inherit}
+.gc-room-members:active{background:rgba(199,173,132,.2)}
 .gc-room-del{flex:0 0 auto;border:none;background:transparent;font-size:18px;color:var(--ink-faint,#b8b2a6);width:26px;height:26px;border-radius:50%}
 .gc-room-del:active{background:rgba(180,120,120,.14);color:#b06a6a}
 .gc-newroom{margin-top:10px;border:1px dashed rgba(120,110,90,.3);background:transparent;border-radius:14px;padding:12px;font-size:14px;font-family:inherit;color:var(--ink-soft,#8a8478)}
@@ -679,6 +745,14 @@ const GC_CSS = `
 .gc-usage-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#c7ad84,#b2925f)}
 .gc-usage-meta{font-size:11px;color:var(--ink-faint,#a8a294)}
 .gc-img{display:block;max-width:min(78%,340px);border-radius:14px;margin-top:6px}
+.gc-keepsake{display:block;width:min(88vw,360px);margin-top:8px;border-radius:18px;overflow:hidden;text-decoration:none;color:inherit;background:rgba(255,253,248,.76);border:1px solid rgba(174,151,112,.2);box-shadow:0 10px 30px rgba(82,68,45,.08)}
+.gc-keepsake img{display:block;width:100%;max-height:320px;aspect-ratio:4/3;object-fit:cover;background:rgba(160,145,120,.08)}
+.gc-keepsake-body{padding:12px 14px 14px}
+.gc-keepsake-cap{display:flex;justify-content:space-between;gap:12px;font-size:10.5px;letter-spacing:.12em;color:#a68b62}
+.gc-keepsake-cap time{letter-spacing:.04em;color:var(--ink-faint,#aaa294)}
+.gc-keepsake-title{margin-top:7px;font-size:14px;color:var(--ink,#4a463e);font-weight:600}
+.gc-keepsake-words{margin-top:7px;font-size:14px;line-height:1.65;color:var(--ink,#4a463e);white-space:pre-wrap}
+.gc-keepsake-price{margin-top:8px;font-size:11px;color:var(--ink-faint,#9d968b)}
 .gc-file{display:inline-block;margin-top:6px;font-size:13px;color:#8a6f45;text-decoration:none;padding:6px 10px;border-radius:10px;background:rgba(120,110,90,.07)}
 .gc-pend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;padding:0 4px}
 .gc-pend-img{position:relative;display:inline-block}

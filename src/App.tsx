@@ -15,13 +15,17 @@ import { ProjectsFrame } from './ProjectsFrame'
 import { GroupPage } from './GroupPage'
 import { TidesPage } from './TidesPage'
 import { MoonPage } from './MoonPage'
+import { PersonalPage } from './PersonalPage'
 import { CallHistoryPage } from './CallHistoryPage'
 import { ReadingPage } from './ReadingPage'
 import { EchoFrame } from './EchoFrame'
+import { MidRoomPage } from './MidRoomPage'
 import { WindowsillPage } from './WindowsillPage'
+import { WalletPage } from './WalletPage'
+import { KeepsakesPage } from './KeepsakesPage'
 import './appearance'  // 启动时 apply 外观偏好
 
-export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon' | 'callhistory' | 'echo' | 'windowsill'
+export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon' | 'personal' | 'callhistory' | 'echo' | 'midroom' | 'windowsill' | 'wallet' | 'keepsakes'
 
 export function App() {
   const [page, setPage] = useState<Page>('home')
@@ -102,9 +106,13 @@ export function App() {
         {page === 'garden' && <GardenFrame onBack={setPage} />}
         {page === 'projects' && <ProjectsFrame onBack={setPage} />}
         {page === 'group' && <GroupPage onBack={setPage} />}
+        {page === 'midroom' && <MidRoomPage onBack={setPage} />}
         {page === 'windowsill' && <WindowsillPage onBack={() => setPage('home')} />}
+        {page === 'wallet' && <WalletPage onBack={() => setPage('home')} />}
+        {page === 'keepsakes' && <KeepsakesPage onBack={setPage} />}
         {page === 'tide' && <TidesPage onBack={setPage} />}
         {page === 'moon' && <MoonPage onBack={setPage} />}
+        {page === 'personal' && <PersonalPage onBack={setPage} />}
         {page === 'callhistory' && <CallHistoryPage onBack={setPage} />}
         {page === 'reading' && <ReadingPage onBack={setPage} />}
         {page === 'echo' && <EchoFrame onBack={setPage} />}
@@ -113,13 +121,13 @@ export function App() {
         {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
         {page === 'cc'    && <CCPage onBack={() => setPage('home')} onNavigate={setPage} />}
         {page === 'api'   && <CCPage channel="api" onBack={() => setPage('home')} onNavigate={setPage} />}
-        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && page !== 'callhistory' && page !== 'reading' && page !== 'windowsill' && (
+        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && page !== 'personal' && page !== 'callhistory' && page !== 'reading' && page !== 'midroom' && page !== 'windowsill' && page !== 'wallet' && page !== 'keepsakes' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>
         )}
       </div>
-      {page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'reading' && page !== 'windowsill' && (
+      {page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'reading' && page !== 'midroom' && page !== 'windowsill' && page !== 'wallet' && page !== 'keepsakes' && (
       <nav className="dock">
         <button
           className="dock-edge"

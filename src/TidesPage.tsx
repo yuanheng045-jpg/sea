@@ -10,6 +10,8 @@ interface Wave {
   desire: number
   status: string
   version: number
+  created_by_role?: string
+  deadline?: string | null
   snow_awarded?: number
 }
 interface CatchNetItem {
@@ -35,16 +37,54 @@ function genId() {
 }
 
 async function tideFetch(path: string, opts: RequestInit = {}) {
-  const res = await fetch(`${API}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-    ...opts,
-  })
+  let res: Response
+  try {
+    res = await fetch(`${API}${path}`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      ...opts,
+    })
+  } catch {
+    const err = new Error('network') as Error & { network?: boolean }
+    err.network = true
+    throw err
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.error || `http_${res.status}`)
   }
   return res.json()
+}
+
+// 断网本地队列:网络失败的写操作先存起来,恢复后按原 request_id 重放(服务端幂等去重)
+const QUEUE_KEY = 'sea:tide:queue'
+type QueuedAction = { path: string; body: Record<string, unknown>; ts: number }
+function readQueue(): QueuedAction[] {
+  try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]') } catch { return [] }
+}
+function writeQueue(q: QueuedAction[]) {
+  try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q.slice(-50))) } catch {}
+}
+function enqueue(path: string, body: Record<string, unknown>) {
+  writeQueue([...readQueue(), { path, body, ts: Date.now() }])
+}
+async function replayQueue(): Promise<boolean> {
+  let q = readQueue().filter(a => Date.now() - a.ts < 7 * 24 * 3600 * 1000)
+  let touched = false
+  while (q.length) {
+    const item = q[0]
+    try {
+      await tideFetch(item.path, { method: 'POST', body: JSON.stringify(item.body) })
+      touched = true
+    } catch (e: any) {
+      if (e.network) break // 还没网,剩下的留着下次
+      touched = true // 服务器有回应(哪怕拒绝)就算处理完,不再重试
+    }
+    q = q.slice(1)
+    writeQueue(q)
+  }
+  writeQueue(q)
+  return touched
 }
 
 // 轻的"叮"——不引外部音频文件,合成一个短促柔和的正弦音
@@ -79,7 +119,7 @@ function WaveCard({ wave, onComplete, onCommit, onSink, busy }: {
   const [shaking, setShaking] = useState(false)
 
   return (
-    <div className={`td-card${bursting ? ' td-burst' : ''}${shaking ? ' td-shake' : ''}`}>
+    <div className={`td-card${wave.created_by_role === 'suxu' ? ' td-wave-suxu' : ''}${bursting ? ' td-burst' : ''}${shaking ? ' td-shake' : ''}`}>
       <div className="td-card-main">
         <span className={`td-size td-size-${wave.size}`}>{wave.size === 'big' ? '大浪' : '小浪'}</span>
         <span className="td-title">{wave.title}</span>
@@ -112,11 +152,12 @@ function WaveCard({ wave, onComplete, onCommit, onSink, busy }: {
 function TagForm({ initial, onCancel, onSubmit }: {
   initial: { size: 'small' | 'big'; stakes: number; desire: number }
   onCancel: () => void
-  onSubmit: (v: { size: 'small' | 'big'; stakes: number; desire: number }) => void
+  onSubmit: (v: { size: 'small' | 'big'; stakes: number; desire: number; deadline?: string }) => void
 }) {
   const [size, setSize] = useState<'small' | 'big'>(initial.size)
   const [stakes, setStakes] = useState(initial.stakes)
   const [desire, setDesire] = useState(initial.desire)
+  const [deadline, setDeadline] = useState('')
   return (
     <div className="td-tag-form">
       <div className="td-add-row">
@@ -134,8 +175,13 @@ function TagForm({ initial, onCancel, onSubmit }: {
         </label>
       </div>
       <div className="td-add-row">
+        <label className="td-slider-label">截止(可不填)
+          <input type="date" className="td-input td-date" value={deadline} onChange={e => setDeadline(e.target.value)} />
+        </label>
+      </div>
+      <div className="td-add-row">
         <button type="button" className="td-btn td-btn-ghost" onClick={onCancel}>取消</button>
-        <button type="button" className="td-btn td-btn-break" onClick={() => onSubmit({ size, stakes, desire })}>放进海里</button>
+        <button type="button" className="td-btn td-btn-break" onClick={() => onSubmit({ size, stakes, desire, deadline: deadline || undefined })}>放进海里</button>
       </div>
     </div>
   )
@@ -156,6 +202,9 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   const [captureText, setCaptureText] = useState('')
   const [promotingId, setPromotingId] = useState<string | null>(null)
   const [showAllFloating, setShowAllFloating] = useState(false)
+  const [seabed, setSeabed] = useState<Wave[] | null>(null)
+  const [drawer, setDrawer] = useState<{ wave: Wave; note: string | null }[]>([])
+  const [offlineNote, setOfflineNote] = useState(false)
   const [soundOn, setSoundOn] = useState(() => {
     try { return localStorage.getItem(SOUND_KEY) !== 'off' } catch { return true }
   })
@@ -165,12 +214,13 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   const load = useCallback(async () => {
     try {
       const surfaceResult = await tideFetch('/surface/recompute', { method: 'POST', body: JSON.stringify({ request_id: genId() }) })
-      const [todayData, catchNetData, snowData, levelData, ledgerData] = await Promise.all([
+      const [todayData, catchNetData, snowData, levelData, ledgerData, lockedData] = await Promise.all([
         tideFetch('/stats/today'),
         tideFetch('/catch-net'),
         tideFetch('/stats/snow'),
         tideFetch('/levels/today'),
         tideFetch('/ledger?status=open'),
+        tideFetch('/waves?status=locked'),
       ])
       if (!mountedRef.current) return
       setFloating(surfaceResult.surfaced)
@@ -180,6 +230,15 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
       setSnow(snowData.total)
       setTodayLevel(levelData.level)
       setLedger(ledgerData)
+      setShowAllFloating(false)
+      const withNotes = await Promise.all((lockedData as Wave[]).map(async (w) => {
+        try {
+          const detail = await tideFetch(`/waves/${w.id}`)
+          return { wave: w, note: (detail.drawer_note && detail.drawer_note.note) || null }
+        } catch { return { wave: w, note: null } }
+      }))
+      if (!mountedRef.current) return
+      setDrawer(withNotes)
       setError(null)
     } catch (e: any) {
       if (mountedRef.current) setError(e.message || 'load_failed')
@@ -197,7 +256,21 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    replayQueue().then((touched) => { if (touched && mountedRef.current) setOfflineNote(false); load() })
+    const onOnline = () => { replayQueue().then(() => { if (mountedRef.current) { setOfflineNote(false); load() } }) }
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
+  }, [load])
+
+  const loadSeabed = useCallback(async () => {
+    try {
+      const sunk = await tideFetch('/waves?status=sunk')
+      if (mountedRef.current) setSeabed(sunk)
+    } catch (e: any) {
+      if (mountedRef.current) setError(e.message || 'load_failed')
+    }
+  }, [])
 
   const setBusy = (id: string, v: boolean) => {
     setBusyIds(prev => {
@@ -209,11 +282,17 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
 
   const doAction = useCallback(async (id: string, action: string) => {
     setBusy(id, true)
+    const body = { request_id: genId() }
     try {
-      await tideFetch(`/waves/${id}/${action}`, { method: 'POST', body: JSON.stringify({ request_id: genId() }) })
+      await tideFetch(`/waves/${id}/${action}`, { method: 'POST', body: JSON.stringify(body) })
       await load()
     } catch (e: any) {
-      setError(e.message || 'action_failed')
+      if (e.network) {
+        enqueue(`/waves/${id}/${action}`, body)
+        setOfflineNote(true)
+      } else {
+        setError(e.message || 'action_failed')
+      }
     } finally {
       setBusy(id, false)
     }
@@ -221,11 +300,18 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
 
   const doComplete = useCallback(async (id: string) => {
     setBusy(id, true)
+    const body = { request_id: genId() }
     try {
-      const result = await tideFetch(`/waves/${id}/complete`, { method: 'POST', body: JSON.stringify({ request_id: genId() }) })
+      const result = await tideFetch(`/waves/${id}/complete`, { method: 'POST', body: JSON.stringify(body) })
       if (soundOn) playChime()
       if (result.snow_awarded) setSnow(s => s + result.snow_awarded)
       setTimeout(() => { if (mountedRef.current) load() }, 550)
+    } catch (e: any) {
+      if (e.network) {
+        enqueue(`/waves/${id}/complete`, body)
+        setOfflineNote(true)
+      }
+      throw e
     } finally {
       setBusy(id, false)
     }
@@ -234,13 +320,21 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   const submitCapture = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     if (!captureText.trim()) return
+    const body = { content: captureText.trim(), request_id: genId() }
     try {
-      await tideFetch('/catch-net', { method: 'POST', body: JSON.stringify({ content: captureText.trim() }) })
+      await tideFetch('/catch-net', { method: 'POST', body: JSON.stringify(body) })
       setCaptureText('')
       setShowCapture(false)
       await load()
     } catch (e: any) {
-      setError(e.message || 'capture_failed')
+      if (e.network) {
+        enqueue('/catch-net', body)
+        setCaptureText('')
+        setShowCapture(false)
+        setOfflineNote(true)
+      } else {
+        setError(e.message || 'capture_failed')
+      }
     }
   }, [captureText, load])
 
@@ -253,13 +347,20 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     }
   }, [load])
 
-  const promoteCatch = useCallback(async (id: string, v: { size: 'small' | 'big'; stakes: number; desire: number }) => {
+  const promoteCatch = useCallback(async (id: string, v: { size: 'small' | 'big'; stakes: number; desire: number; deadline?: string }) => {
+    const body = { ...v, request_id: genId() }
     try {
-      await tideFetch(`/catch-net/${id}/promote`, { method: 'POST', body: JSON.stringify({ ...v, request_id: genId() }) })
+      await tideFetch(`/catch-net/${id}/promote`, { method: 'POST', body: JSON.stringify(body) })
       setPromotingId(null)
       await load()
     } catch (e: any) {
-      setError(e.message || 'promote_failed')
+      if (e.network) {
+        enqueue(`/catch-net/${id}/promote`, body)
+        setPromotingId(null)
+        setOfflineNote(true)
+      } else {
+        setError(e.message || 'promote_failed')
+      }
     }
   }, [load])
 
@@ -295,6 +396,7 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
       </header>
 
       {error && <div className="td-error">{error === 'today_full' ? '今天的海面满了' : '出了点小问题,稍后再试'}</div>}
+      {offlineNote && <div className="td-error">现在断网,刚才那下已经记住了,等有网会自动补上</div>}
 
       <section className="td-section">
         <h3 className="td-section-title">潮位</h3>
@@ -344,7 +446,55 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
             />
           ))}
         </div>
+        <div className="td-sea-tools">
+          {!showAllFloating ? (
+            <button className="td-link" onClick={() => { setShowAllFloating(true); loadAllFloating() }}>翻翻整片海</button>
+          ) : (
+            <button className="td-link" onClick={() => load()}>只看浮上来的</button>
+          )}
+          <button className="td-link" onClick={() => { if (seabed === null) loadSeabed(); else setSeabed(null) }}>
+            {seabed === null ? '海里' : '收起海里'}
+          </button>
+        </div>
       </section>
+
+      {seabed !== null && (
+        <section className="td-section">
+          <h3 className="td-section-title">海里</h3>
+          {seabed.length === 0 && <p className="td-empty">海里很干净,没有沉着的浪</p>}
+          <div className="td-list">
+            {seabed.map(w => (
+              <div key={w.id} className={`td-card${w.created_by_role === 'suxu' ? ' td-wave-suxu' : ''}`}>
+                <div className="td-card-main">
+                  <span className={`td-size td-size-${w.size}`}>{w.size === 'big' ? '大浪' : '小浪'}</span>
+                  <span className="td-title">{w.title}</span>
+                </div>
+                <div className="td-card-actions">
+                  <button className="td-btn td-btn-ghost" disabled={busyIds.has(w.id)}
+                    onClick={async () => { await doAction(w.id, 'restore'); loadSeabed() }}>捞回来</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {drawer.length > 0 && (
+        <section className="td-section">
+          <h3 className="td-section-title">苏煦的抽屉</h3>
+          <div className="td-list">
+            {drawer.map(({ wave, note }) => (
+              <div key={wave.id} className="td-card td-drawer-card">
+                <div className="td-card-main">
+                  <span className="td-size">🔒</span>
+                  <span className="td-title">{wave.title}</span>
+                </div>
+                {note ? <p className="td-drawer-note">{note}</p> : <p className="td-drawer-note td-faint">他还没留话</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {ledger.length > 0 && (
         <section className="td-section">
@@ -411,7 +561,7 @@ const TD_CSS = `
 .td-ledger-card { border-left: 3px solid var(--blue-deep); flex-direction: row; align-items: center; gap: 10px; flex-wrap: wrap; }
 .td-ledger-kind { font-size: 11px; padding: 2px 8px; border-radius: 999px; color: white; background: var(--blue-deep); flex-shrink: 0; }
 .td-ledger-interest { font-size: 12px; color: var(--ink-faint); width: 100%; }
-.td-page { padding: 20px 16px 100px; max-width: 480px; margin: 0 auto; position: relative; min-height: 100%; }
+.td-page { padding: 0 16px 100px; max-width: 480px; margin: 0 auto; position: relative; min-height: 100%; }
 .td-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .td-back { background: none; border: none; font-size: 24px; color: var(--ink-soft); cursor: pointer; padding: 4px 8px; }
 .td-page-title { font-family: var(--font-display); font-size: 20px; color: var(--ink); letter-spacing: 0.02em; }
@@ -471,6 +621,13 @@ const TD_CSS = `
 .td-seg button { border: none; background: none; padding: 6px 14px; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
 .td-seg button.active { background: var(--blue); color: white; }
 .td-slider-label { display: flex; flex-direction: column; font-size: 11px; color: var(--ink-faint); gap: 4px; flex: 1; }
+.td-wave-suxu { border-left: 3px solid var(--blue-deep); }
+.td-sea-tools { display: flex; gap: 16px; margin-top: 10px; padding-left: 2px; }
+.td-link { background: none; border: none; font-size: 12px; color: var(--ink-faint); cursor: pointer; padding: 2px 0; text-decoration: underline; text-underline-offset: 3px; }
+.td-drawer-card { opacity: 0.85; }
+.td-drawer-note { margin: 0; font-size: 13px; color: var(--blue-deep); }
+.td-faint { color: var(--ink-faint); }
+.td-date { width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .td-burst, .td-shake, .td-card, .td-catch-card { animation: none !important; transition: none !important; }
 }

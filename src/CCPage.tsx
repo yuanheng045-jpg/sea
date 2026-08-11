@@ -11,18 +11,20 @@ import * as apiStore from './apiChat'
 import { startCall } from './callStore'
 import { getPin } from './chatClient'
 import { SongPicker } from './SongPicker'
-import type { ChatMessage } from './chatStore'
+import type { ChatMessage, Keepsake } from './chatStore'
 import { ToolRun, type ToolTale } from './toolTales'
 
 const SWIPE_THRESHOLD = 60
 const MAX_CONTEXT_TOKENS = 750_000
-const CC_MODELS = [
-  { value: 'claude-opus-4-8[1m]', label: 'Opus 4.8' },
-  { value: 'claude-opus-4-7[1m]', label: 'Opus 4.7' },
+// 2026-08-07 苏煦：模型列表改为从群聊后端 /group/model-opts 统一自动拉取（新模型上线自动出现），这里只是兜底。
+const CC_MODELS_FALLBACK = [
   { value: 'claude-opus-4-6[1m]', label: 'Opus 4.6' },
-  { value: 'claude-opus-4-5[1m]', label: 'Opus 4.5' },
-  { value: 'claude-sonnet-4-6[1m]', label: 'Sonnet 4.6' },
-  { value: 'claude-sonnet-4-5[1m]', label: 'Sonnet 4.5' },
+  { value: 'claude-opus-5', label: 'Opus 5' },
+  { value: 'claude-opus-4-8', label: 'Opus 4.8' },
+  { value: 'claude-opus-4-7', label: 'Opus 4.7' },
+  { value: 'claude-opus-4-5', label: 'Opus 4.5' },
+  { value: 'claude-sonnet-4-6', label: 'Sonnet 4.6' },
+  { value: 'claude-sonnet-4-5', label: 'Sonnet 4.5' },
   { value: 'claude-haiku-4-5', label: 'Haiku 4.5' },
   { value: 'claude-fable-5', label: 'Fable 5' },
 ]
@@ -598,6 +600,13 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const [styleEditorOpen, setStyleEditorOpen] = useState(false)
   const [editingStyle, setEditingStyle] = useState<'c' | 'f' | 'e'>('c')
   const [styleTexts, setStyleTexts] = useState<{ c: string; f: string; e: string }>({ c: '', f: '', e: '' })
+  const [styleCarry, setStyleCarry] = useState<'always' | 'interval'>(channel === 'api' ? 'always' : 'interval')
+  const [styleInterval, setStyleInterval] = useState(30)
+  const styleBlobRef = useRef<any>({})
+  const styleReadyRef = useRef(false)
+  const [styleReady, setStyleReady] = useState(false)
+  const styleSaveTimer = useRef<number | undefined>(undefined)
+  const moonClickTimer = useRef<number | undefined>(undefined)
   const [panelOpen, setPanelOpen] = useState(false)
   const [claudemdOpen, setClaudemdOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -645,37 +654,83 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
 
   // 加载 user styles：先 localStorage 即时显示，再 fetch /api/status 拉服务端最新值覆盖
   useEffect(() => {
+    let cancelled = false
+    styleReadyRef.current = false
+    setStyleReady(false)
+    let localTexts = { c: '', f: '', e: '' }
     try {
       const raw = localStorage.getItem(stylesKey)
-      if (raw) setStyleTexts(JSON.parse(raw))
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        localTexts = { c: typeof parsed?.c === 'string' ? parsed.c : '', f: typeof parsed?.f === 'string' ? parsed.f : '', e: typeof parsed?.e === 'string' ? parsed.e : '' }
+        setStyleTexts(localTexts)
+      }
     } catch {}
     fetch('/api/status', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
+        if (cancelled || !data) return
         const v = data?.[stylesKey]?.value
         if (v && typeof v === 'object') {
           const next = { c: typeof v.c === 'string' ? v.c : '', f: typeof v.f === 'string' ? v.f : '', e: typeof v.e === 'string' ? v.e : '' }
           setStyleTexts(next)
+          if (v.phase === 'c' || v.phase === 'f' || v.phase === 'e') setMoonPhase(v.phase)
+          setStyleCarry(v.carry === 'always' || v.carry === 'interval' ? v.carry : (channel === 'api' ? 'always' : 'interval'))
+          const iv = parseInt(v.interval, 10)
+          setStyleInterval(iv > 0 ? iv : 30)
+          styleBlobRef.current = { ...v, ...next }
           try { localStorage.setItem(stylesKey, JSON.stringify(next)) } catch {}
+        } else {
+          styleBlobRef.current = { ...localTexts, phase: 'c', carry: channel === 'api' ? 'always' : 'interval', interval: 30 }
         }
+        styleReadyRef.current = true
+        setStyleReady(true)
       })
       .catch(() => {})
+    return () => {
+      cancelled = true
+      styleReadyRef.current = false
+      if (styleSaveTimer.current) window.clearTimeout(styleSaveTimer.current)
+      if (moonClickTimer.current) window.clearTimeout(moonClickTimer.current)
+    }
   }, [stylesKey])
 
-  const styleSaveTimer = useRef<number | undefined>(undefined)
-  const saveStyle = (k: 'c' | 'f' | 'e', text: string) => {
-    const next = { ...styleTexts, [k]: text }
-    setStyleTexts(next)
-    try { localStorage.setItem(stylesKey, JSON.stringify(next)) } catch {}
+  // 月相/携带方式随文本一起存进同一个 blob(user_status), hub 服务端靠它给 CC 通道(含夜巡等唤醒)携带 style
+  const putStyleBlob = (partial: any, debounceMs: number) => {
+    if (!styleReadyRef.current) return
+    const blob = { ...styleBlobRef.current, ...partial }
+    styleBlobRef.current = blob
     if (styleSaveTimer.current) window.clearTimeout(styleSaveTimer.current)
     styleSaveTimer.current = window.setTimeout(() => {
       fetch('/api/status/' + stylesKey, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: next }),
+        body: JSON.stringify({ value: blob }),
       }).catch(() => {})
-    }, 600)
+    }, debounceMs)
+  }
+  const saveStyle = (k: 'c' | 'f' | 'e', text: string) => {
+    const next = { ...styleTexts, [k]: text }
+    setStyleTexts(next)
+    try { localStorage.setItem(stylesKey, JSON.stringify(next)) } catch {}
+    putStyleBlob(next, 600)
+  }
+  const savePhase = (ph: 'c' | 'f' | 'e') => { setMoonPhase(ph); putStyleBlob({ phase: ph }, 200) }
+  const saveCarry = (v: 'always' | 'interval') => { setStyleCarry(v); putStyleBlob({ carry: v }, 200) }
+  const saveInterval = (n: number) => { const v = n > 0 ? n : 30; setStyleInterval(v); putStyleBlob({ interval: v }, 400) }
+  const handleMoonClick = () => {
+    if (!styleReadyRef.current) return
+    if (moonClickTimer.current) window.clearTimeout(moonClickTimer.current)
+    moonClickTimer.current = window.setTimeout(() => {
+      moonClickTimer.current = undefined
+      savePhase(moonPhase === 'c' ? 'f' : moonPhase === 'f' ? 'e' : 'c')
+    }, 260)
+  }
+  const handleMoonDoubleClick = () => {
+    if (!styleReadyRef.current) return
+    if (moonClickTimer.current) { window.clearTimeout(moonClickTimer.current); moonClickTimer.current = undefined }
+    setStyleEditorOpen(true)
   }
 
   useEffect(() => {
@@ -808,9 +863,37 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
     }
   }, [onBack, styleEditorOpen, panelOpen])
 
+  const decisionInfo = useMemo(() => {
+    const map = new Map<string, { msg: ChatMessage; decision: DecisionData }>()
+    const answered = new Map<string, string>()
+    for (const m of messages) {
+      if (m.role === 'assistant' && typeof m.content === 'string' && m.content.includes('决策卡')) {
+        const { cleaned, decision } = extractDecision(m.content)
+        if (decision) map.set(m.id, { msg: { ...m, content: cleaned }, decision })
+      } else if (m.role === 'user' && typeof m.content === 'string') {
+        const mm = m.content.match(/^【决定】(.+?)：选\s*([A-D])/)
+        if (mm) answered.set(mm[1], mm[2])
+      }
+    }
+    return { map, answered }
+  }, [messages])
+
   const onSend = () => {
     const text = draft.trim()
-    const active = (moonPhase === 'f' ? styleTexts.f : moonPhase === 'e' ? styleTexts.e : styleTexts.c).trim()
+    // CC 通道 style 由 hub 服务端携带(连夜巡唤醒也带); API 通道客户端携带+常驻/定时门控
+    const activeStyle = (moonPhase === 'f' ? styleTexts.f : moonPhase === 'e' ? styleTexts.e : styleTexts.c).trim()
+    let active = ''
+    if (channel === 'api' && activeStyle) {
+      const lk = 'sea-style-lastcarry-' + stylesKey
+      let due = true
+      if (styleCarry === 'interval') {
+        try {
+          const rec = JSON.parse(localStorage.getItem(lk) || 'null')
+          due = !rec || rec.text !== activeStyle || Date.now() - rec.t > styleInterval * 60_000
+        } catch {}
+      }
+      if (due) { active = activeStyle; try { localStorage.setItem(lk, JSON.stringify({ t: Date.now(), text: activeStyle })) } catch {} }
+    }
     if (!text && attachments.length === 0) return
     const images = attachments.filter((a) => a.kind === 'image').map((a) => a.url)
     const files = attachments.filter((a) => a.kind === 'file').map((a) => ({ url: a.url, name: a.name }))
@@ -908,10 +991,11 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
         </div>
         <button
           className="cc-moon"
-          onClick={() => setMoonPhase(p => p === 'c' ? 'f' : p === 'f' ? 'e' : 'c')}
-          onDoubleClick={() => setStyleEditorOpen(true)}
+          onClick={handleMoonClick}
+          onDoubleClick={handleMoonDoubleClick}
+          disabled={!styleReady}
           aria-label="单击切换 style · 双击编辑"
-          title="单击切换 style · 双击编辑"
+          title={styleReady ? '单击切换 style · 双击编辑' : '正在读取 style…'}
         >
           <MoonSvg phase={moonPhase} />
         </button>
@@ -932,13 +1016,14 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
         {messages.length === 0 && connected && authed && (
           <div className="cc-empty">还没消息</div>
         )}
-        {visibleMessages.map((m) => (
+        {visibleMessages.map((m) => { const di = decisionInfo.map.get(m.id); return (
           <Fragment key={m.id}>
             <MessageRow
-              message={m}
+              message={di ? di.msg : m}
               expanded={expandedThinking.has(m.id) || !!m.autoExpanded}
               onToggleThinking={() => toggleThinking(m.id, !!m.autoExpanded)}
             />
+            {di && <ApDecisionCard d={di.decision} answeredChoice={decisionInfo.answered.get(di.decision.title)} onDecide={(t) => store.sendMessage(t)} />}
             {m.memoryHits && m.memoryHits.length > 0 && (
               <details className="cc-memory-hits">
                 <summary>💡 命中 {m.memoryHits.length} 条记忆</summary>
@@ -960,7 +1045,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
               <div className="ap-msg-meta">缓存命中 {Math.round(((m.usage.cached || 0) / m.usage.input) * 100)}%{typeof m.usage.cost === 'number' && m.usage.cost > 0 ? ' · $' + m.usage.cost.toFixed(4) : ''}</div>
             ) : null}
           </Fragment>
-        ))}
+        ) })}
       </div>
 
       <input
@@ -1104,10 +1189,21 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
             <textarea
               className="cc-modal-input"
               value={styleTexts[editingStyle]}
+              disabled={!styleReady}
               onChange={(e) => saveStyle(editingStyle, e.target.value)}
               placeholder={`${editingStyle === 'c' ? '弯月' : editingStyle === 'f' ? '满月' : '月食'} 的 user style，写你想要的语气、口吻、规则…`}
               rows={6}
             />
+            <div className="cc-style-tabs" style={{ marginTop: 8 }}>
+              <button disabled={!styleReady} className={`cc-style-tab${styleCarry === 'always' ? ' active' : ''}`} onClick={() => saveCarry('always')}>常驻</button>
+              <button disabled={!styleReady} className={`cc-style-tab${styleCarry === 'interval' ? ' active' : ''}`} onClick={() => saveCarry('interval')}>定时</button>
+              {styleCarry === 'interval' && (
+                <input type="number" min={1} max={600} value={styleInterval} disabled={!styleReady}
+                  onChange={(e) => saveInterval(parseInt(e.target.value, 10) || 0)}
+                  style={{ width: 52, background: 'transparent', border: '1px solid rgba(127,127,127,.35)', borderRadius: 6, textAlign: 'center', color: 'inherit', fontSize: 12 }} />
+              )}
+              {styleCarry === 'interval' && <span style={{ fontSize: 12, opacity: 0.65, alignSelf: 'center' }}>分钟</span>}
+            </div>
             <div className="cc-modal-actions">
               <button onClick={() => setStyleEditorOpen(false)}>关闭</button>
             </div>
@@ -1226,6 +1322,21 @@ function HtmlCard({ url }: { url: string }) {
   )
 }
 
+function KeepsakeChatCard({ card }: { card: Keepsake }) {
+  const day = new Date(card.observed_at).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
+  return (
+    <a className="cc-keepsake" href={card.page_url} target="_blank" rel="noreferrer">
+      <img src={card.image_url} alt={card.title || '苏煦捡回来的东西'} loading="lazy" decoding="async" />
+      <div className="cc-keepsake-body">
+        <div className="cc-keepsake-cap"><span>拾贝</span><time>{day}</time></div>
+        {card.title && <div className="cc-keepsake-title">{card.title}</div>}
+        <div className="cc-keepsake-words">{card.words}</div>
+        {card.price_snapshot && <div className="cc-keepsake-price">当时看到 · {card.price_snapshot}</div>}
+      </div>
+    </a>
+  )
+}
+
 const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinking }: {
   message: ChatMessage
   expanded: boolean
@@ -1265,7 +1376,6 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
             onClick={hasThinking ? onToggleThinking : undefined}
             aria-expanded={thinkingExpanded}
           >
-            <span className="cc-thinking-flower" aria-hidden="true"><ClaudeSparkle /></span>
             <span className="cc-undercurrent-label">Undercurrent</span>
             {thinkingActive && (
               <span className="cc-undercurrent-dots" aria-hidden="true">
@@ -1311,6 +1421,9 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
         {Array.isArray(message.htmls) && message.htmls.map((u: string, i: number) => (
           <HtmlCard key={i} url={u} />
         ))}
+        {Array.isArray(message.keepsakes) && message.keepsakes.map(card => (
+          <KeepsakeChatCard key={card.id} card={card} />
+        ))}
         {text && (
           <MessageBody
             text={text}
@@ -1323,6 +1436,62 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
     </div>
   )
 }, (prev, next) => prev.message === next.message && prev.expanded === next.expanded)
+
+// 决策卡（2026-07-30）：苏煦回复末尾的「决策卡：…」块 → 可点选卡片（与客厅同款交互）
+interface DecisionData { title: string; options: { key: string; label: string }[]; recommend?: string; why?: string }
+function extractDecision(text: string): { cleaned: string; decision: DecisionData | null } {
+  const m = String(text || '').match(/(?:^|\n)\s*决策卡[：:]\s*(.+)\s*\n([\s\S]*)$/)
+  if (!m) return { cleaned: text, decision: null }
+  const title = m[1].trim(); const opts: { key: string; label: string }[] = []; const rest: string[] = []
+  let recommend = ''; let why = ''
+  for (const line of m[2].split('\n')) {
+    const o = line.match(/^\s*([A-D])[：:.、]\s*(.+)$/)
+    const r = line.match(/^\s*推荐[：:]\s*([A-D])\s*[，,。]?\s*(.*)$/)
+    if (o) opts.push({ key: o[1], label: o[2].trim() })
+    else if (r) { recommend = r[1]; why = (r[2] || '').replace(/^因为/, '').trim() }
+    else rest.push(line)
+  }
+  if (opts.length < 2) return { cleaned: text, decision: null }
+  const cleaned = (text.slice(0, m.index).trim() + '\n' + rest.join('\n').trim()).trim()
+  return { cleaned, decision: { title, options: opts.slice(0, 4), recommend, why } }
+}
+function ApDecisionCard({ d, answeredChoice, onDecide }: { d: DecisionData; answeredChoice?: string; onDecide: (t: string) => void }) {
+  const [sel, setSel] = useState('')
+  const [note, setNote] = useState('')
+  const [sent, setSent] = useState(false)
+  const done = answeredChoice || (sent ? (sel || d.recommend || '') : '')
+  if (done) {
+    const lab = d.options.find(o => o.key === done)?.label || ''
+    return <div className="ap-dec ap-dec-done"><div className="ap-dec-title">{d.title}</div><div className="ap-dec-badge">✓ 已选 {done}{lab ? ' · ' + lab.slice(0, 26) : ''}</div></div>
+  }
+  const pick = (k: string) => {
+    const lab = d.options.find(o => o.key === k)?.label || ''
+    const extra = note.trim()
+    onDecide('【决定】' + d.title + '：选 ' + k + (lab ? '（' + lab + '）' : '') + (extra ? '。补充：' + extra : ''))
+    setSent(true)
+  }
+  return (
+    <div className="ap-dec">
+      <div className="ap-dec-title">{d.title}</div>
+      {d.options.map(o => (
+        <button key={o.key} type="button" className={`ap-dec-opt${sel === o.key ? ' sel' : ''}`} onClick={() => setSel(sel === o.key ? '' : o.key)}>
+          <span className="ap-dec-key">{o.key}</span>
+          <span className="ap-dec-label">{o.label}</span>
+          {d.recommend === o.key && <span className="ap-dec-rectag">推荐</span>}
+        </button>
+      ))}
+      {d.why && <div className="ap-dec-why">推荐 {d.recommend}：{d.why}</div>}
+      <textarea className="ap-dec-note" placeholder="想补充点什么…（可不填）" value={note} rows={1}
+        onChange={e => { setNote(e.target.value); const t = e.target; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 80) + 'px' }} />
+      <div className="ap-dec-acts">
+        {sel
+          ? <button type="button" className="ap-dec-btn primary" onClick={() => pick(sel)}>就这么定（{sel}）</button>
+          : (d.recommend ? <button type="button" className="ap-dec-btn primary" onClick={() => pick(d.recommend!)}>按推荐（{d.recommend}）</button> : null)}
+        <button type="button" className="ap-dec-btn ghost" onClick={() => onDecide('再讲白点——刚才那张卡我没太看懂，换个比喻讲讲')}>再讲白点</button>
+      </div>
+    </div>
+  )
+}
 
 function formatTsShort(ms: number | undefined): string {
   if (!ms) return ''
@@ -1349,6 +1518,8 @@ function shortModel(m: string): string {
     if (m.toLowerCase().includes(k)) {
       const match = m.match(/(\d+)[-.](\d+)/)
       if (match) return `${v} ${match[1]}.${match[2]}`
+      const single = m.match(/-(\d+)(?:\[|$)/) // claude-opus-5 / claude-opus-5[1m] → Opus 5
+      if (single) return `${v} ${single[1]}`
       return v
     }
   }
@@ -1374,6 +1545,14 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
   const store = channel === 'api' ? apiStore : ccStore
   const [confirming, setConfirming] = useState<null | 'forge' | 'compact'>(null)
   const [deletingConv, setDeletingConv] = useState<string | null>(null)
+  // 模型下拉：从群聊后端统一拉取（自动含新模型），失败静默用兜底
+  const [ccModels, setCcModels] = useState(CC_MODELS_FALLBACK)
+  useEffect(() => {
+    fetch('/group/model-opts', { credentials: 'same-origin' }).then(r => r.json()).then(j => {
+      const ids: string[] = Array.isArray(j?.modelOpts?.suxu) ? j.modelOpts.suxu : []
+      if (ids.length) setCcModels(ids.map((v: string) => ({ value: v, label: shortModel(v) })))
+    }).catch(() => {})
+  }, [])
   const { actionPending, actionResult } = store.useChatState()
   const confirmTimerRef = useRef<number | undefined>(undefined)
   const tapAction = (a: 'forge' | 'compact') => {
@@ -1468,7 +1647,7 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
               <select className="cc-model-select" style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', color: 'inherit' }} value={channel === 'api' ? (state.model || '') : curModel} onChange={(e) => store.sendSessionAction('session_set_model', { model: e.target.value })}>
                 {channel === 'api'
                   ? (state.models || []).map((m: string) => <option key={m} value={m}>{shortModel(m)}</option>)
-                  : <>{curModel && !CC_MODELS.some((mm) => mm.value === curModel) ? <option value={curModel}>{shortModel(curModel)}（当前）</option> : null}{CC_MODELS.map((mm) => <option key={mm.value} value={mm.value}>{mm.label}</option>)}</>}
+                  : <>{curModel && !ccModels.some((mm) => mm.value === curModel) ? <option value={curModel}>{shortModel(curModel)}（当前）</option> : null}{ccModels.map((mm) => <option key={mm.value} value={mm.value}>{mm.label}</option>)}</>}
               </select>
             </div>
             {channel !== 'api' && (
