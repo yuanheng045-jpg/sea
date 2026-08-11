@@ -4,7 +4,7 @@ import * as ccStore from './chatStore'
 import * as apiStore from './apiChat'
 import type { ChatMessage } from './chatStore'
 
-type Book = { id: string; title: string; author: string; last_chapter: number; chapter_count: number; last_read_at: string }
+type Book = { id: string; title: string; author: string; source_url: string; cover: string; last_chapter: number; chapter_count: number; last_read_at: string }
 type ChapterItem = { chapter_num: number; title: string }
 type Ann = { id: string; original_text: string; annotation: string; annotator: string; created_at: string }
 type AO3Result = { id: string; title: string; author: string; fandoms: string[]; summary: string; words: string; kudos: string; chapters: string; language: string }
@@ -18,6 +18,21 @@ type View =
 const API = '/api/reading'
 const CH_KEY = 'sea-reading-channel'
 
+async function requestJson(url: string, init?: RequestInit) {
+  const response = await fetch(url, init)
+  const text = await response.text()
+  let data: any
+  try { data = text ? JSON.parse(text) : {} } catch { throw new Error('服务返回了无法识别的内容') }
+  if (!response.ok || data.error) throw new Error(data.error || `请求失败（${response.status}）`)
+  return data
+}
+
+function coverColor(title: string) {
+  let hash = 0
+  for (const char of title) hash = (hash * 31 + char.charCodeAt(0)) % 360
+  return `hsl(${hash} 35% 42%)`
+}
+
 export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
   const [view, setView] = useState<View>({ kind: 'shelf' })
   const [books, setBooks] = useState<Book[]>([])
@@ -27,11 +42,14 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
   const [chatInput, setChatInput] = useState('')
   const [selection, setSelection] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [importStage, setImportStage] = useState('')
+  const [updatingBook, setUpdatingBook] = useState<string | null>(null)
   const [annPopup, setAnnPopup] = useState<{ ann: Ann; x: number; y: number } | null>(null)
   const [chatChannel, setChatChannel] = useState<'cc' | 'api'>(() => {
     try { return (localStorage.getItem(CH_KEY) as 'cc' | 'api') || 'cc' } catch { return 'cc' }
   })
   const logRef = useRef<HTMLDivElement>(null)
+  const importTimers = useRef<number[]>([])
 
   // discover state
   const [discoverTab, setDiscoverTab] = useState<'ao3' | 'link'>('ao3')
@@ -47,6 +65,23 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
   const store = chatChannel === 'api' ? apiStore : ccStore
   const { messages, ccBusy, connected, authed } = store.useChatState()
   const recentMsgs = messages.filter((m: ChatMessage) => m.role !== 'activity').slice(-30)
+
+  const clearImportStages = () => {
+    importTimers.current.forEach(window.clearTimeout)
+    importTimers.current = []
+    setImportStage('')
+  }
+
+  const startImportStages = (first = '下载中…') => {
+    clearImportStages()
+    setImportStage(first)
+    importTimers.current = [
+      window.setTimeout(() => setImportStage('解析中…'), 1200),
+      window.setTimeout(() => setImportStage('入库中…'), 3800),
+    ]
+  }
+
+  useEffect(() => () => importTimers.current.forEach(window.clearTimeout), [])
 
   useEffect(() => {
     if (chatOpen && chatChannel === 'api') apiStore.initApi()
@@ -85,24 +120,27 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
 
   const deleteBook = (e: React.MouseEvent, book: Book) => {
     e.stopPropagation()
-    if (!confirm(`删掉《${book.title}》？批注和聊天记录也会一起删除。`)) return
-    fetch(`${API}/books/${book.id}`, { method: 'DELETE' })
-      .then(r => r.json())
+    if (!confirm(`删掉《${book.title}》？批注和共读记录会一起删掉，无法恢复。`)) return
+    requestJson(`${API}/books/${book.id}`, { method: 'DELETE' })
       .then(() => fetchBooks())
+      .catch(e => alert(e.message))
   }
 
-  const uploadEpub = (file: File) => {
+  const uploadBookFile = (file: File) => {
+    const isTxt = file.name.toLowerCase().endsWith('.txt')
+    const isEpub = file.name.toLowerCase().endsWith('.epub')
+    if (!isTxt && !isEpub) { alert('只支持 EPUB 或 TXT 文件'); return }
     setUploading(true)
+    startImportStages('读取文件中…')
     const fd = new FormData()
-    fd.append('epub', file)
-    fetch('/api/import-epub', { method: 'POST', body: fd })
-      .then(r => r.json())
+    fd.append(isTxt ? 'txt' : 'epub', file)
+    requestJson(isTxt ? '/api/import-txt' : '/api/import-epub', { method: 'POST', body: fd })
       .then(d => {
-        setUploading(false)
-        if (d.success) { fetchBooks(); openBook({ id: d.book_id, title: '', author: '', last_chapter: 0, chapter_count: d.chapters, last_read_at: '' }) }
-        else alert(d.error || '导入失败')
+        fetchBooks()
+        openBook({ id: d.book_id, title: d.title, author: d.author || '', source_url: '', cover: d.cover || '', last_chapter: 0, chapter_count: d.chapters, last_read_at: '' })
       })
-      .catch(() => { setUploading(false); alert('导入失败') })
+      .catch(e => alert(e.message))
+      .finally(() => { setUploading(false); clearImportStages() })
   }
 
   // ── discover: search ──
@@ -124,44 +162,50 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
 
   const importAO3 = (workId: string) => {
     setImportingId(workId)
-    fetch(`${API}/import-ao3`, {
+    startImportStages()
+    requestJson(`${API}/import-ao3`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ work_id: workId })
     })
-      .then(r => r.json())
       .then(d => {
-        setImportingId(null)
-        if (d.success) {
-          fetchBooks()
-          alert(`《${d.title}》已导入，共 ${d.chapters} 章`)
-          setView({ kind: 'shelf' })
-        } else {
-          alert(d.error || '导入失败')
-        }
+        fetchBooks()
+        alert(`《${d.title}》已导入，共 ${d.chapters} 章`)
+        setView({ kind: 'shelf' })
       })
-      .catch(() => { setImportingId(null); alert('导入失败') })
+      .catch(e => alert(e.message))
+      .finally(() => { setImportingId(null); clearImportStages() })
   }
 
   const importFromUrl = () => {
     if (!linkUrl.trim() || importingLink) return
     setImportingLink(true)
-    fetch(`${API}/import-url`, {
+    startImportStages()
+    requestJson(`${API}/import-url`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: linkUrl.trim() })
     })
-      .then(r => r.json())
       .then(d => {
-        setImportingLink(false)
-        if (d.success) {
-          fetchBooks()
-          setLinkUrl('')
-          alert(`《${d.title}》已导入，共 ${d.chapters} 章`)
-          setView({ kind: 'shelf' })
-        } else {
-          alert(d.error || '导入失败')
-        }
+        fetchBooks()
+        setLinkUrl('')
+        alert(`《${d.title}》已导入，共 ${d.chapters} 章`)
+        setView({ kind: 'shelf' })
       })
-      .catch(() => { setImportingLink(false); alert('导入失败') })
+      .catch(e => alert(e.message))
+      .finally(() => { setImportingLink(false); clearImportStages() })
+  }
+
+  const updateFromAO3 = (book: Book) => {
+    if (updatingBook) return
+    setUpdatingBook(book.id)
+    startImportStages()
+    requestJson(`${API}/books/${book.id}/update`, { method: 'POST' })
+      .then(d => {
+        alert(d.added ? `追到 ${d.added} 个新章节，现在共 ${d.total} 章` : `已经是最新，共 ${d.total} 章`)
+        openBook(book)
+        fetchBooks()
+      })
+      .catch(e => alert(e.message))
+      .finally(() => { setUpdatingBook(null); clearImportStages() })
   }
 
   const saveAnnotation = (text: string, note: string) => {
@@ -256,7 +300,7 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
                     {r.summary && <p className="rd-result-summary">{r.summary}</p>}
                     {r.language && <p className="rd-result-lang">{r.language}</p>}
                     <button className="rd-import-btn" onClick={() => importAO3(r.id)} disabled={importingId === r.id}>
-                      {importingId === r.id ? '导入中…' : '导入到书架'}
+                      {importingId === r.id ? importStage || '导入中…' : '导入到书架'}
                     </button>
                   </div>
                 )}
@@ -271,7 +315,7 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
             <input type="url" value={linkUrl} onChange={e => setLinkUrl(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') importFromUrl() }}
               placeholder="https://…/book.epub" />
-            <button onClick={importFromUrl} disabled={importingLink}>{importingLink ? '导入中…' : '导入'}</button>
+            <button onClick={importFromUrl} disabled={importingLink}>{importingLink ? importStage || '导入中…' : '导入'}</button>
           </div>
         </>}
       </div>
@@ -287,6 +331,10 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
         {books.length === 0 && <p className="rd-empty">书架还是空的。</p>}
         {books.map(b => (
           <div key={b.id} className="rd-row" onClick={() => openBook(b)}>
+            <div style={{ position: 'relative', width: 42, height: 56, flex: '0 0 42px', borderRadius: 5, overflow: 'hidden', display: 'grid', placeItems: 'center', color: 'white', background: coverColor(b.title), fontSize: 18 }}>
+              <span>{b.title.trim().charAt(0) || '书'}</span>
+              {b.cover && <img src={b.cover} alt="" loading="lazy" decoding="async" onError={e => { e.currentTarget.style.display = 'none' }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+            </div>
             <div className="rd-row-info">
               <span>{b.title}</span>
               <small>{b.author}{b.author && ' · '}{b.chapter_count}章{b.last_chapter ? ` · 读到第${b.last_chapter}章` : ''}</small>
@@ -297,8 +345,8 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
         <div className="rd-shelf-actions">
           <button className="rd-find-btn" onClick={() => setView({ kind: 'discover' })}>找书</button>
           <label className="rd-upload-btn">
-            {uploading ? '导入中…' : '导入 epub'}
-            <input type="file" accept=".epub" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && uploadEpub(e.target.files[0])} />
+            {uploading ? importStage || '导入中…' : '导入 EPUB / TXT'}
+            <input type="file" accept=".epub,.txt" style={{ display: 'none' }} onChange={e => { const file = e.target.files?.[0]; e.currentTarget.value = ''; if (file) uploadBookFile(file) }} />
           </label>
         </div>
       </div>
@@ -308,7 +356,9 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
   // ── TOC ──
   if (view.kind === 'toc') return (
     <div className="rd-page">
-      {header(view.book.title, () => { fetchBooks(); setView({ kind: 'shelf' }) })}
+      {header(view.book.title, () => { fetchBooks(); setView({ kind: 'shelf' }) }, view.book.source_url
+        ? <button className="rd-chat-btn" onClick={() => updateFromAO3(view.book)} disabled={updatingBook === view.book.id}>{updatingBook === view.book.id ? importStage || '检查中…' : '检查更新'}</button>
+        : undefined)}
       <div className="rd-body">
         {view.book.author && <p className="rd-sub">{view.book.author}</p>}
         {view.chapters.map(c => (
