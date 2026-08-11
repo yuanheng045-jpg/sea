@@ -17,6 +17,7 @@ type View =
 
 const API = '/api/reading'
 const CH_KEY = 'sea-reading-channel'
+const ANNOTATION_HINT_KEY = 'sea-reading-annotation-hint-v1'
 
 async function requestJson(url: string, init?: RequestInit) {
   const response = await fetch(url, init)
@@ -44,12 +45,15 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
   const [uploading, setUploading] = useState(false)
   const [importStage, setImportStage] = useState('')
   const [updatingBook, setUpdatingBook] = useState<string | null>(null)
+  const [showAnnotationHint, setShowAnnotationHint] = useState(false)
   const [annPopup, setAnnPopup] = useState<{ ann: Ann; x: number; y: number } | null>(null)
   const [chatChannel, setChatChannel] = useState<'cc' | 'api'>(() => {
     try { return (localStorage.getItem(CH_KEY) as 'cc' | 'api') || 'cc' } catch { return 'cc' }
   })
   const logRef = useRef<HTMLDivElement>(null)
   const importTimers = useRef<number[]>([])
+  const annotationHintTimer = useRef<number | null>(null)
+  const annotationHintShown = useRef(false)
 
   // discover state
   const [discoverTab, setDiscoverTab] = useState<'ao3' | 'link'>('ao3')
@@ -81,7 +85,10 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
     ]
   }
 
-  useEffect(() => () => importTimers.current.forEach(window.clearTimeout), [])
+  useEffect(() => () => {
+    importTimers.current.forEach(window.clearTimeout)
+    if (annotationHintTimer.current !== null) window.clearTimeout(annotationHintTimer.current)
+  }, [])
 
   useEffect(() => {
     if (chatOpen && chatChannel === 'api') apiStore.initApi()
@@ -108,6 +115,21 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
     })
   }
 
+  const dismissAnnotationHint = () => {
+    setShowAnnotationHint(false)
+    if (annotationHintTimer.current !== null) window.clearTimeout(annotationHintTimer.current)
+    annotationHintTimer.current = null
+    try { localStorage.setItem(ANNOTATION_HINT_KEY, '1') } catch {}
+  }
+
+  const showAnnotationHintOnce = () => {
+    if (annotationHintShown.current) return
+    try { if (localStorage.getItem(ANNOTATION_HINT_KEY)) return } catch {}
+    annotationHintShown.current = true
+    setShowAnnotationHint(true)
+    annotationHintTimer.current = window.setTimeout(dismissAnnotationHint, 5000)
+  }
+
   const openChapter = (book: Book, cnum: number, total: number) => {
     fetch(`${API}/books/${book.id}/chapters/${cnum}`).then(r => r.json()).then(d => {
       setChapter(d.chapter)
@@ -115,6 +137,7 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
       setView({ kind: 'reader', book, cnum, total: d.totalChapters || total })
       setChatOpen(false)
       setSelection('')
+      showAnnotationHintOnce()
     })
   }
 
@@ -376,6 +399,11 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
     <div className="rd-page" onClick={() => setAnnPopup(null)}>
       {header(chapter?.title || `第${view.cnum}章`, () => openBook(view.book),
         <button className="rd-chat-btn" onClick={() => setChatOpen(!chatOpen)}>💬</button>
+      )}
+      {showAnnotationHint && (
+        <button type="button" aria-live="polite" onClick={dismissAnnotationHint} style={{ position: 'fixed', zIndex: 220, top: 'calc(env(safe-area-inset-top, 0px) + 56px)', left: '50%', transform: 'translateX(-50%)', width: 'max-content', maxWidth: 'calc(100vw - 32px)', padding: '9px 14px', border: '1px solid var(--border, rgba(0,0,0,.08))', borderRadius: 999, background: 'var(--bg, #fff)', color: 'var(--text, #332f2b)', boxShadow: '0 6px 20px rgba(0,0,0,.12)', font: 'inherit', fontSize: 13, cursor: 'pointer' }}>
+          长按选中文字，可以批注或共读
+        </button>
       )}
       <div className="rd-body rd-reader-body" onMouseUp={handleSelection} onTouchEnd={() => setTimeout(handleSelection, 300)}>
         <p className="rd-sub">{view.book.title} · #{view.cnum}</p>
