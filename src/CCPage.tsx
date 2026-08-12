@@ -1519,19 +1519,6 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
         {isAssistant && toolTales.length > 0 && (
           <ToolRun segmentId={toolTales[0]?.id ?? message.id} items={toolTales} />
         )}
-        {message.image && (
-          <img
-            className={`cc-msg-img${message.image.startsWith('/sticker-images/') ? ' cc-sticker-msg' : ''}`}
-            src={absUrl(message.image)}
-            referrerPolicy="no-referrer"
-            alt=""
-            loading="lazy"
-            decoding="async"
-          />
-        )}
-        {Array.isArray(message.images) && message.images.map((u: string, i: number) => (
-          <img key={i} className={`cc-msg-img${u.startsWith('/sticker-images/') ? ' cc-sticker-msg' : ''}`} src={absUrl(u)} referrerPolicy="no-referrer" alt="" loading="lazy" decoding="async" />
-        ))}
         {Array.isArray(message.files) && message.files.map((fl: any, i: number) => (
           <a key={i} className="cc-msg-file" href={absUrl(fl.url ?? '')} target="_blank" rel="noopener">
             <FileIconInline /> {fl.name ?? '文件'}
@@ -1561,6 +1548,19 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
             onDoubleTap={isAssistant && hasThinking ? onToggleThinking : undefined}
           />
         )}
+        {message.image && (
+          <img
+            className={`cc-msg-img${message.image.startsWith('/sticker-images/') ? ' cc-sticker-msg' : ''}`}
+            src={absUrl(message.image)}
+            referrerPolicy="no-referrer"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+        {Array.isArray(message.images) && message.images.map((u: string, i: number) => (
+          <img key={i} className={`cc-msg-img${u.startsWith('/sticker-images/') ? ' cc-sticker-msg' : ''}`} src={absUrl(u)} referrerPolicy="no-referrer" alt="" loading="lazy" decoding="async" />
+        ))}
       </div>
     </div>
   )
