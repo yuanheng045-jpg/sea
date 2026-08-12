@@ -316,7 +316,6 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   }
   const uploadSticker = async (file: File) => {
     if (!file.type.startsWith('image/')) { setStickerError('这里只能收图片'); return }
-    if (!stickerDescription.trim()) { setStickerError('先写一句这张图表达什么'); return }
     setStickerUploading(true); setStickerError('')
     try {
       const data = await new Promise<string>((resolve, reject) => {
@@ -484,7 +483,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
                 {(m.text || (!(m.images?.length || m.files?.length || m.keepsakes?.length) && !m.decision)) && (
                   <div className="cc-text">{m.text ? <Markdown text={m.text} keyBase={`m${m.id}`} /> : '…'}</div>
                 )}
-                {Array.isArray(m.images) && m.images.map(u => <img key={u} className="gc-img" src={u} loading="lazy" />)}
+                {Array.isArray(m.images) && m.images.map(u => <img key={u} className={`gc-img${u.startsWith('/group/sticker-images/') ? ' gc-sticker-msg' : ''}`} src={u} loading="lazy" />)}
                 {Array.isArray(m.files) && m.files.map(f => <a key={f.url} className="gc-file" href={f.url} download={f.name || true}>📎 {f.name || '文件'}</a>)}
                 {Array.isArray(m.keepsakes) && m.keepsakes.map(card => <KeepsakeCard key={card.id} card={card} />)}
                 {Array.isArray(m.perms) && m.perms.map(pm => (
@@ -548,8 +547,8 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
             </div>
             {stickerTab === 'yaoyao' && (
               <div className="gc-sticker-add">
-                <input value={stickerDescription} maxLength={240} placeholder="这张图表达什么（必填）" onChange={e => setStickerDescription(e.target.value)} />
-                <input value={stickerTags} maxLength={240} placeholder="标签，用空格隔开" onChange={e => setStickerTags(e.target.value)} />
+                <input value={stickerDescription} maxLength={240} placeholder="描述（选填，方便以后找）" onChange={e => setStickerDescription(e.target.value)} />
+                <input value={stickerTags} maxLength={240} placeholder="标签（选填，用空格隔开）" onChange={e => setStickerTags(e.target.value)} />
                 <input ref={stickerInputRef} type="file" accept="image/*" hidden onChange={onStickerPick} />
                 <button disabled={stickerUploading} onClick={() => stickerInputRef.current?.click()}>{stickerUploading ? '正在收好…' : '选图收藏'}</button>
                 <span>也可以直接在这里粘贴图片</span>
@@ -563,7 +562,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
                     <button className="gc-sticker-image" onClick={() => sendSticker(sticker)} title={sticker.description}>
                       <img src={sticker.image_url} alt={sticker.description} loading="lazy" />
                     </button>
-                    <div className="gc-sticker-desc">{sticker.description}</div>
+                    <div className="gc-sticker-desc">{sticker.description || sticker.tags.join('、') || '未命名贴纸'}</div>
                     {stickerTab === 'yaoyao' && <button className="gc-sticker-remove" onClick={() => removeSticker(sticker)} aria-label={`删除${sticker.description}`}>删除</button>}
                   </div>
                 ))}
@@ -880,6 +879,7 @@ const GC_CSS = `
 .gc-usage-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#c7ad84,#b2925f)}
 .gc-usage-meta{font-size:11px;color:var(--ink-faint,#a8a294)}
 .gc-img{display:block;max-width:min(78%,340px);border-radius:14px;margin-top:6px}
+.gc-img.gc-sticker-msg{width:auto;height:auto;max-width:180px;max-height:160px;object-fit:contain;border-radius:12px}
 .gc-keepsake{display:block;width:min(88vw,360px);margin-top:8px;border-radius:18px;overflow:hidden;text-decoration:none;color:inherit;background:rgba(255,253,248,.76);border:1px solid rgba(174,151,112,.2);box-shadow:0 10px 30px rgba(82,68,45,.08)}
 .gc-keepsake img{display:block;width:100%;max-height:320px;aspect-ratio:4/3;object-fit:cover;background:rgba(160,145,120,.08)}
 .gc-keepsake-body{padding:12px 14px 14px}
