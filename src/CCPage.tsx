@@ -929,7 +929,14 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const openStickers = async () => {
     if (channel !== 'cc') return
     setStickerOpen(true); setPlusOpen(false); setStickerError(''); setStickerLoading(true)
-    try { await Promise.all([loadStickerTab('yaoyao'), loadStickerTab('xuxu')]) }
+    try {
+      // 贴纸图片经当前页面的 /cc-api 取；先等门票种好，避免缩略图先发请求变问号。
+      await fetch('/cc-api/pin-login', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: getPin() }),
+      })
+      await Promise.all([loadStickerTab('yaoyao'), loadStickerTab('xuxu')])
+    }
     catch (e: any) { setStickerError(e?.message || '贴纸柜没打开') }
     finally { setStickerLoading(false) }
   }
@@ -1395,7 +1402,10 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   )
 }
 
-const absUrl = (u: string) => /^https?:\/\//.test(u || '') ? (u || '') : `https://cc.atlantis-sy.blue${u || ''}`
+const absUrl = (u: string) => {
+  if (/^\/sticker-images\/st_[A-Za-z0-9_-]+\.(?:webp|gif)$/.test(u || '')) return `/cc-api${u}`
+  return /^https?:\/\//.test(u || '') ? (u || '') : `https://cc.atlantis-sy.blue${u || ''}`
+}
 
 function activityToolTales(activities: any[] | undefined, parentId: string): ToolTale[] {
   return (activities ?? []).map((activity, index) => {

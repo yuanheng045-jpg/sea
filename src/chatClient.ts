@@ -83,7 +83,8 @@ export function createChatClient(opts?: {
     }
     if (pin) {
       localStorage.setItem(PIN_KEY, pin)
-      setPinCookie(pin)
+      // 先把当前页面域的 HttpOnly 门票种好，再让 hub 回历史；否则历史贴纸会抢跑成问号。
+      await setPinCookie(pin)
     }
     if (pin && ws?.readyState === WebSocket.OPEN) {
       let cid = localStorage.getItem(CLIENT_ID_KEY)
