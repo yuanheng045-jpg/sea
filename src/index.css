@@ -2554,6 +2554,52 @@ button { font: inherit; cursor: pointer; color: inherit; }
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   cursor: zoom-in;
 }
+.cc-msg-img.cc-sticker-msg {
+  width: auto;
+  height: auto;
+  max-width: 180px !important;
+  max-height: 160px !important;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+/* 主聊天贴纸柜 */
+.cc-sticker-mask {
+  position: fixed; inset: 0; z-index: 75; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(25,28,34,.18); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+}
+.cc-sticker-sheet {
+  width: min(100%,520px); max-height: min(76dvh,680px); display: flex; flex-direction: column;
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom,0px)); border-radius: 24px 24px 0 0;
+  background: rgba(252,250,246,.98); box-shadow: 0 -16px 48px rgba(58,52,42,.16);
+}
+.cc-sticker-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.cc-sticker-title { font-family: var(--font-display,serif); font-size: 18px; letter-spacing: .16em; color: var(--ink,#5f584d); }
+.cc-sticker-sub { font-size: 11.5px; color: var(--ink-faint,#a8a294); margin-top: 2px; }
+.cc-sticker-close { width: 34px; height: 34px; border: none; border-radius: 50%; background: rgba(120,110,90,.08); color: var(--ink-soft,#8a8478); font-size: 22px; }
+.cc-sticker-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 14px 0 10px; padding: 4px; border-radius: 14px; background: rgba(120,110,90,.07); }
+.cc-sticker-tabs button { border: none; border-radius: 10px; padding: 8px; background: transparent; color: var(--ink-soft,#8a8478); font-family: inherit; font-size: 13px; }
+.cc-sticker-tabs button.on { background: rgba(255,255,255,.82); color: var(--ink,#4a463e); box-shadow: 0 2px 8px rgba(80,70,50,.08); }
+.cc-sticker-add { display: grid; grid-template-columns: 1fr 1fr auto; gap: 7px; align-items: center; margin-bottom: 10px; }
+.cc-sticker-add input { min-width: 0; border: 1px solid rgba(120,110,90,.16); border-radius: 10px; padding: 8px 10px; background: rgba(255,255,255,.65); font: inherit; font-size: 12px; color: var(--ink,#4a463e); outline: none; }
+.cc-sticker-add button { border: none; border-radius: 10px; padding: 9px 11px; background: linear-gradient(135deg,#c7ad84,#b2925f); color: #fff; font: inherit; font-size: 12px; white-space: nowrap; }
+.cc-sticker-add button:disabled { opacity: .55; }
+.cc-sticker-add span { grid-column: 1/-1; font-size: 10.5px; color: var(--ink-faint,#a8a294); text-align: right; }
+.cc-sticker-error { padding: 8px 10px; margin-bottom: 8px; border-radius: 10px; background: rgba(194,110,110,.09); color: #a56767; font-size: 12px; }
+.cc-sticker-grid { overflow-y: auto; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; padding: 2px; overscroll-behavior: contain; }
+.cc-sticker-item { position: relative; min-width: 0; padding: 7px; border-radius: 14px; background: rgba(255,255,255,.55); border: 1px solid rgba(120,110,90,.09); }
+.cc-sticker-image { display: block; width: 100%; aspect-ratio: 1; border: none; border-radius: 10px; overflow: hidden; padding: 0; background: rgba(120,110,90,.05); }
+.cc-sticker-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.cc-sticker-desc { font-size: 10.5px; color: var(--ink-soft,#817a70); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 5px 1px 0; }
+.cc-sticker-remove { display: block; margin: 4px 0 0 auto; border: none; background: transparent; color: #b48585; font: inherit; font-size: 10.5px; padding: 2px; }
+.cc-sticker-empty { grid-column: 1/-1; padding: 36px 12px; text-align: center; color: var(--ink-faint,#aaa294); font-size: 13px; }
+@media(max-width:390px) {
+  .cc-sticker-add { grid-template-columns: 1fr auto; }
+  .cc-sticker-add input:first-child { grid-column: 1/-1; }
+  .cc-sticker-grid { gap: 7px; }
+  .cc-sticker-sheet { padding-left: 13px; padding-right: 13px; }
+}
 .cc-lightbox {
   position: fixed; inset: 0; z-index: 1000;
   background: rgba(10, 15, 30, 0.88);

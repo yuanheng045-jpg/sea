@@ -29,6 +29,8 @@ const CC_MODELS_FALLBACK = [
   { value: 'claude-fable-5', label: 'Fable 5' },
 ]
 
+interface Sticker { id: string; owner: 'xuxu' | 'yaoyao'; description: string; tags: string[]; image_url: string; image_mime: string; byte_size: number; created_at: string }
+
 // ── Music card ──
 const MUSIC_RE = /\[music:(\d+):([^:]*):([^:]*):([^\]]*)\](.*)?/
 const MC_API = 'https://puppy.atlantis-sy.blue/nm'
@@ -596,6 +598,14 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const [draft, setDraft] = useState('')
   const [plusOpen, setPlusOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [stickerOpen, setStickerOpen] = useState(false)
+  const [stickerTab, setStickerTab] = useState<'yaoyao' | 'xuxu'>('yaoyao')
+  const [stickers, setStickers] = useState<Record<'yaoyao' | 'xuxu', Sticker[]>>({ yaoyao: [], xuxu: [] })
+  const [stickerLoading, setStickerLoading] = useState(false)
+  const [stickerError, setStickerError] = useState('')
+  const [stickerUploading, setStickerUploading] = useState(false)
+  const [stickerDescription, setStickerDescription] = useState('')
+  const [stickerTags, setStickerTags] = useState('')
   const [moonPhase, setMoonPhase] = useState<'c' | 'f' | 'e'>('c')
   const [styleEditorOpen, setStyleEditorOpen] = useState(false)
   const [editingStyle, setEditingStyle] = useState<'c' | 'f' | 'e'>('c')
@@ -613,6 +623,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const [claudemdDraft, setClaudemdDraft] = useState('')
   const photoInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const stickerInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState<'photo' | 'file' | null>(null)
   const [pendingImages, setPendingImages] = useState<File[] | null>(null)
   const [attachments, setAttachments] = useState<Array<{ kind: 'image' | 'file'; url: string; name?: string }>>([])
@@ -907,6 +918,69 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
     setAttachments([])
   }
 
+  const loadStickerTab = async (owner: 'yaoyao' | 'xuxu') => {
+    const res = await fetch(`/cc-api/api/stickers?owner=${owner}`, {
+      credentials: 'include', headers: { 'X-Channel-Pin': getPin() },
+    })
+    const body = await res.json()
+    if (!res.ok || !body.ok) throw new Error(body.error || '贴纸柜没打开')
+    setStickers(prev => ({ ...prev, [owner]: body.stickers || [] }))
+  }
+  const openStickers = async () => {
+    if (channel !== 'cc') return
+    setStickerOpen(true); setPlusOpen(false); setStickerError(''); setStickerLoading(true)
+    try { await Promise.all([loadStickerTab('yaoyao'), loadStickerTab('xuxu')]) }
+    catch (e: any) { setStickerError(e?.message || '贴纸柜没打开') }
+    finally { setStickerLoading(false) }
+  }
+  const uploadSticker = async (file: File) => {
+    if (!file.type.startsWith('image/')) { setStickerError('这里只能收图片'); return }
+    setStickerUploading(true); setStickerError('')
+    try {
+      const data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '')
+        reader.onerror = () => reject(new Error('图片没读出来'))
+        reader.readAsDataURL(file)
+      })
+      const res = await fetch('/cc-api/api/stickers', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Channel-Pin': getPin() },
+        body: JSON.stringify({ data, mime: file.type, description: stickerDescription.trim(), tags: stickerTags }),
+      })
+      const body = await res.json()
+      if (!res.ok || !body.ok) throw new Error(body.error || '贴纸没存成')
+      setStickers(prev => ({ ...prev, yaoyao: [body.sticker, ...prev.yaoyao.filter(row => row.id !== body.sticker.id)].slice(0, 12) }))
+      setStickerDescription(''); setStickerTags(''); setStickerTab('yaoyao')
+    } catch (e: any) { setStickerError(e?.message || '贴纸没存成') }
+    finally { setStickerUploading(false) }
+  }
+  const onStickerPick = async (e: { target: HTMLInputElement }) => {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (file) await uploadSticker(file)
+  }
+  const onStickerPaste = async (e: { clipboardData: DataTransfer; preventDefault: () => void }) => {
+    const file = Array.from(e.clipboardData.items).find(item => item.kind === 'file' && item.type.startsWith('image/'))?.getAsFile()
+    if (!file) return
+    e.preventDefault(); await uploadSticker(file)
+  }
+  const sendSticker = (sticker: Sticker) => {
+    if (channel !== 'cc') return
+    store.sendMessage('', { images: [sticker.image_url] })
+    setStickerOpen(false)
+  }
+  const removeSticker = async (sticker: Sticker) => {
+    setStickerError('')
+    try {
+      const res = await fetch(`/cc-api/api/stickers?id=${encodeURIComponent(sticker.id)}`, {
+        method: 'DELETE', credentials: 'include', headers: { 'X-Channel-Pin': getPin() },
+      })
+      const body = await res.json()
+      if (!res.ok || !body.ok) throw new Error(body.error || '贴纸没删成')
+      setStickers(prev => ({ ...prev, yaoyao: prev.yaoyao.filter(row => row.id !== sticker.id) }))
+    } catch (e: any) { setStickerError(e?.message || '贴纸没删成') }
+  }
+
   // 只上报"某一刻发生了哪一类动作"：打字 / 删改 / 整段删光。一个字的内容都不出门。
   const onDraftChange = (value: string) => {
     setDraft(value)
@@ -1078,6 +1152,44 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
         }}
       />
       {pickerOpen && <SongPicker onClose={() => setPickerOpen(false)} onPick={(tag) => { store.sendMessage(tag); setPickerOpen(false) }} />}
+      {stickerOpen && channel === 'cc' && (
+        <div className="cc-sticker-mask" onClick={() => setStickerOpen(false)}>
+          <section className="cc-sticker-sheet" onClick={e => e.stopPropagation()} onPaste={onStickerPaste}>
+            <div className="cc-sticker-head">
+              <div><div className="cc-sticker-title">贴纸柜</div><div className="cc-sticker-sub">点一下就发给苏煦</div></div>
+              <button className="cc-sticker-close" onClick={() => setStickerOpen(false)} aria-label="关闭">×</button>
+            </div>
+            <div className="cc-sticker-tabs">
+              <button className={stickerTab === 'yaoyao' ? 'on' : ''} onClick={() => setStickerTab('yaoyao')}>我的</button>
+              <button className={stickerTab === 'xuxu' ? 'on' : ''} onClick={() => setStickerTab('xuxu')}>苏煦的</button>
+            </div>
+            {stickerTab === 'yaoyao' && (
+              <div className="cc-sticker-add">
+                <input value={stickerDescription} maxLength={240} placeholder="描述（选填，方便以后找）" onChange={e => setStickerDescription(e.target.value)} />
+                <input value={stickerTags} maxLength={240} placeholder="标签（选填，用空格隔开）" onChange={e => setStickerTags(e.target.value)} />
+                <input ref={stickerInputRef} type="file" accept="image/*" hidden onChange={onStickerPick} />
+                <button disabled={stickerUploading} onClick={() => stickerInputRef.current?.click()}>{stickerUploading ? '正在收好…' : '选图收藏'}</button>
+                <span>也可以直接在这里粘贴图片</span>
+              </div>
+            )}
+            {stickerError && <div className="cc-sticker-error">{stickerError}</div>}
+            {stickerLoading ? <div className="cc-sticker-empty">正在翻柜子…</div> : (
+              <div className="cc-sticker-grid">
+                {stickers[stickerTab].map(sticker => (
+                  <div key={sticker.id} className="cc-sticker-item">
+                    <button className="cc-sticker-image" onClick={() => sendSticker(sticker)} title={sticker.description}>
+                      <img src={absUrl(sticker.image_url)} alt={sticker.description} loading="lazy" />
+                    </button>
+                    <div className="cc-sticker-desc">{sticker.description || sticker.tags.join('、') || '未命名贴纸'}</div>
+                    {stickerTab === 'yaoyao' && <button className="cc-sticker-remove" onClick={() => removeSticker(sticker)} aria-label={`删除${sticker.description || '贴纸'}`}>删除</button>}
+                  </div>
+                ))}
+                {!stickers[stickerTab].length && <div className="cc-sticker-empty">{stickerTab === 'yaoyao' ? '你的柜子还是空的，先收第一张吧' : '苏煦还没往这里攒图'}</div>}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
       <div className="cc-input-bar">
         <div className="cc-input-col">
         {attachments.length > 0 && (
@@ -1114,6 +1226,13 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
                   onClick={(e) => { e.stopPropagation(); setPickerOpen(true); setPlusOpen(false) }}
                   style={{ fontSize: 20, lineHeight: 1 }}
                 >♪</button>
+                {channel === 'cc' && <button
+                  className="cc-plus-item"
+                  aria-label="贴纸"
+                  title="贴纸"
+                  onClick={(e) => { e.stopPropagation(); void openStickers() }}
+                  style={{ fontSize: 15, lineHeight: 1 }}
+                >贴</button>}
                 <button
                   className="cc-plus-item"
                   aria-label="打电话"
@@ -1392,7 +1511,7 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
         )}
         {message.image && (
           <img
-            className="cc-msg-img"
+            className={`cc-msg-img${message.image.startsWith('/sticker-images/') ? ' cc-sticker-msg' : ''}`}
             src={absUrl(message.image)}
             referrerPolicy="no-referrer"
             alt=""
@@ -1401,7 +1520,7 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
           />
         )}
         {Array.isArray(message.images) && message.images.map((u: string, i: number) => (
-          <img key={i} className="cc-msg-img" src={absUrl(u)} referrerPolicy="no-referrer" alt="" loading="lazy" decoding="async" />
+          <img key={i} className={`cc-msg-img${u.startsWith('/sticker-images/') ? ' cc-sticker-msg' : ''}`} src={absUrl(u)} referrerPolicy="no-referrer" alt="" loading="lazy" decoding="async" />
         ))}
         {Array.isArray(message.files) && message.files.map((fl: any, i: number) => (
           <a key={i} className="cc-msg-file" href={absUrl(fl.url ?? '')} target="_blank" rel="noopener">
