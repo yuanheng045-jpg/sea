@@ -7,6 +7,7 @@ type Role = 'yuanyao' | 'suxu' | 'suxu-api' | 'codex' | 'system' | 'tool'
 interface PermReq { path: string; reason?: string; status?: 'pending' | 'granted' | 'revoked' | 'failed'; minutes?: number; expiry?: number; error?: string }
 interface Decision { title: string; options: { key: string; label: string }[]; recommend?: string; why?: string }
 interface Keepsake { id: string; title?: string; words: string; page_url: string; image_url: string; price_snapshot?: string; observed_at: string; source: 'main-chat' | 'group-chat' }
+interface Sticker { id: string; owner: 'xuxu' | 'yaoyao'; description: string; tags: string[]; image_url: string; image_mime: string; byte_size: number; created_at: string }
 interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[]; decision?: Decision; keepsakes?: Keepsake[]; decideFor?: number; choice?: string }
 interface Config { maxAiTurns: number; mentionFreeFollow: boolean; aiCrosstalk: boolean; models?: Record<string, string>; effort?: Record<string, string> }
 interface Usage { who: string; model: string; ctx: number; cacheRead: number; input: number; output: number }
@@ -168,8 +169,17 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   const [pendImgs, setPendImgs] = useState<string[]>([])
   const [pendFiles, setPendFiles] = useState<{ url: string; name?: string }[]>([])
   const [uploading, setUploading] = useState(false)
+  const [stickerOpen, setStickerOpen] = useState(false)
+  const [stickerTab, setStickerTab] = useState<'yaoyao' | 'xuxu'>('yaoyao')
+  const [stickers, setStickers] = useState<Record<'yaoyao' | 'xuxu', Sticker[]>>({ yaoyao: [], xuxu: [] })
+  const [stickerLoading, setStickerLoading] = useState(false)
+  const [stickerError, setStickerError] = useState('')
+  const [stickerUploading, setStickerUploading] = useState(false)
+  const [stickerDescription, setStickerDescription] = useState('')
+  const [stickerTags, setStickerTags] = useState('')
   const imgInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const stickerInputRef = useRef<HTMLInputElement>(null)
   const [opts, setOpts] = useState<{ modelOpts: Record<string, string[]>; effortOpts: string[] }>({ modelOpts: {}, effortOpts: [] })
   const feedRef = useRef<HTMLDivElement>(null)
   const stickRef = useRef(true)
@@ -291,6 +301,68 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
         if (kind === 'img') setPendImgs(p => [...p, r.url]); else setPendFiles(p => [...p, { url: r.url, name: r.name }])
       }
     } finally { setUploading(false) }
+  }
+  const loadStickerTab = async (owner: 'yaoyao' | 'xuxu') => {
+    const res = await fetch(`${API}/stickers?owner=${owner}`, { credentials: 'same-origin' })
+    const body = await res.json()
+    if (!res.ok || !body.ok) throw new Error(body.error || '贴纸柜没打开')
+    setStickers(prev => ({ ...prev, [owner]: body.stickers || [] }))
+  }
+  const openStickers = async () => {
+    setStickerOpen(true); setPlusOpen(false); setStickerError(''); setStickerLoading(true)
+    try { await Promise.all([loadStickerTab('yaoyao'), loadStickerTab('xuxu')]) }
+    catch (e: any) { setStickerError(e?.message || '贴纸柜没打开') }
+    finally { setStickerLoading(false) }
+  }
+  const uploadSticker = async (file: File) => {
+    if (!file.type.startsWith('image/')) { setStickerError('这里只能收图片'); return }
+    if (!stickerDescription.trim()) { setStickerError('先写一句这张图表达什么'); return }
+    setStickerUploading(true); setStickerError('')
+    try {
+      const data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '')
+        reader.onerror = () => reject(new Error('图片没读出来'))
+        reader.readAsDataURL(file)
+      })
+      const res = await fetch(`${API}/stickers`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+        body: JSON.stringify({ data, mime: file.type, description: stickerDescription.trim(), tags: stickerTags }),
+      })
+      const body = await res.json()
+      if (!res.ok || !body.ok) throw new Error(body.error || '贴纸没存成')
+      setStickers(prev => ({ ...prev, yaoyao: [body.sticker, ...prev.yaoyao.filter(row => row.id !== body.sticker.id)].slice(0, 12) }))
+      setStickerDescription(''); setStickerTags(''); setStickerTab('yaoyao')
+    } catch (e: any) { setStickerError(e?.message || '贴纸没存成') }
+    finally { setStickerUploading(false) }
+  }
+  const onStickerPick = async (e: { target: HTMLInputElement }) => {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (file) await uploadSticker(file)
+  }
+  const onStickerPaste = async (e: { clipboardData: DataTransfer; preventDefault: () => void }) => {
+    const file = Array.from(e.clipboardData.items).find(item => item.kind === 'file' && item.type.startsWith('image/'))?.getAsFile()
+    if (!file) return
+    e.preventDefault(); await uploadSticker(file)
+  }
+  const sendSticker = async (sticker: Sticker) => {
+    if (!roomId) return
+    setStickerOpen(false); stickRef.current = true
+    try {
+      await fetch(`${API}/say?room=${roomId}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+        body: JSON.stringify({ text: '', images: [sticker.image_url] }),
+      })
+    } catch { setStickerError('贴纸没发出去') }
+  }
+  const removeSticker = async (sticker: Sticker) => {
+    setStickerError('')
+    try {
+      const res = await fetch(`${API}/stickers?id=${encodeURIComponent(sticker.id)}`, { method: 'DELETE', credentials: 'same-origin' })
+      const body = await res.json()
+      if (!res.ok || !body.ok) throw new Error(body.error || '贴纸没删成')
+      setStickers(prev => ({ ...prev, yaoyao: prev.yaoyao.filter(row => row.id !== sticker.id) }))
+    } catch (e: any) { setStickerError(e?.message || '贴纸没删成') }
   }
   const mention = (who: string) => setInput(v => (v.trim() ? v.trim() + ' ' : '') + '@' + who + ' ')
   const toggleInject = async () => {
@@ -448,6 +520,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
                 <button className="cc-plus-item gc-at" onClick={toggleKeepalive} aria-label="缓存保活" title="每约50分钟静默续一次苏煦的缓存">{`保活${room?.keepalive ? '·开' : '·关'}`}</button>
                 <button className="cc-plus-item gc-at" onClick={() => { imgInputRef.current?.click(); setPlusOpen(false) }}>发照片</button>
                 <button className="cc-plus-item gc-at" onClick={() => { fileInputRef.current?.click(); setPlusOpen(false) }}>发文件</button>
+                <button className="cc-plus-item gc-at" onClick={openStickers}>贴纸</button>
                 {(room?.members || []).includes('suxu') && <button className="cc-plus-item gc-at" onClick={() => { mention('苏煦'); setPlusOpen(false) }}>@苏煦</button>}
                 {(room?.members || []).includes('suxu-api') && <button className="cc-plus-item gc-at" onClick={() => { mention('苏煦API'); setPlusOpen(false) }}>@API</button>}
                 {(room?.members || []).includes('codex') && <button className="cc-plus-item gc-at" onClick={() => { mention('codex'); setPlusOpen(false) }}>@codex</button>}
@@ -461,6 +534,45 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
           <button className="cc-send" onClick={send} disabled={!input.trim() && !pendImgs.length && !pendFiles.length} aria-label="发送"><ClaudeSparkle /></button>
         </div>
       </div>
+
+      {stickerOpen && (
+        <div className="gc-sticker-mask" onClick={() => setStickerOpen(false)}>
+          <section className="gc-sticker-sheet" onClick={e => e.stopPropagation()} onPaste={onStickerPaste}>
+            <div className="gc-sticker-head">
+              <div><div className="gc-sticker-title">贴纸柜</div><div className="gc-sticker-sub">点一下就发出去</div></div>
+              <button className="gc-sticker-close" onClick={() => setStickerOpen(false)} aria-label="关闭">×</button>
+            </div>
+            <div className="gc-sticker-tabs">
+              <button className={stickerTab === 'yaoyao' ? 'on' : ''} onClick={() => setStickerTab('yaoyao')}>我的</button>
+              <button className={stickerTab === 'xuxu' ? 'on' : ''} onClick={() => setStickerTab('xuxu')}>苏煦的</button>
+            </div>
+            {stickerTab === 'yaoyao' && (
+              <div className="gc-sticker-add">
+                <input value={stickerDescription} maxLength={240} placeholder="这张图表达什么（必填）" onChange={e => setStickerDescription(e.target.value)} />
+                <input value={stickerTags} maxLength={240} placeholder="标签，用空格隔开" onChange={e => setStickerTags(e.target.value)} />
+                <input ref={stickerInputRef} type="file" accept="image/*" hidden onChange={onStickerPick} />
+                <button disabled={stickerUploading} onClick={() => stickerInputRef.current?.click()}>{stickerUploading ? '正在收好…' : '选图收藏'}</button>
+                <span>也可以直接在这里粘贴图片</span>
+              </div>
+            )}
+            {stickerError && <div className="gc-sticker-error">{stickerError}</div>}
+            {stickerLoading ? <div className="gc-sticker-empty">正在翻柜子…</div> : (
+              <div className="gc-sticker-grid">
+                {stickers[stickerTab].map(sticker => (
+                  <div key={sticker.id} className="gc-sticker-item">
+                    <button className="gc-sticker-image" onClick={() => sendSticker(sticker)} title={sticker.description}>
+                      <img src={sticker.image_url} alt={sticker.description} loading="lazy" />
+                    </button>
+                    <div className="gc-sticker-desc">{sticker.description}</div>
+                    {stickerTab === 'yaoyao' && <button className="gc-sticker-remove" onClick={() => removeSticker(sticker)} aria-label={`删除${sticker.description}`}>删除</button>}
+                  </div>
+                ))}
+                {!stickers[stickerTab].length && <div className="gc-sticker-empty">{stickerTab === 'yaoyao' ? '你的柜子还是空的，先收第一张吧' : '苏煦还没往这里攒图'}</div>}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
 
       {/* 侧边栏：房间列表 */}
       {barOpen && (
@@ -690,6 +802,29 @@ const GC_CSS = `
 .gc-ta::placeholder{color:var(--ink-faint,#a8a294);opacity:.6}
 .gc-send{flex:0 0 auto;width:40px;height:40px;border:none;background:transparent;color:oklch(0.52 0.08 256);display:flex;align-items:center;justify-content:center;transition:transform .15s}
 .gc-send:active{transform:scale(1.12)}.claude-sparkle{display:block}
+/* 贴纸柜 */
+.gc-sticker-mask{position:fixed;inset:0;z-index:75;display:flex;align-items:flex-end;justify-content:center;background:rgba(25,28,34,.18);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.gc-sticker-sheet{width:min(100%,520px);max-height:min(76dvh,680px);display:flex;flex-direction:column;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));border-radius:24px 24px 0 0;background:rgba(252,250,246,.98);box-shadow:0 -16px 48px rgba(58,52,42,.16)}
+.gc-sticker-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.gc-sticker-title{font-family:var(--font-display,serif);font-size:18px;letter-spacing:.16em;color:var(--ink,#5f584d)}
+.gc-sticker-sub{font-size:11.5px;color:var(--ink-faint,#a8a294);margin-top:2px}
+.gc-sticker-close{width:34px;height:34px;border:none;border-radius:50%;background:rgba(120,110,90,.08);color:var(--ink-soft,#8a8478);font-size:22px}
+.gc-sticker-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:14px 0 10px;padding:4px;border-radius:14px;background:rgba(120,110,90,.07)}
+.gc-sticker-tabs button{border:none;border-radius:10px;padding:8px;background:transparent;color:var(--ink-soft,#8a8478);font-family:inherit;font-size:13px}
+.gc-sticker-tabs button.on{background:rgba(255,255,255,.82);color:var(--ink,#4a463e);box-shadow:0 2px 8px rgba(80,70,50,.08)}
+.gc-sticker-add{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;align-items:center;margin-bottom:10px}
+.gc-sticker-add input{min-width:0;border:1px solid rgba(120,110,90,.16);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.65);font:inherit;font-size:12px;color:var(--ink,#4a463e);outline:none}
+.gc-sticker-add button{border:none;border-radius:10px;padding:9px 11px;background:linear-gradient(135deg,#c7ad84,#b2925f);color:#fff;font:inherit;font-size:12px;white-space:nowrap}
+.gc-sticker-add button:disabled{opacity:.55}.gc-sticker-add span{grid-column:1/-1;font-size:10.5px;color:var(--ink-faint,#a8a294);text-align:right}
+.gc-sticker-error{padding:8px 10px;margin-bottom:8px;border-radius:10px;background:rgba(194,110,110,.09);color:#a56767;font-size:12px}
+.gc-sticker-grid{overflow-y:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:2px;overscroll-behavior:contain}
+.gc-sticker-item{position:relative;min-width:0;padding:7px;border-radius:14px;background:rgba(255,255,255,.55);border:1px solid rgba(120,110,90,.09)}
+.gc-sticker-image{display:block;width:100%;aspect-ratio:1;border:none;border-radius:10px;overflow:hidden;padding:0;background:rgba(120,110,90,.05)}
+.gc-sticker-image img{display:block;width:100%;height:100%;object-fit:contain}
+.gc-sticker-desc{font-size:10.5px;color:var(--ink-soft,#817a70);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:5px 1px 0}
+.gc-sticker-remove{display:block;margin:4px 0 0 auto;border:none;background:transparent;color:#b48585;font:inherit;font-size:10.5px;padding:2px}
+.gc-sticker-empty{grid-column:1/-1;padding:36px 12px;text-align:center;color:var(--ink-faint,#aaa294);font-size:13px}
+@media(max-width:390px){.gc-sticker-add{grid-template-columns:1fr auto}.gc-sticker-add input:first-child{grid-column:1/-1}.gc-sticker-grid{gap:7px}.gc-sticker-sheet{padding-left:13px;padding-right:13px}}
 /* 侧边栏 */
 .gc-drawer-mask{position:fixed;inset:0;z-index:60;background:rgba(20,30,60,.14);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:gc-fade .18s ease}
 @keyframes gc-fade{from{opacity:0}to{opacity:1}}
