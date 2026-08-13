@@ -185,12 +185,12 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
     }
   }
 
-  const toggleGuard = async (field: 'chainguard' | 'cachekeepalive' | 'waketag' | 'inactivity' | 'nightguard' | 'nightnote' | 'heartalert', value: boolean) => {
+  const toggleGuard = async (field: 'chainguard' | 'cachekeepalive' | 'waketag' | 'inactivity' | 'nightguard' | 'nightnote' | 'heartalert' | 'heartgap', value: boolean) => {
     setGuardBusy(field)
     try {
       const r = await fetch('/api/sysctl', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'guard-set', guard: { [field]: { enabled: value } } }) })
       const j = await r.json()
-      const label = field === 'chainguard' ? '断链保安' : field === 'cachekeepalive' ? '缓存保温' : field === 'waketag' ? '自主闹钟' : field === 'inactivity' ? '失联静默' : field === 'nightguard' ? '凌晨守护' : field === 'nightnote' ? '夜记' : '心率告警'
+      const label = field === 'chainguard' ? '断链保安' : field === 'cachekeepalive' ? '缓存保温' : field === 'heartgap' ? '心率断流哨兵' : field === 'waketag' ? '自主闹钟' : field === 'inactivity' ? '失联静默' : field === 'nightguard' ? '凌晨守护' : field === 'nightnote' ? '夜记' : '心率告警'
       if (j.ok) { setData((d: any) => ({ ...d, guard: { ...d.guard, [field]: { ...d.guard[field], enabled: value } } })); setActMsg(`${label} 已${value ? '开启' : '关闭'}`) }
       else setActMsg('切换失败')
     } catch { setActMsg('切换失败') }
@@ -309,6 +309,7 @@ export function StatusPage({ onBack }: { onBack: () => void }) {
           {/* 2026-08-07 续话闹钟并进自主闹钟,这一行退休 */}
           <div className="st-row"><span>自主闹钟 wake <small>苏煦自己定下次醒来的时间，1～1440 分钟</small></span>{guard ? <Switch on={guard.waketag?.enabled !== false} busy={guardBusy === 'waketag'} onClick={() => toggleGuard('waketag', guard.waketag?.enabled === false)} /> : <b>—</b>}</div>
           <div className="st-row"><span>缓存保温 <small>约每 50 分钟静默续热；关掉后长觉醒来会重建</small></span>{guard ? <Switch on={guard.cachekeepalive?.enabled !== false} busy={guardBusy === 'cachekeepalive'} onClick={() => toggleGuard('cachekeepalive', guard.cachekeepalive?.enabled === false)} /> : <b>—</b>}</div>
+          <div className="st-row"><span>心率断流哨兵 <small>45 分钟没收到心率时，只提醒苏煦一次</small></span>{guard ? <Switch on={guard.heartgap?.enabled !== false} busy={guardBusy === 'heartgap'} onClick={() => toggleGuard('heartgap', guard.heartgap?.enabled === false)} /> : <b>—</b>}</div>
           <div className="st-row"><span>凌晨守护 nightguard</span>{guard ? <Switch on={!!guard.nightguard?.enabled} busy={guardBusy === 'nightguard'} onClick={() => toggleGuard('nightguard', !guard.nightguard?.enabled)} /> : <b>—</b>}</div>
           <div className="st-row"><span>失联静默 <small>只看你在 CC / API 有没有说话</small></span>{guard ? <Switch on={guard.inactivity?.enabled !== false} busy={guardBusy === 'inactivity'} onClick={() => toggleGuard('inactivity', guard.inactivity?.enabled === false)} /> : <b>—</b>}</div>
           <div className="st-row"><span>多久后安静等待</span><span><input type="number" min={1} max={720} step={1} value={inactivityInput} disabled={inactivitySaving} onChange={(e) => setInactivityInput(e.target.value)} onBlur={(e) => saveInactivityHours(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur() }} style={{ width: '3.5em', textAlign: 'right', background: 'transparent', border: 'none', outline: 'none', padding: '2px 0', color: 'inherit', font: 'inherit' }} /> 小时{inactivitySaving ? ' …' : ''}</span></div>
