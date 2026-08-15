@@ -39,7 +39,7 @@ interface DayView {
   completions: (Wave & { completed_at: string })[]
   ledger_changes: { op: string; row_id: string; ts: string; before?: LedgerEntry; after?: LedgerEntry }[]
   gaze: { view_count: number; last_view_at: string | null; notes: { ts: string; note: string }[] }
-  report: { compact: string; generated_at: string } | null
+  activity: { total_minutes: number; latest_active: string | null; compact: string; per_app: { app: string; minutes: number }[] }
 }
 const LEDGER_LABEL: Record<string, string> = { assigned: '布置', debt_yao: '原瑶欠', debt_suxu: '苏煦欠', punishment: '惩罚' }
 
@@ -261,7 +261,6 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   const [editingDueId, setEditingDueId] = useState<string | null>(null)
   const [editDueDate, setEditDueDate] = useState('')
   const [editDueTime, setEditDueTime] = useState('')
-  const [reportOpen, setReportOpen] = useState(false)
   const [calendarExpanded, setCalendarExpanded] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [catchOpen, setCatchOpen] = useState(false)
@@ -432,13 +431,11 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     const nextDay = `${next}-01`
     setCalendarMonth(next)
     setSelectedDay(nextDay)
-    setReportOpen(false)
     loadCalendar(next, nextDay)
   }, [calendarMonth, loadCalendar])
 
   const chooseDay = useCallback((day: string) => {
     setSelectedDay(day)
-    setReportOpen(false)
     loadCalendar(calendarMonth, day)
   }, [calendarMonth, loadCalendar])
 
@@ -516,14 +513,8 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
           <span className="td-time-kicker">{todayGroup ? '今天 · 含逾期' : dayTitle(group.day)}</span>
           <strong>{todayGroup ? dayTitle(todayKey) : `${group.waves.length + group.ledger.length} 件事`}</strong>
         </div>
-        <button className="td-link" onClick={() => {
-          const month = monthOf(group.day)
-          setCalendarMonth(month)
-          setSelectedDay(group.day)
-          setReportOpen(true)
-          loadCalendar(month, group.day)
-        }}>当天夜报</button>
       </div>
+      {dayView?.day === group.day && <p className="td-day-activity">{dayView.activity.compact}</p>}
       {!group.waves.length && !group.ledger.length && <p className="td-empty">今天没有赶着要办的事</p>}
       <div className="td-day-list">
         {group.waves.map(w => {
@@ -551,9 +542,6 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
           </div>
         })}
       </div>
-      {reportOpen && dayView?.day === group.day && (dayView.report
-        ? <p className="td-report">{dayView.report.compact}</p>
-        : <p className="td-gaze">这天还没有夜报</p>)}
     </section>
   )
 
@@ -712,7 +700,7 @@ const TD_CSS = `
 .td-inline-actions button, .td-due-editor button { border: 0; background: oklch(1 0 0 / .45); color: var(--ink-soft); border-radius: 999px; padding: 5px 8px; font-size: 11px; cursor: pointer; }
 .td-due-editor { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
 .td-due-editor input { min-width: 112px; flex: 1; border: 0; border-radius: 9px; padding: 7px; color: var(--ink); background: oklch(1 0 0 / .5); }
-.td-report { white-space: pre-wrap; color: var(--ink-soft); line-height: 1.7; font-size: 13px; background: oklch(1 0 0 / .28); border-radius: 12px; padding: 12px; }
+.td-day-activity { margin: 7px 0 0; color: var(--ink-faint); font-size: 11px; text-align: right; }
 .td-gaze { color: var(--blue-deep); font-size: 11px; margin: 12px 0 0; }
 .td-unfinished { margin-top: 4px; }
 .td-unfinished-row { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 9px; padding: 11px 12px; border-radius: 14px; background: var(--glass-bg); border: 1px solid var(--glass-edge); }
