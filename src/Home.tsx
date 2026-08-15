@@ -22,16 +22,10 @@ const HOME_APPS: AppDef[] = [
   { key: 'keepsakes',   iconKey: 'keepsakes',   icon: '🐚', label: '拾贝',    def: { x: 68, y: 92 } },
 ]
 
-const CAL = [
-  [0, 1, 2, 3, 4, 5, 6],
-  [7, 8, 9, 10, 11, 12, 13],
-  [14, 15, 16, 17, 18, 19, 20],
-  [21, 22, 23, 24, 25, 26, 27],
-  [28, 29, 30, 0, 0, 0, 0],
-]
-
-
 export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const nowBj = new Date(Date.now() + 8 * 3600_000)
+  const month = nowBj.getUTCMonth() + 1
+  const day = nowBj.getUTCDate()
   return (
     <div className="home">
       <header className="top-bar">
@@ -80,22 +74,11 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
               </div>
             </div>
           </div>
-          <div className="cal-side">
-            <div className="cal-title">June</div>
-            <div className="cal-grid">
-              {['日','一','二','三','四','五','六'].map(d => (
-                <span key={d} className="cal-head">{d}</span>
-              ))}
-              {CAL.flat().map((day, i) => (
-                <span
-                  key={i}
-                  className={`cal-day${day === 0 ? ' empty' : ''}${day === 19 ? ' today' : ''}`}
-                >
-                  {day || ''}
-                </span>
-              ))}
-            </div>
-          </div>
+          <button className="cal-side cal-entry" onClick={() => onNavigate('tide')} aria-label="打开潮汐日历">
+            <span className="cal-entry-date"><b>{day}</b><i>{month}月</i></span>
+            <span className="cal-entry-copy"><strong>潮汐日历</strong><small>看看哪天有什么事</small></span>
+            <span className="cal-entry-arrow">›</span>
+          </button>
         </div>
       </div>
 

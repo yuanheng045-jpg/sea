@@ -12,6 +12,8 @@ interface Wave {
   version: number
   created_by_role?: string
   deadline?: string | null
+  due_has_time?: boolean
+  done_at?: string | null
   snow_awarded?: number
 }
 interface CatchNetItem {
@@ -26,11 +28,53 @@ interface LedgerEntry {
   content: string
   status: string
   interest_note: string | null
+  deadline?: string | null
+  due_has_time?: boolean
+}
+interface CalendarMonth { month: string; waves: (Wave & { due_day: string })[]; ledger: (LedgerEntry & { due_day: string })[] }
+interface DayView {
+  day: string
+  waves: Wave[]
+  ledger: LedgerEntry[]
+  completions: (Wave & { completed_at: string })[]
+  ledger_changes: { op: string; row_id: string; ts: string; before?: LedgerEntry; after?: LedgerEntry }[]
+  gaze: { view_count: number; last_view_at: string | null; notes: { ts: string; note: string }[] }
+  report: { compact: string; generated_at: string } | null
 }
 const LEDGER_LABEL: Record<string, string> = { assigned: '布置', debt_yao: '原瑶欠', debt_suxu: '苏煦欠', punishment: '惩罚' }
 
 const API = '/tide'
 const SOUND_KEY = 'sea:tide:sound'
+const UNFINISHED_TITLE = '还在海上'
+
+function bjDay(date = new Date()) {
+  return new Date(date.getTime() + 8 * 3600_000).toISOString().slice(0, 10)
+}
+function monthOf(day: string) { return day.slice(0, 7) }
+function shiftMonth(month: string, delta: number) {
+  const [y, m] = month.split('-').map(Number)
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1))
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+}
+function monthDays(month: string) {
+  const [y, m] = month.split('-').map(Number)
+  const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay()
+  const count = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  return [...Array(first).fill(null), ...Array.from({ length: count }, (_, i) => i + 1)] as (number | null)[]
+}
+function dueParts(deadline?: string | null) {
+  if (!deadline) return { day: '', time: '' }
+  const d = new Date(deadline)
+  const local = new Date(d.getTime() + 8 * 3600_000).toISOString()
+  return { day: local.slice(0, 10), time: local.slice(11, 16) }
+}
+function dueLabel(item: { deadline?: string | null; due_has_time?: boolean }) {
+  if (!item.deadline) return '没定日子'
+  const { day, time } = dueParts(item.deadline)
+  const diff = Math.round((new Date(`${day}T00:00:00+08:00`).getTime() - new Date(`${bjDay()}T00:00:00+08:00`).getTime()) / 864e5)
+  const distance = diff === 0 ? '今天' : diff > 0 ? `还剩 ${diff} 天` : `晚了 ${-diff} 天`
+  return `${item.due_has_time ? time : '全天'} · ${distance}`
+}
 
 function genId() {
   return (crypto as any).randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -152,12 +196,13 @@ function WaveCard({ wave, onComplete, onCommit, onSink, busy }: {
 function TagForm({ initial, onCancel, onSubmit }: {
   initial: { size: 'small' | 'big'; stakes: number; desire: number }
   onCancel: () => void
-  onSubmit: (v: { size: 'small' | 'big'; stakes: number; desire: number; deadline?: string }) => void
+  onSubmit: (v: { size: 'small' | 'big'; stakes: number; desire: number; due_date?: string; due_time?: string }) => void
 }) {
   const [size, setSize] = useState<'small' | 'big'>(initial.size)
   const [stakes, setStakes] = useState(initial.stakes)
   const [desire, setDesire] = useState(initial.desire)
   const [deadline, setDeadline] = useState('')
+  const [dueTime, setDueTime] = useState('')
   return (
     <div className="td-tag-form">
       <div className="td-add-row">
@@ -178,10 +223,13 @@ function TagForm({ initial, onCancel, onSubmit }: {
         <label className="td-slider-label">截止(可不填)
           <input type="date" className="td-input td-date" value={deadline} onChange={e => setDeadline(e.target.value)} />
         </label>
+        {deadline && <label className="td-slider-label">具体时间(可不填)
+          <input type="time" className="td-input td-date" value={dueTime} onChange={e => setDueTime(e.target.value)} />
+        </label>}
       </div>
       <div className="td-add-row">
         <button type="button" className="td-btn td-btn-ghost" onClick={onCancel}>取消</button>
-        <button type="button" className="td-btn td-btn-break" onClick={() => onSubmit({ size, stakes, desire, deadline: deadline || undefined })}>放进海里</button>
+        <button type="button" className="td-btn td-btn-break" onClick={() => onSubmit({ size, stakes, desire, due_date: deadline || undefined, due_time: dueTime || undefined })}>放进海里</button>
       </div>
     </div>
   )
@@ -191,7 +239,6 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   const [today, setToday] = useState<Wave[]>([])
   const [floating, setFloating] = useState<Wave[]>([])
   const [catchNet, setCatchNet] = useState<CatchNetItem[]>([])
-  const [ledger, setLedger] = useState<LedgerEntry[]>([])
   const [snow, setSnow] = useState(0)
   const [todayLevel, setTodayLevel] = useState<number | null>(null)
   const [lowTide, setLowTide] = useState(false)
@@ -204,6 +251,15 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   const [showAllFloating, setShowAllFloating] = useState(false)
   const [seabed, setSeabed] = useState<Wave[] | null>(null)
   const [drawer, setDrawer] = useState<{ wave: Wave; note: string | null }[]>([])
+  const [calendarMonth, setCalendarMonth] = useState(monthOf(bjDay()))
+  const [calendar, setCalendar] = useState<CalendarMonth | null>(null)
+  const [selectedDay, setSelectedDay] = useState(bjDay())
+  const [dayView, setDayView] = useState<DayView | null>(null)
+  const [unfinished, setUnfinished] = useState<{ waves: Wave[]; ledger: LedgerEntry[] }>({ waves: [], ledger: [] })
+  const [editingDueId, setEditingDueId] = useState<string | null>(null)
+  const [editDueDate, setEditDueDate] = useState('')
+  const [editDueTime, setEditDueTime] = useState('')
+  const [reportOpen, setReportOpen] = useState(false)
   const [offlineNote, setOfflineNote] = useState(false)
   const [soundOn, setSoundOn] = useState(() => {
     try { return localStorage.getItem(SOUND_KEY) !== 'off' } catch { return true }
@@ -214,12 +270,11 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   const load = useCallback(async () => {
     try {
       const surfaceResult = await tideFetch('/surface/recompute', { method: 'POST', body: JSON.stringify({ request_id: genId() }) })
-      const [todayData, catchNetData, snowData, levelData, ledgerData, lockedData] = await Promise.all([
+      const [todayData, catchNetData, snowData, levelData, lockedData] = await Promise.all([
         tideFetch('/stats/today'),
         tideFetch('/catch-net'),
         tideFetch('/stats/snow'),
         tideFetch('/levels/today'),
-        tideFetch('/ledger?status=open'),
         tideFetch('/waves?status=locked'),
       ])
       if (!mountedRef.current) return
@@ -229,7 +284,6 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
       setCatchNet(catchNetData)
       setSnow(snowData.total)
       setTodayLevel(levelData.level)
-      setLedger(ledgerData)
       setShowAllFloating(false)
       const withNotes = await Promise.all((lockedData as Wave[]).map(async (w) => {
         try {
@@ -247,6 +301,23 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     }
   }, [])
 
+  const loadCalendar = useCallback(async (month: string, day: string) => {
+    try {
+      const [monthData, selectedData, unfinishedData] = await Promise.all([
+        tideFetch(`/stats/calendar/${month}`),
+        tideFetch(`/stats/day/${day}`),
+        tideFetch('/stats/unfinished'),
+      ])
+      if (!mountedRef.current) return
+      setCalendar(monthData)
+      setDayView(selectedData)
+      setUnfinished(unfinishedData)
+      setError(null)
+    } catch (e: any) {
+      if (mountedRef.current) setError(e.message || 'calendar_failed')
+    }
+  }, [])
+
   const loadAllFloating = useCallback(async () => {
     try {
       const all = await tideFetch('/waves?status=floating,surfaced')
@@ -257,11 +328,11 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   }, [])
 
   useEffect(() => {
-    replayQueue().then((touched) => { if (touched && mountedRef.current) setOfflineNote(false); load() })
-    const onOnline = () => { replayQueue().then(() => { if (mountedRef.current) { setOfflineNote(false); load() } }) }
+    replayQueue().then((touched) => { if (touched && mountedRef.current) setOfflineNote(false); load(); loadCalendar(calendarMonth, selectedDay) })
+    const onOnline = () => { replayQueue().then(() => { if (mountedRef.current) { setOfflineNote(false); load(); loadCalendar(calendarMonth, selectedDay) } }) }
     window.addEventListener('online', onOnline)
     return () => window.removeEventListener('online', onOnline)
-  }, [load])
+  }, [load, loadCalendar]) // 初始月份/日期由首屏 state 固定，后续切换在按钮中显式加载
 
   const loadSeabed = useCallback(async () => {
     try {
@@ -285,7 +356,7 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     const body = { request_id: genId() }
     try {
       await tideFetch(`/waves/${id}/${action}`, { method: 'POST', body: JSON.stringify(body) })
-      await load()
+      await Promise.all([load(), loadCalendar(calendarMonth, selectedDay)])
     } catch (e: any) {
       if (e.network) {
         enqueue(`/waves/${id}/${action}`, body)
@@ -296,7 +367,7 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     } finally {
       setBusy(id, false)
     }
-  }, [load])
+  }, [load, loadCalendar, calendarMonth, selectedDay])
 
   const doComplete = useCallback(async (id: string) => {
     setBusy(id, true)
@@ -305,7 +376,7 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
       const result = await tideFetch(`/waves/${id}/complete`, { method: 'POST', body: JSON.stringify(body) })
       if (soundOn) playChime()
       if (result.snow_awarded) setSnow(s => s + result.snow_awarded)
-      setTimeout(() => { if (mountedRef.current) load() }, 550)
+      setTimeout(() => { if (mountedRef.current) { load(); loadCalendar(calendarMonth, selectedDay) } }, 550)
     } catch (e: any) {
       if (e.network) {
         enqueue(`/waves/${id}/complete`, body)
@@ -315,7 +386,7 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     } finally {
       setBusy(id, false)
     }
-  }, [load, soundOn])
+  }, [load, loadCalendar, calendarMonth, selectedDay, soundOn])
 
   const submitCapture = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -347,12 +418,12 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     }
   }, [load])
 
-  const promoteCatch = useCallback(async (id: string, v: { size: 'small' | 'big'; stakes: number; desire: number; deadline?: string }) => {
+  const promoteCatch = useCallback(async (id: string, v: { size: 'small' | 'big'; stakes: number; desire: number; due_date?: string; due_time?: string }) => {
     const body = { ...v, request_id: genId() }
     try {
       await tideFetch(`/catch-net/${id}/promote`, { method: 'POST', body: JSON.stringify(body) })
       setPromotingId(null)
-      await load()
+      await Promise.all([load(), loadCalendar(calendarMonth, selectedDay)])
     } catch (e: any) {
       if (e.network) {
         enqueue(`/catch-net/${id}/promote`, body)
@@ -362,7 +433,7 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
         setError(e.message || 'promote_failed')
       }
     }
-  }, [load])
+  }, [load, loadCalendar, calendarMonth, selectedDay])
 
   const setLevel = useCallback(async (level: number) => {
     try {
@@ -382,6 +453,54 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     })
   }
 
+  const chooseMonth = useCallback((delta: number) => {
+    const next = shiftMonth(calendarMonth, delta)
+    const nextDay = `${next}-01`
+    setCalendarMonth(next)
+    setSelectedDay(nextDay)
+    setReportOpen(false)
+    loadCalendar(next, nextDay)
+  }, [calendarMonth, loadCalendar])
+
+  const chooseDay = useCallback((day: string) => {
+    setSelectedDay(day)
+    setReportOpen(false)
+    loadCalendar(calendarMonth, day)
+  }, [calendarMonth, loadCalendar])
+
+  const beginDueEdit = (wave: Wave) => {
+    const p = dueParts(wave.deadline)
+    setEditingDueId(wave.id)
+    setEditDueDate(p.day || selectedDay)
+    setEditDueTime(wave.due_has_time ? p.time : '')
+  }
+
+  const saveDue = useCallback(async (id: string) => {
+    try {
+      await tideFetch(`/waves/${id}/due`, {
+        method: 'PATCH',
+        body: JSON.stringify({ due_date: editDueDate || null, due_time: editDueTime || undefined, request_id: genId() }),
+      })
+      setEditingDueId(null)
+      await Promise.all([load(), loadCalendar(calendarMonth, selectedDay)])
+    } catch (e: any) { setError(e.message || 'reschedule_failed') }
+  }, [editDueDate, editDueTime, load, loadCalendar, calendarMonth, selectedDay])
+
+  const deleteWave = useCallback(async (id: string) => {
+    if (!window.confirm('把这件事从潮汐里藏起来？之后仍可以撤回。')) return
+    try {
+      await tideFetch(`/waves/${id}/delete`, { method: 'POST', body: JSON.stringify({ request_id: genId() }) })
+      await Promise.all([load(), loadCalendar(calendarMonth, selectedDay)])
+    } catch (e: any) { setError(e.message || 'delete_failed') }
+  }, [load, loadCalendar, calendarMonth, selectedDay])
+
+  const markedDays = new Set([
+    ...(calendar?.waves || []).map(x => x.due_day),
+    ...(calendar?.ledger || []).map(x => x.due_day),
+  ])
+  const dayCells = monthDays(calendarMonth)
+  const selectedCompletionIds = new Set((dayView?.waves || []).filter(w => w.status === 'done').map(w => w.id))
+
   return (
     <div className="td-page">
       <style>{TD_CSS}</style>
@@ -397,6 +516,79 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
 
       {error && <div className="td-error">{error === 'today_full' ? '今天的海面满了' : '出了点小问题,稍后再试'}</div>}
       {offlineNote && <div className="td-error">现在断网,刚才那下已经记住了,等有网会自动补上</div>}
+
+      <section className="td-calendar-card" aria-label="潮汐日历">
+        <div className="td-cal-nav">
+          <button onClick={() => chooseMonth(-1)} aria-label="上个月">‹</button>
+          <strong>{Number(calendarMonth.slice(5))}月 <span>{calendarMonth.slice(0, 4)}</span></strong>
+          <button onClick={() => chooseMonth(1)} aria-label="下个月">›</button>
+        </div>
+        <div className="td-cal-grid">
+          {['日','一','二','三','四','五','六'].map(d => <span key={d} className="td-cal-head">{d}</span>)}
+          {dayCells.map((day, i) => {
+            if (!day) return <span key={`empty-${i}`} />
+            const key = `${calendarMonth}-${String(day).padStart(2, '0')}`
+            return <button key={key} className={`td-cal-day${key === selectedDay ? ' selected' : ''}${key === bjDay() ? ' today' : ''}`}
+              onClick={() => chooseDay(key)}>
+              <span>{day}</span>{markedDays.has(key) && <i />}
+            </button>
+          })}
+        </div>
+      </section>
+
+      <section className="td-day-panel">
+        <div className="td-day-head">
+          <h3>{selectedDay.slice(5).replace('-', '月')}日</h3>
+          {dayView?.report && <button className="td-link" onClick={() => setReportOpen(v => !v)}>{reportOpen ? '收起夜报' : '翻当天夜报'}</button>}
+        </div>
+        {reportOpen && dayView?.report && <p className="td-report">{dayView.report.compact}</p>}
+        {!dayView?.waves.length && !dayView?.ledger.length && !dayView?.completions.length && <p className="td-empty">这天还没有安排</p>}
+        <div className="td-day-list">
+          {dayView?.waves.map(w => {
+            const p = dueParts(w.deadline)
+            return <div key={w.id} className={`td-day-item${w.status === 'done' ? ' done' : ''}`}>
+              <time>{w.due_has_time ? p.time : '全天'}</time>
+              <div><strong>{w.title}</strong><span>{w.status === 'done' ? '已完成' : w.size === 'big' ? '大浪' : '小浪'}</span></div>
+              {w.status !== 'done' && <div className="td-inline-actions">
+                <button onClick={() => beginDueEdit(w)}>改期</button><button onClick={() => deleteWave(w.id)}>藏起</button>
+              </div>}
+              {editingDueId === w.id && <div className="td-due-editor">
+                <input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
+                <input type="time" value={editDueTime} onChange={e => setEditDueTime(e.target.value)} />
+                <button onClick={() => saveDue(w.id)}>存好</button><button onClick={() => setEditingDueId(null)}>取消</button>
+              </div>}
+            </div>
+          })}
+          {dayView?.ledger.map(x => <div key={x.id} className="td-day-item promise">
+            <time>{x.due_has_time ? dueParts(x.deadline).time : '全天'}</time>
+            <div><strong>{x.content}</strong><span>{LEDGER_LABEL[x.kind] || '承诺'} · {x.status === 'settled' ? '已结清' : '还记着'}</span></div>
+          </div>)}
+          {dayView?.completions.filter(w => !selectedCompletionIds.has(w.id)).map(w => <div key={`done-${w.id}`} className="td-day-item done">
+            <time>{dueParts(w.completed_at).time}</time><div><strong>{w.title}</strong><span>这天完成</span></div>
+          </div>)}
+        </div>
+        {!!dayView?.gaze.view_count && <p className="td-gaze">苏煦这天来看过 {dayView.gaze.view_count} 次{dayView.gaze.notes.length ? `，留了 ${dayView.gaze.notes.length} 句话` : ''}</p>}
+      </section>
+
+      <section className="td-section td-unfinished">
+        <h3 className="td-section-title">{UNFINISHED_TITLE} <span className="td-count">{unfinished.waves.length + unfinished.ledger.length}</span></h3>
+        {!unfinished.waves.length && !unfinished.ledger.length && <p className="td-empty">海面安安静静，暂时没有没办完的事</p>}
+        <div className="td-list">
+          {unfinished.waves.map(w => <div key={w.id} className="td-unfinished-row">
+            <span className={`td-size td-size-${w.size}`}>{w.size === 'big' ? '大浪' : '小浪'}</span>
+            <div><strong>{w.title}</strong><small>{dueLabel(w)}</small></div>
+            <button className="td-link" onClick={() => beginDueEdit(w)}>改期</button>
+            {editingDueId === w.id && <div className="td-due-editor">
+              <input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
+              <input type="time" value={editDueTime} onChange={e => setEditDueTime(e.target.value)} />
+              <button onClick={() => saveDue(w.id)}>存好</button><button onClick={() => setEditingDueId(null)}>取消</button>
+            </div>}
+          </div>)}
+          {unfinished.ledger.map(x => <div key={x.id} className="td-unfinished-row promise">
+            <span className="td-size">承诺</span><div><strong>{x.content}</strong><small>{LEDGER_LABEL[x.kind]} · {dueLabel(x)}</small></div>
+          </div>)}
+        </div>
+      </section>
 
       <section className="td-section">
         <h3 className="td-section-title">潮位</h3>
@@ -496,21 +688,6 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
         </section>
       )}
 
-      {ledger.length > 0 && (
-        <section className="td-section">
-          <h3 className="td-section-title">主人的账本</h3>
-          <div className="td-list">
-            {ledger.map(entry => (
-              <div key={entry.id} className="td-ledger-card">
-                <span className="td-ledger-kind">{LEDGER_LABEL[entry.kind] || entry.kind}</span>
-                <span className="td-title">{entry.content}</span>
-                {entry.interest_note && <span className="td-ledger-interest">{entry.interest_note}</span>}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {catchNet.length > 0 && (
         <section className="td-section">
           <h3 className="td-section-title">捞网 <span className="td-count">{catchNet.length}</span></h3>
@@ -558,6 +735,39 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
 }
 
 const TD_CSS = `
+.td-calendar-card, .td-day-panel { background: var(--glass-bg); border: 1px solid var(--glass-edge); border-radius: 22px; box-shadow: var(--shadow-glass); padding: 16px; margin-bottom: 16px; }
+.td-cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.td-cal-nav button { border: 0; background: transparent; color: var(--ink-soft); font-size: 25px; padding: 0 8px; cursor: pointer; }
+.td-cal-nav strong { color: var(--ink); font-family: var(--font-display); font-size: 18px; font-weight: 500; }
+.td-cal-nav strong span { color: var(--ink-faint); font-size: 12px; margin-left: 4px; }
+.td-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.td-cal-head { text-align: center; font-size: 10px; color: var(--ink-faint); padding-bottom: 4px; }
+.td-cal-day { position: relative; border: 0; background: transparent; color: var(--ink-soft); min-height: 38px; border-radius: 13px; display: grid; place-items: center; cursor: pointer; }
+.td-cal-day span { font-family: var(--font-display); font-size: 14px; }
+.td-cal-day i { width: 4px; height: 4px; border-radius: 50%; background: var(--blue-deep); position: absolute; bottom: 4px; }
+.td-cal-day.today { box-shadow: inset 0 0 0 1px var(--blue); }
+.td-cal-day.selected { background: var(--blue); color: white; }
+.td-cal-day.selected i { background: white; }
+.td-day-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.td-day-head h3 { margin: 0; color: var(--ink); font: 500 17px var(--font-display); }
+.td-day-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.td-day-item { display: grid; grid-template-columns: 44px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--glass-edge); }
+.td-day-item time { color: var(--blue-deep); font-size: 12px; font-variant-numeric: tabular-nums; }
+.td-day-item strong, .td-unfinished-row strong { display: block; color: var(--ink); font-size: 14px; font-weight: 500; }
+.td-day-item span, .td-unfinished-row small { display: block; color: var(--ink-faint); font-size: 11px; margin-top: 2px; }
+.td-day-item.done { opacity: .58; }
+.td-day-item.done strong { text-decoration: line-through; }
+.td-day-item.promise { border-left: 2px solid var(--blue-deep); padding-left: 8px; }
+.td-inline-actions { display: flex; gap: 6px; }
+.td-inline-actions button, .td-due-editor button { border: 0; background: oklch(1 0 0 / .45); color: var(--ink-soft); border-radius: 999px; padding: 5px 8px; font-size: 11px; cursor: pointer; }
+.td-due-editor { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+.td-due-editor input { min-width: 112px; flex: 1; border: 0; border-radius: 9px; padding: 7px; color: var(--ink); background: oklch(1 0 0 / .5); }
+.td-report { white-space: pre-wrap; color: var(--ink-soft); line-height: 1.7; font-size: 13px; background: oklch(1 0 0 / .28); border-radius: 12px; padding: 12px; }
+.td-gaze { color: var(--blue-deep); font-size: 11px; margin: 12px 0 0; }
+.td-unfinished { margin-top: 22px; }
+.td-unfinished-row { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 9px; padding: 11px 12px; border-radius: 14px; background: var(--glass-bg); border: 1px solid var(--glass-edge); }
+.td-unfinished-row.promise { border-left: 3px solid var(--blue-deep); }
+.td-unfinished-row .td-due-editor { margin-top: 4px; }
 .td-ledger-card { border-left: 3px solid var(--blue-deep); flex-direction: row; align-items: center; gap: 10px; flex-wrap: wrap; }
 .td-ledger-kind { font-size: 11px; padding: 2px 8px; border-radius: 999px; color: white; background: var(--blue-deep); flex-shrink: 0; }
 .td-ledger-interest { font-size: 12px; color: var(--ink-faint); width: 100%; }
