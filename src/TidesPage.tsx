@@ -45,7 +45,7 @@ const LEDGER_LABEL: Record<string, string> = { assigned: '布置', debt_yao: '�
 
 const API = '/tide'
 const SOUND_KEY = 'sea:tide:sound'
-const UNFINISHED_TITLE = '还在海上'
+const UNFINISHED_TITLE = '潮间带'
 
 function bjDay(date = new Date()) {
   return new Date(date.getTime() + 8 * 3600_000).toISOString().slice(0, 10)
