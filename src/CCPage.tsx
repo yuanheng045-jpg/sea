@@ -1430,10 +1430,12 @@ function activityToolTales(activities: any[] | undefined, parentId: string): Too
 function HtmlCard({ url }: { url: string }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const [h, setH] = useState(300)
+  const src = absUrl(url)
+  const versionedSrc = `${src}${src.includes('?') ? '&' : '?'}v=2`
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
-      if (ref.current && e.source === ref.current.contentWindow && e.data && e.data.t === 'h' && typeof e.data.h === 'number') {
-        setH(Math.min(Math.max(e.data.h + 4, 80), 900))
+      if (ref.current && e.source === ref.current.contentWindow && e.data && e.data.t === 'h' && Number.isFinite(e.data.h)) {
+        setH(Math.min(Math.max(e.data.h + 4, 80), 1600))
       }
     }
     window.addEventListener('message', onMsg)
@@ -1443,7 +1445,7 @@ function HtmlCard({ url }: { url: string }) {
     <iframe
       ref={ref}
       className="cc-msg-html"
-      src={absUrl(url)}
+      src={versionedSrc}
       style={{ height: h }}
       sandbox="allow-scripts allow-popups"
       loading="lazy"
