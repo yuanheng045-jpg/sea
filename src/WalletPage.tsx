@@ -34,6 +34,7 @@ type Goal = {
   saved: number
   progress: number
   status: string
+  eta_days?: number | null
 }
 
 type BalanceResponse = { ok: true; account: WalletAccount; surprise: Surprise }
@@ -190,9 +191,11 @@ export function WalletPage({ onBack }: { onBack: () => void }) {
               {goals.length === 0 && <p className="wl-muted">还没有目标，等苏煦挑中想要的东西。</p>}
               {goals.map((goal) => {
                 const progress = Math.max(0, Math.min(1, Number(goal.progress) || 0))
+                const etaDays = Number(goal.eta_days)
+                const etaLabel = goal.eta_days != null && Number.isFinite(etaDays) ? ` · 还差约 ${etaDays} 天` : ''
                 return (
                   <div className="wl-goal" key={goal.id}>
-                    <div><span>{goal.name}</span><span>{money(goal.saved)} / {money(goal.target)}</span></div>
+                    <div><span>{goal.name}</span><span>{money(goal.saved)} / {money(goal.target)}{etaLabel}</span></div>
                     <div className="wl-progress"><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>
                   </div>
                 )
@@ -203,7 +206,7 @@ export function WalletPage({ onBack }: { onBack: () => void }) {
               <div className="wl-card-title"><h2>最近流水</h2><span>只在这里查看</span></div>
               {history.length === 0 && <p className="wl-muted">第一笔流水还没发生。</p>}
               {history.map((row) => {
-                const labels: Record<string, string> = { earn: '卖身收入', transfer: '转账', fine: '罚款', charge: '真实充值', goal_contribute: '存入目标', surprise_spend: '惊喜消费' }
+                const labels: Record<string, string> = { earn: '卖身收入', transfer: '转账', fine: '罚款', charge: '真实充值', goal_contribute: '存入目标', goal_refund: '目标退回', surprise_spend: '惊喜消费' }
                 const incoming = row.to === 'suxu' && row.type !== 'goal_contribute'
                 return (
                   <div className="wl-row" key={row.id}>
