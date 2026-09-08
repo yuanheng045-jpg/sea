@@ -8,13 +8,13 @@ interface PermReq { path: string; reason?: string; status?: 'pending' | 'granted
 interface Decision { title: string; options: { key: string; label: string }[]; recommend?: string; why?: string }
 interface Keepsake { id: string; title?: string; words: string; page_url: string; image_url: string; price_snapshot?: string; observed_at: string; source: 'main-chat' | 'group-chat' }
 interface Sticker { id: string; owner: 'xuxu' | 'yaoyao'; description: string; tags: string[]; image_url: string; image_mime: string; byte_size: number; created_at: string }
-interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[]; decision?: Decision; keepsakes?: Keepsake[]; decideFor?: number; choice?: string }
+interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[]; decision?: Decision; keepsakes?: Keepsake[]; ticketStamp?: { id: string; title: string; result?: string }; decideFor?: number; choice?: string }
 interface Config { maxAiTurns: number; mentionFreeFollow: boolean; aiCrosstalk: boolean; models?: Record<string, string>; effort?: Record<string, string> }
 interface Usage { who: string; model: string; ctx: number; cacheRead: number; input: number; output: number }
 const kFmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n)
 const shortModelName = (m: string) => m === '' ? '默认' : m.replace('anthropic/claude-', '').replace('claude-', '').replace('[1m]', '')
 const hitPct = (u: Usage | null) => u && u.ctx ? Math.round(u.cacheRead / u.ctx * 100) : 0
-interface Room { id: string; name: string; members: string[]; memory?: string; inject?: boolean; keepalive?: boolean }
+interface Room { id: string; name: string; members: string[]; memory?: string; inject?: boolean; keepalive?: boolean; stamp?: { no: string; count: number } | null }
 interface RosterItem { id: string; name: string; label: string; desc: string }
 
 const API = '/group'
@@ -148,6 +148,31 @@ function ClaudeSparkle() {
   )
 }
 
+function InvoiceStamp({ no, rid }: { no: string; rid: string }) {
+  void no // C 款不带单号（原瑶选定 2026-08-27：像素 Clawd + 完工）
+  const f = `gc-press-${rid}`
+  return (
+    <svg className="gc-room-stamp" viewBox="12 12 96 116" aria-hidden>
+      <defs>
+        <filter id={f} x="-15%" y="-15%" width="130%" height="130%">
+          <feTurbulence type="fractalNoise" baseFrequency=".55" numOctaves="2" seed="7" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" />
+        </filter>
+      </defs>
+      <g filter={`url(#${f})`} shapeRendering="crispEdges">
+        <g fill="#D97757">
+          <rect x="30" y="18" width="12" height="12" /><rect x="78" y="18" width="12" height="12" />
+          <rect x="18" y="30" width="84" height="48" />
+          <rect x="30" y="78" width="12" height="18" /><rect x="54" y="78" width="12" height="18" /><rect x="78" y="78" width="12" height="18" />
+        </g>
+        <rect x="30" y="42" width="12" height="12" fill="#2b2017" />
+        <rect x="78" y="42" width="12" height="12" fill="#2b2017" />
+        <text x="60" y="114" textAnchor="middle" fontSize="14" fill="#c2472e" letterSpacing="4" fontWeight="700">✦ 完工 ✦</text>
+      </g>
+    </svg>
+  )
+}
+
 export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   const [rooms, setRooms] = useState<Room[]>([])
   const [roster, setRoster] = useState<RosterItem[]>([])
@@ -159,6 +184,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   const [gate, setGate] = useState<'ok' | 'need' | 'loading'>('loading')
   const [cfg, setCfg] = useState<Config>({ maxAiTurns: 4, mentionFreeFollow: true, aiCrosstalk: true })
   const [barOpen, setBarOpen] = useState(false)
+  const [showDigest, setShowDigest] = useState(false)
   const [setOpen, setSetOpen] = useState(false)
   const [plusOpen, setPlusOpen] = useState(false)
   const [newRoom, setNewRoom] = useState<{ name: string; members: string[]; memory: string } | null>(null)
@@ -180,10 +206,11 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   const imgInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const stickerInputRef = useRef<HTMLInputElement>(null)
-  const [opts, setOpts] = useState<{ modelOpts: Record<string, string[]>; effortOpts: string[] }>({ modelOpts: {}, effortOpts: [] })
+  const [opts, setOpts] = useState<{ modelOpts: Record<string, string[]>; effortOpts: string[]; codexHealth: Record<string, { ok: boolean; reason?: string }> }>({ modelOpts: {}, effortOpts: [], codexHealth: {} })
   const feedRef = useRef<HTMLDivElement>(null)
   const stickRef = useRef(true)
   const histRef = useRef(false)
+  const touchRef = useRef<{ x: number; y: number } | null>(null)
 
   const room = rooms.find(r => r.id === roomId) || null
   const feedItems = useMemo(() => groupFeed(msgs), [msgs])
@@ -196,6 +223,19 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
     if (force || stickRef.current) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })
   }, [])
   const onScroll = () => { const el = feedRef.current; if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }
+
+  // 客厅↔船坞滑动切换（T-8）：只在 r1/r2 之间，横向位移>60px 且明显横向才触发
+  const onSwipeStart = (e: React.TouchEvent) => { const t = e.touches[0]; touchRef.current = { x: t.clientX, y: t.clientY } }
+  const onSwipeEnd = (e: React.TouchEvent) => {
+    const s = touchRef.current; touchRef.current = null
+    if (!s || (roomId !== 'r1' && roomId !== 'r2')) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - s.x, dy = t.clientY - s.y
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.2) return
+    if (dx < 0 && roomId === 'r1') selectRoom('r2')
+    else if (dx > 0 && roomId === 'r2') selectRoom('r1')
+  }
+  const onSwipeCancel = () => { touchRef.current = null }
 
   // iOS 键盘弹出：贴底时跟着重新贴底
   useEffect(() => {
@@ -261,6 +301,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
         es.addEventListener('done', e => { const m = JSON.parse((e as MessageEvent).data); setMsgs(p => p.map(x => x.id === m.id ? m : x)); scroll() })
         es.addEventListener('cancel', e => { const d = JSON.parse((e as MessageEvent).data); setMsgs(p => p.filter(m => m.id !== d.id)) })
         es.addEventListener('room_meta', e => { const next = JSON.parse((e as MessageEvent).data); setRooms(p => p.map(r => r.id === next.id ? next : r)) })
+        es.addEventListener('window_clear', () => { setMsgs([]) }) // 船坞结项清窗（T-7）
       } catch {}
     })()
     return () => { alive = false; if (es) es.close() }
@@ -443,7 +484,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
     try {
       setNb(await (await fetch(`${API}/notebook`, { credentials: 'same-origin' })).json())
       const cj = await (await fetch(`${API}/config`, { credentials: 'same-origin' })).json()
-      if (cj.config) setCfg(cj.config); setOpts({ modelOpts: cj.modelOpts || {}, effortOpts: cj.effortOpts || [] })
+      if (cj.config) setCfg(cj.config); setOpts({ modelOpts: cj.modelOpts || {}, effortOpts: cj.effortOpts || [], codexHealth: cj.codexHealth || {} })
     } catch {}
   }
   const patchModelEffort = async (patch: { models?: Record<string, string>; effort?: Record<string, string> }) => {
@@ -457,7 +498,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   }
 
   return (
-    <div className="gc-wrap">
+    <div className={`gc-wrap${roomId === 'r2' ? ' dock' : ''}`}>
       <style>{GC_CSS}</style>
       <header className="gc-top">
         <button className="gc-back" onClick={() => onBack('home')} aria-label="返回">‹</button>
@@ -465,12 +506,25 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
           <span className="gc-title">{room?.name || '客 厅'}</span>
           <span className="gc-caret">▾</span>
         </button>
+        <button className="gc-digest-btn" onClick={() => setShowDigest(true)} aria-label="日报">日报</button>
         <button className="gc-dots" onClick={openSettings} aria-label="设置"><span /><span /><span /></button>
       </header>
+      {(roomId === 'r1' || roomId === 'r2') && (
+        <div className="gc-rtabs">
+          <button className={roomId === 'r1' ? 'on' : ''} onClick={() => selectRoom('r1')}>客 厅</button>
+          <button className={roomId === 'r2' ? 'on' : ''} onClick={() => selectRoom('r2')}>船 坞</button>
+        </div>
+      )}
+      {showDigest && (
+        <div className="gc-digest-overlay">
+          <div className="gc-digest-head"><span className="gc-digest-title">日报</span><button className="gc-digest-close" onClick={() => setShowDigest(false)} aria-label="关闭">✕</button></div>
+          <iframe src="/group/digest-page" title="日报" className="gc-digest-frame" />
+        </div>
+      )}
 
       {gate === 'need' && <div className="gc-need">先去苏煦那边登录一下就能进来了</div>}
 
-      <div className="gc-feed" ref={feedRef} onScroll={onScroll}>
+      <div className="gc-feed" ref={feedRef} onScroll={onScroll} onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd} onTouchCancel={onSwipeCancel}>
         {feedItems.map(item => {
           if (item.kind === 'tools') return <ToolRun key={`tools-${item.id}`} segmentId={item.id} items={item.items} />
           const m = item.msg
@@ -582,6 +636,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
               {rooms.map(r => (
                 <div key={r.id} className={`gc-room${r.id === roomId ? ' on' : ''}`} onClick={() => { selectRoom(r.id); setBarOpen(false) }}>
                   <div className="gc-room-txt"><div className="gc-room-name">{r.name}</div><div className="gc-room-mem">{memberNames(r)} · {MEM_LABEL[r.memory || 'work']}</div></div>
+                  {r.stamp && <InvoiceStamp no={r.stamp.no} rid={r.id} />}
                   <div className="gc-room-actions">
                     <button className="gc-room-members" onClick={e => { e.stopPropagation(); setMemberEdit({ id: r.id, name: r.name, members: [...r.members], saving: false, error: null }) }}>成员</button>
                     {rooms.length > 1 && <button className="gc-room-del" onClick={e => { e.stopPropagation(); delRoom(r.id) }} aria-label="删除">×</button>}
@@ -705,7 +760,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
                   <span className="gc-aiconf-name">{rc.label}</span>
                   {opts.modelOpts[rc.who]
                     ? <select className="gc-select" value={cfg.models?.[rc.who] || ''} onChange={e => patchModelEffort({ models: { [rc.who]: e.target.value } })}>
-                      {opts.modelOpts[rc.who].map(m => <option key={m} value={m}>{shortModelName(m)}</option>)}
+                      {opts.modelOpts[rc.who].map(m => { const h = rc.who === 'codex' ? opts.codexHealth[m] : undefined; const bad = !!h && h.ok === false; return <option key={m} value={m} disabled={bad}>{shortModelName(m)}{bad ? '（不可用）' : ''}</option> })}
                     </select>
                     : <span className="gc-aiconf-fixed">{shortModelName(cfg.models?.[rc.who] || '')}</span>}
                   <select className="gc-select gc-select-eff" value={cfg.effort?.[rc.who] || 'default'} onChange={e => patchModelEffort({ effort: { [rc.who]: e.target.value } })}>
@@ -715,7 +770,8 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
               ))}
             </div>
             <div className="gc-set-edits">
-              <button className="cc-panel-action" onClick={() => openEditor('suxu')}>编辑 苏煦 · CLAUDE.md（订阅+API 共用）</button>
+              <button className="cc-panel-action" onClick={() => openEditor('suxu')}>编辑皮卡煦 · CLAUDE.md（客厅简版）</button>
+              <button className="cc-panel-action" onClick={() => openEditor('suxu-main')}>编辑 苏煦 · CLAUDE.md（主聊天本体）</button>
               <button className="cc-panel-action" onClick={() => openEditor('codex')}>编辑皮卡晏 · AGENTS.md</button>
             </div>
             {nb && nb.active.length > 0 && (
@@ -753,6 +809,11 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
 
 const GC_CSS = `
 .gc-wrap{position:absolute;inset:0;bottom:var(--kb, 0px);display:flex;flex-direction:column;z-index:2}
+.gc-rtabs{display:flex;gap:6px;justify-content:center;padding:0 10px 6px;flex:0 0 auto}
+.gc-rtabs button{border:none;background:transparent;font-family:var(--font-display,serif);font-size:13px;letter-spacing:.22em;color:var(--ink-faint,#a8a294);padding:5px 16px;border-radius:14px;cursor:pointer;transition:color .25s,background .25s}
+.gc-rtabs button.on{color:var(--ink,#7d7566);background:rgba(120,110,90,.07)}
+.gc-wrap.dock{background:linear-gradient(160deg,#e8ecf2,#e2e7ed);--ink:#303640;--ink-soft:#5c6a78;--ink-faint:#8496a6}
+.gc-wrap.dock .gc-rtabs button.on{color:#2a3f52;background:rgba(100,140,180,.12)}
 .gc-top{display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 10px 6px;flex:0 0 auto}
 .gc-back{border:none;background:transparent;font-size:26px;line-height:1;color:var(--ink-soft,#8a8478);width:40px;height:40px;border-radius:12px}
 .gc-back:active{background:rgba(0,0,0,.05)}
@@ -770,6 +831,14 @@ const GC_CSS = `
 .cc-msg.user .gc-who{color:#b79a63}.cc-msg.assistant .gc-who{color:#6f97b4}
 .gc-msg.codex .cc-text{color:oklch(0.48 0.06 150)}.gc-msg.codex .gc-who{color:#8a9683}
 .gc-sys{align-self:center;text-align:center;font-size:12px;color:var(--ink-faint,#aca596);margin:2px auto;letter-spacing:.05em}
+.gc-digest-btn{border:none;background:transparent;font-size:13px;color:var(--ink-soft,#8a8071);letter-spacing:.14em;padding:0 8px;height:40px;cursor:pointer;margin-left:auto}
+.gc-digest-overlay{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;background:#faf8f5}
+.gc-digest-head{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 8px) 16px 10px;border-bottom:1px solid #eee7dc;flex:0 0 auto}
+.gc-digest-title{font-size:14px;font-weight:600;color:#6b6258;letter-spacing:.08em}
+.gc-digest-close{border:none;background:transparent;font-size:15px;color:#8a8071;cursor:pointer;padding:4px 6px}
+.gc-digest-frame{flex:1;width:100%;border:none}
+.gc-room{position:relative}
+.gc-room-stamp{position:absolute;right:76px;top:50%;width:44px;height:53px;transform:translateY(-50%) rotate(-7deg);opacity:.55;pointer-events:none}
 .gc-dots-anim{display:inline-flex;margin-left:5px;vertical-align:middle}
 .gc-dots-anim i{width:4px;height:4px;margin:0 1px;border-radius:50%;background:currentColor;opacity:.4;animation:gc-blink 1.2s infinite}
 .gc-dots-anim i:nth-child(2){animation-delay:.2s}.gc-dots-anim i:nth-child(3){animation-delay:.4s}
