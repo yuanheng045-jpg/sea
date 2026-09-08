@@ -3,5 +3,16 @@ dist
 .DS_Store
 *.local
 *.log
-*.bak
-*.bak_*
+*.bak*
+
+# 凭据不入库，只允许脱敏的 .example 模板
+*.env
+.env*
+*token*
+*secret*
+*credential*
+*.pem
+*.key
+*.p12
+*.pfx
+!*.example
