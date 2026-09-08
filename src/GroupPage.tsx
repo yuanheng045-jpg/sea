@@ -641,7 +641,7 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
                   {r.stamp && <InvoiceStamp no={r.stamp.no} rid={r.id} />}
                   <div className="gc-room-actions">
                     <button className="gc-room-members" onClick={e => { e.stopPropagation(); setMemberEdit({ id: r.id, name: r.name, members: [...r.members], saving: false, error: null }) }}>成员</button>
-                    {rooms.length > 1 && <button className="gc-room-del" onClick={e => { e.stopPropagation(); delRoom(r.id) }} aria-label="删除">×</button>}
+                    {r.id !== 'r1' && r.id !== 'r2' && <button className="gc-room-del" onClick={e => { e.stopPropagation(); delRoom(r.id) }} aria-label="删除">×</button>}
                   </div>
                 </div>
               ))}
