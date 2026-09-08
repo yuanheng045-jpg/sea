@@ -463,6 +463,8 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
     }
   }
   const delRoom = async (id: string) => {
+    const name = rooms.find(r => r.id === id)?.name || id
+    if (!window.confirm(`确定删除「${name}」？历史会归档但房间不会自己回来。`)) return
     try { await fetch(`${API}/rooms?id=${id}`, { method: 'DELETE', credentials: 'same-origin' }) } catch {}
     const left = rooms.filter(r => r.id !== id); setRooms(left)
     const nextId = roomId === id ? (left[0]?.id || null) : roomId
