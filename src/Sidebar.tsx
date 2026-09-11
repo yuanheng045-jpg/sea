@@ -375,7 +375,12 @@ function AppearancePanel({ appearance: a, textColors }: {
       const next = [...a.bgImages, full]
       updateAppearance({ bgImages: next, bgCurrent: next.length - 1, bgMode: 'image' })
     } catch (err) {
-      alert('上传失败：' + (err instanceof Error ? err.message : String(err)) + '，网络稳一点再试')
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('413')) {
+        alert('这张超过了当前管道上限(约15MB)。15MB内的图现在就能传；更大的等今晚nginx升级后再来，闸会开到60MB')
+      } else {
+        alert('上传失败：' + msg + '，网络稳一点再试')
+      }
     } finally {
       setBgUploading(false)
     }
