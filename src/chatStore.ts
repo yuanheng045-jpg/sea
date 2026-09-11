@@ -2,6 +2,8 @@
 // 给 sea 各组件一个统一的 chat 状态 + sendMessage 入口
 import { useSyncExternalStore } from 'react'
 import { createChatClient, type HubEvent, type ChatClient } from './chatClient'
+import { livePush, liveEnd, liveCatchUp, liveDropPrefix, liveRename, liveKey } from './liveStream'
+import { stripPaceMarks } from './paceMarks'
 
 export type ChatMessage = {
   id: string
@@ -22,6 +24,7 @@ export type ChatMessage = {
   fresh?: boolean
   usage?: any
   memSaved?: { ok: boolean; content: string }
+  live?: { text?: boolean; thinking?: boolean }   // 正在直播（weir 直接写 DOM，content/thinking 结束前不进 state）
 }
 
 export type Keepsake = {
@@ -45,10 +48,11 @@ type State = {
   connected: boolean
   authed: boolean
   sessionState: Record<string, any> | null
-  actionPending: 'forge' | 'compact' | null
+  actionPending: 'forge' | 'compact' | 'prune' | null
   actionResult: { action: string; ok: boolean; note?: string; ts: number } | null
   hintsEnabled: boolean
   healthEnabled: boolean
+  timeEnabled: boolean
   textColors: { su: string; you: string }
   claudemd: { content: string | null; lastSave: 'ok' | 'fail' | null }
 }
@@ -66,6 +70,15 @@ const HEALTH_KEY = 'sea-health-enabled'
 function loadHealth(): boolean {
   try {
     const raw = localStorage.getItem(HEALTH_KEY)
+    if (raw === null) return true
+    return raw === 'true'
+  } catch { return true }
+}
+
+const TIME_KEY = 'sea-time-enabled'
+function loadTime(): boolean {
+  try {
+    const raw = localStorage.getItem(TIME_KEY)
     if (raw === null) return true
     return raw === 'true'
   } catch { return true }
@@ -104,6 +117,7 @@ let state: State = {
   actionResult: null,
   hintsEnabled: loadHints(),
   healthEnabled: loadHealth(),
+  timeEnabled: loadTime(),
   textColors: loadTextColors(),
   claudemd: { content: null, lastSave: null },
 }
@@ -115,6 +129,36 @@ let _activityIdCounter = 0
 function setState(updater: (s: State) => State) {
   state = updater(state)
   listeners.forEach((l) => l())
+}
+
+// ── 流式直播（2026-09-09 weir 顺滑流式）──
+// delta 不再逐字进 state：交给 liveStream（weir 在 rAF 里均速落 DOM、只追加正在生长的段落），
+// state 只在"开始直播"和"done"各动一次。旧的 setTimeout 排字器（.bak-20260830-smooth*）整段退役。
+function pendingStreamId(): string | null {
+  for (let i = state.messages.length - 1; i >= 0; i--) {
+    const m = state.messages[i]
+    if (m.role === 'assistant' && m.pending && m.id.startsWith('stream-')) return m.id
+  }
+  return null
+}
+
+function markLive(id: string, kind: 'text' | 'thinking') {
+  const m = state.messages.find((x) => x.id === id)
+  if (!m || m.live?.[kind]) return
+  setState((s) => ({
+    ...s,
+    messages: s.messages.map((x) => x.id === id ? { ...x, live: { ...(x.live ?? {}), [kind]: true } } : x),
+  }))
+}
+
+// gentle=true：上一条已结束、还在按节奏吐尾巴的流放它走完（苏煦连发两条时第一条不被瞬间写完）
+function dropLiveStreams(gentle = false) { liveDropPrefix('stream-', gentle) }
+
+// 苏煦回复里的 <!--pace:*--> 语速标记只给排字器看：进 state 的最终文本一律剥干净（渲染/复制都不可见）
+function cleanMsg<T extends { role: string; content?: any }>(m: T): T {
+  return m.role === 'assistant' && typeof m.content === 'string' && m.content.indexOf('<!--') !== -1
+    ? { ...m, content: stripPaceMarks(m.content) }
+    : m
 }
 
 function handleEvent(e: HubEvent) {
@@ -132,7 +176,8 @@ function handleEvent(e: HubEvent) {
       setState((s) => ({ ...s, authed: false }))
       break
     case 'history': {
-      const msgs = ((e as any).messages ?? []) as ChatMessage[]
+      const msgs = (((e as any).messages ?? []) as ChatMessage[]).map(cleanMsg)
+      dropLiveStreams()
       setState((s) => ({ ...s, messages: msgs, visibleCount: 50 }))
       break
     }
@@ -141,7 +186,7 @@ function handleEvent(e: HubEvent) {
       setState((s) => {
         if (s.messages.some((x) => x.id === m.id)) return s
         const settled = s.messages.map(x => x.role === 'activity' && x.pending ? { ...x, pending: false } : x)
-        return { ...s, messages: [...settled, { ...m, fresh: true }] }
+        return { ...s, messages: [...settled, { ...cleanMsg(m), fresh: true }] }
       })
       break
     }
@@ -197,6 +242,13 @@ function handleEvent(e: HubEvent) {
     case 'text_start': {
       const t = e as any
       const streamId = `stream-${t.reply_to ?? Date.now()}`
+      const sameStream = e.type === 'text_start' && state.messages.some((m) => m.id === streamId && m.role === 'assistant' && m.pending)
+      if (!sameStream) dropLiveStreams(true)
+      if (!state.messages.some((m) => m.id === streamId)) {
+        // 占位的 stream-wait-* 即将改名成 streamId：直播 sink 跟着改名（组件按新 id 重挂并追平）
+        const wait = state.messages.find((m) => m.role === 'assistant' && m.pending && m.id.startsWith('stream-wait-'))
+        if (wait) liveRename(wait.id, streamId)
+      }
       setState((s) => {
         if (s.messages.some((m) => m.id === streamId)) return s
         const messages = [...s.messages]
@@ -223,61 +275,55 @@ function handleEvent(e: HubEvent) {
     }
     case 'thinking_delta': {
       const t = e as any
-      setState((s) => {
-        const msgs = [...s.messages]
-        for (let i = msgs.length - 1; i >= 0; i--) {
-          if (msgs[i].role === 'assistant' && msgs[i].pending) {
-            msgs[i] = { ...msgs[i], thinking: (msgs[i].thinking ?? '') + (t.text ?? '') }
-            break
-          }
-        }
-        return { ...s, messages: msgs }
-      })
+      const id = pendingStreamId()
+      if (!id) break
+      markLive(id, 'thinking')
+      livePush(liveKey(id, 'thinking'), t.text)
       break
     }
     case 'text_delta': {
       const t = e as any
-      setState((s) => {
-        const msgs = [...s.messages]
-        for (let i = msgs.length - 1; i >= 0; i--) {
-          if (msgs[i].role === 'assistant' && msgs[i].pending) {
-            const prev = typeof msgs[i].content === 'string' ? (msgs[i].content as string) : ''
-            msgs[i] = { ...msgs[i], content: prev + (t.text ?? '') }
-            break
-          }
-        }
-        return { ...s, messages: msgs }
-      })
+      const id = pendingStreamId()
+      if (!id) break
+      if (!state.messages.find((m) => m.id === id)?.live?.text) {
+        liveCatchUp(liveKey(id, 'thinking'))   // 正文开口：思维链先落完（让路）
+        markLive(id, 'text')
+      }
+      livePush(liveKey(id, 'text'), t.text)
       break
     }
     case 'done': {
       const d = e as any
-      setState((s) => {
+      const streamId = pendingStreamId()
+      const finish = () => setState((s) => {
         const msgs = [...s.messages]
         let replaced = false
-        for (let i = msgs.length - 1; i >= 0; i--) {
-          if (msgs[i].role === 'assistant' && msgs[i].pending && msgs[i].id.startsWith('stream-')) {
-            const activities = msgs[i].activities
-            msgs[i] = {
-              id: d.id,
-              role: 'assistant',
-              content: d.content ?? '',
-              thinking: d.thinking ?? undefined,
-              ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
-              pending: false,
-              autoExpanded: true,
-              images: d.images, files: d.files, htmls: d.htmls, keepsakes: d.keepsakes,
-              activities: d.activities ?? activities,
-            }
-            replaced = true
-            break
+        let idx = streamId ? msgs.findIndex((m) => m.id === streamId) : -1
+        if (idx < 0) {
+          for (let i = msgs.length - 1; i >= 0; i--) {
+            if (msgs[i].role === 'assistant' && msgs[i].pending && msgs[i].id.startsWith('stream-')) { idx = i; break }
           }
+        }
+        if (idx >= 0) {
+          const activities = msgs[idx].activities
+          msgs[idx] = {
+            id: d.id,
+            role: 'assistant',
+            content: stripPaceMarks(d.content ?? ''),
+            thinking: d.thinking ?? undefined,
+            ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
+            pending: false,
+            autoExpanded: true,
+            images: d.images, files: d.files, htmls: d.htmls, keepsakes: d.keepsakes,
+            activities: d.activities ?? activities,
+          }
+          replaced = true
         }
         if (!replaced && !msgs.some((m) => m.id === d.id)) {
           msgs.push({
             id: d.id,
             role: 'assistant',
-            content: d.content ?? '',
+            content: stripPaceMarks(d.content ?? ''),
             thinking: d.thinking ?? undefined,
             ts: typeof d.ts === 'string' ? new Date(d.ts).getTime() : (d.ts ?? Date.now()),
             images: d.images, files: d.files, htmls: d.htmls, keepsakes: d.keepsakes,
@@ -286,6 +332,17 @@ function handleEvent(e: HubEvent) {
         }
         return { ...s, messages: msgs }
       })
+      if (streamId) {
+        // 等 weir 把缓冲里的尾巴均速吐完（DOM 完整）再换成最终渲染，否则尾巴会一口气倒出来
+        Promise.all([liveEnd(liveKey(streamId, 'text')), liveEnd(liveKey(streamId, 'thinking'))])
+          .catch((err) => console.error('[chat] live end', err))
+          .then(() => { finish(); liveDropPrefix(streamId + ':') })
+      } else finish()
+      break
+    }
+    case 'error': {
+      const id = pendingStreamId()
+      if (id) { liveEnd(liveKey(id, 'text')); liveEnd(liveKey(id, 'thinking')) }
       break
     }
     case 'edit': {
@@ -293,7 +350,7 @@ function handleEvent(e: HubEvent) {
       setState((s) => ({
         ...s,
         messages: s.messages.map((m) =>
-          m.id === ed.id ? { ...m, content: ed.content } : m
+          m.id === ed.id ? { ...m, content: typeof ed.content === 'string' ? stripPaceMarks(ed.content) : ed.content } : m
         ),
       }))
       break
@@ -303,13 +360,14 @@ function handleEvent(e: HubEvent) {
       break
     case 'cc_busy': {
       const busy = !!(e as any).busy
+      if (busy && !state.messages.some((m) => m.role === 'assistant' && m.pending)) dropLiveStreams(true)
       setState((s) => {
         if (!busy) {
           return {
             ...s,
             ccBusy: false,
             messages: s.messages
-              .filter((m) => !(m.role === 'assistant' && m.pending && !m.content && !m.thinking && !m.activities?.length))
+              .filter((m) => !(m.role === 'assistant' && m.pending && !m.content && !m.thinking && !m.activities?.length && !m.live?.text && !m.live?.thinking))
               .map((m) => m.role === 'activity' && m.pending ? { ...m, pending: false } : m),
           }
         }
@@ -438,6 +496,7 @@ export function sendMessage(text: string, extra?: { style?: string; image?: any;
     files: extra?.files,
     hints_enabled: state.hintsEnabled,
     health_enabled: state.healthEnabled,
+    time_enabled: state.timeEnabled,
   })
 }
 
@@ -449,6 +508,7 @@ export function sendRaw(msg: any): boolean {
 export function sendSessionAction(action: string, extra?: Record<string, any>): boolean {
   if (action === 'session_forge') setState((s) => ({ ...s, actionPending: 'forge' }))
   else if (action === 'session_compact') setState((s) => ({ ...s, actionPending: 'compact' }))
+  else if (action === 'session_prune') setState((s) => ({ ...s, actionPending: 'prune' }))
   return sendRaw({ type: action, ...(extra ?? {}) })
 }
 
@@ -468,6 +528,11 @@ export function setHintsEnabled(enabled: boolean) {
 export function setHealthEnabled(enabled: boolean) {
   try { localStorage.setItem(HEALTH_KEY, String(enabled)) } catch {}
   setState((s) => ({ ...s, healthEnabled: enabled }))
+}
+
+export function setTimeEnabled(enabled: boolean) {
+  try { localStorage.setItem(TIME_KEY, String(enabled)) } catch {}
+  setState((s) => ({ ...s, timeEnabled: enabled }))
 }
 
 

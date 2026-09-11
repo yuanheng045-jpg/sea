@@ -3,6 +3,7 @@ import type { Page } from './App'
 import * as ccStore from './chatStore'
 import * as apiStore from './apiChat'
 import type { ChatMessage } from './chatStore'
+import { LiveText, onLiveGrow, TEXT_TUNING, THINKING_TUNING } from './liveStream'
 
 type Book = { id: string; title: string; author: string; source_url: string; cover: string; last_chapter: number; chapter_count: number; last_read_at: string }
 type ChapterItem = { chapter_num: number; title: string }
@@ -98,6 +99,8 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
   }, [recentMsgs.length, recentMsgs[recentMsgs.length - 1]?.content])
+  // weir 直播跟随：每帧落字后贴底
+  useEffect(() => onLiveGrow(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }), [])
 
   const switchChannel = (ch: 'cc' | 'api') => {
     setChatChannel(ch)
@@ -456,13 +459,17 @@ export function ReadingPage({ onBack }: { onBack: (p: Page) => void }) {
               <div className="rd-chat-msg rd-chat-ai" style={{ opacity: 0.6 }}>选一段文字，聊聊这本书。</div>
             ) : recentMsgs.map((m: ChatMessage, i: number) => (
               <div key={m.id || i} className={`rd-chat-msg rd-chat-${m.role === 'user' ? 'me' : 'ai'}${m.pending ? ' pending' : ''}`}>
-                {m.role === 'assistant' && m.thinking && (
+                {m.role === 'assistant' && (m.thinking || (m.pending && m.live?.thinking)) && (
                   <details className="rd-chat-thinking" open={m.pending || undefined}>
                     <summary>思考</summary>
-                    <div>{m.thinking}</div>
+                    {m.pending && m.live?.thinking
+                      ? <LiveText id={m.id} kind="thinking" block={null} tuning={THINKING_TUNING} />
+                      : <div>{m.thinking}</div>}
                   </details>
                 )}
-                {typeof m.content === 'string' ? m.content : ''}
+                {m.pending && m.live?.text
+                  ? <LiveText id={m.id} kind="text" block={null} tuning={TEXT_TUNING} />
+                  : (typeof m.content === 'string' ? m.content : '')}
               </div>
             ))}
           </div>

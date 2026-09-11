@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import { Sidebar } from './Sidebar'
 import { observeBubble } from './bubbleIO'
 import { Markdown, renderInline } from './miniMarkdown'
+import { LiveText, onLiveGrow, TEXT_TUNING, THINKING_TUNING } from './liveStream'
 import type { Page } from './App'
 import { IconSlot } from './IconSlot'
+import { ToolboxPage } from './Toolbox'
 import { enablePush } from './push'
 import * as ccStore from './chatStore'
 import * as apiStore from './apiChat'
@@ -576,7 +578,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const {
     messages, connected, authed, ccAlive, ccBusy,
     streamingPhase, streamingElapsed, sessionState,
-    hintsEnabled, healthEnabled, claudemd, visibleCount,
+    hintsEnabled, healthEnabled, timeEnabled, claudemd, visibleCount,
   } = store.useChatState()
   useEffect(() => { if (channel === 'api') apiStore.initApi() }, [channel])
   // 通话功能发的合成提示(通话摘要请求/未接来电留言请求)走正常发消息管线,
@@ -619,6 +621,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const moonClickTimer = useRef<number | undefined>(undefined)
   const [panelOpen, setPanelOpen] = useState(false)
   const [claudemdOpen, setClaudemdOpen] = useState(false)
+  const [toolboxOpen, setToolboxOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [claudemdDraft, setClaudemdDraft] = useState('')
   const photoInputRef = useRef<HTMLInputElement>(null)
@@ -636,6 +639,20 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const typingLastDelRef = useRef(0)
   const typingPrevLenRef = useRef(0)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!toolboxOpen && listRef.current) requestAnimationFrame(() => { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight })
+  }, [toolboxOpen])
+
+  // weir 直播跟随（2026-09-09）：贴底与否在 scroll 事件里记（读几何免费），每帧落字后只写 scrollTop，不读 scrollHeight 判断
+  const stickRef = useRef(true)
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    const onScroll = () => { stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60 }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    const off = onLiveGrow(() => { const l = listRef.current; if (l && stickRef.current) l.scrollTop = l.scrollHeight })
+    return () => { el.removeEventListener('scroll', onScroll); off() }
+  }, [toolboxOpen])
 
   useEffect(() => {
     const latestUser = [...messages].reverse().find((m) => m.role === 'user')?.id ?? null
@@ -661,7 +678,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
     }, { root: listEl, threshold: 0 })
     obs.observe(sentinelRef.current)
     return () => obs.disconnect()
-  }, [hasMore])
+  }, [hasMore, toolboxOpen])
 
   // 加载 user styles：先 localStorage 即时显示，再 fetch /api/status 拉服务端最新值覆盖
   useEffect(() => {
@@ -1004,8 +1021,8 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
         keepalive: true,
       }).catch(() => {})
     }
-    // 曾打到 6 个字又整段抹平：立刻报，不受任何节流
-    if (prev >= 6 && len === 0) { typingLastDelRef.current = 0; ping('clear'); return }
+    // 曾打到 15 个字又整段抹平：立刻报，不受任何节流（2026-08-23 原瑶收严 6→15，抹掉半句错字不算数）
+    if (prev >= 15 && len === 0) { typingLastDelRef.current = 0; ping('clear'); return }
     if (!len) return
     // 字数回退＝一次删改动作，连续退格并作一次；单独走自己的 1.5 秒窗口，不被打字那条 4 秒节流吞掉
     if (len < prev) {
@@ -1093,11 +1110,11 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
       <div className="cc-waterline" />
 
       <div className="cc-messages" ref={listRef}>
-        {hasMore && <div ref={sentinelRef} className="cc-load-sentinel" />}
+        {!toolboxOpen && hasMore && <div ref={sentinelRef} className="cc-load-sentinel" />}
         {messages.length === 0 && connected && authed && (
           <div className="cc-empty">还没消息</div>
         )}
-        {visibleMessages.map((m) => { const di = decisionInfo.map.get(m.id); return (
+        {!toolboxOpen && visibleMessages.map((m) => { const di = decisionInfo.map.get(m.id); return (
           <Fragment key={m.id}>
             <MessageRow
               message={di ? di.msg : m}
@@ -1266,6 +1283,14 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
                 >
                   <HeartSvg />
                 </button>
+                <button
+                  className={`cc-plus-item time${timeEnabled ? ' on' : ' off'}`}
+                  onClick={(e) => { e.stopPropagation(); store.setTimeEnabled(!timeEnabled) }}
+                  aria-label={`时间戳 ${timeEnabled ? '开启' : '关闭'}`}
+                  title={`时间戳：${timeEnabled ? '开' : '关'}`}
+                >
+                  <ClockSvg />
+                </button>
               </div>
             )}
             <button
@@ -1349,6 +1374,8 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
         />
       )}
 
+      {toolboxOpen && <ToolboxPage onClose={() => setToolboxOpen(false)} />}
+
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -1362,6 +1389,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
           onClose={() => setPanelOpen(false)}
           onAction={(a) => store.sendSessionAction(a)}
           onEditClaudemd={() => { setPanelOpen(false); setClaudemdOpen(true); store.sendClaudemdGet() }}
+          onOpenToolbox={() => { setPanelOpen(false); setToolboxOpen(true) }}
         />
       )}
 
@@ -1486,8 +1514,11 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
     typeof message.content === 'string' ? message.content
     : message.content ? JSON.stringify(message.content) : ''
   const isAssistant = message.role === 'assistant'
-  const hasThinking = isAssistant && typeof message.thinking === 'string' && message.thinking.length > 0
-  const thinkingActive = isAssistant && !!message.pending && text.length === 0
+  // 直播中（weir 直接写 DOM）：content/thinking 还没进 state，靠 live 标记决定挂哪种容器
+  const liveText = isAssistant && !!message.pending && !!message.live?.text
+  const liveThinking = isAssistant && !!message.pending && !!message.live?.thinking
+  const hasThinking = isAssistant && ((typeof message.thinking === 'string' && message.thinking.length > 0) || liveThinking)
+  const thinkingActive = isAssistant && !!message.pending && text.length === 0 && !liveText
   const showThinking = thinkingActive || hasThinking
   const thinkingExpanded = thinkingActive || expanded
   return (
@@ -1516,7 +1547,9 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
           </button>
         )}
         {hasThinking && thinkingExpanded && (
-          <div className="cc-thinking-body" aria-live="polite">{message.thinking}</div>
+          liveThinking
+            ? <LiveText id={message.id} kind="thinking" className="cc-thinking-body cc-live" block={null} tuning={THINKING_TUNING} />
+            : <div className="cc-thinking-body" aria-live="polite">{message.thinking}</div>
         )}
         {isAssistant && toolTales.length > 0 && (
           <ToolRun segmentId={toolTales[0]?.id ?? message.id} items={toolTales} />
@@ -1542,7 +1575,10 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
         {Array.isArray(message.keepsakes) && message.keepsakes.map(card => (
           <KeepsakeChatCard key={card.id} card={card} />
         ))}
-        {text && (
+        {liveText ? (
+          // 直播正文：每段一枚 .cc-paragraph 气泡（与最终 Markdown 渲染同款），封口段落做行内排版；done 后整体换成 MessageBody
+          <LiveText id={message.id} kind="text" className="cc-text cc-live" block="p" blockClass="cc-paragraph" onBlock={observeBubble} tuning={TEXT_TUNING} sealFormat />
+        ) : text && (
           <MessageBody
             text={text}
             fresh={message.fresh}
@@ -1666,15 +1702,16 @@ function formatTs(ms: number | undefined): string {
   return new Date(ms).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
+function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd, onOpenToolbox }: {
   channel: 'cc' | 'api'
   state: Record<string, any> | null
   onClose: () => void
   onAction: (action: string) => void
   onEditClaudemd: () => void
+  onOpenToolbox: () => void
 }) {
   const store = channel === 'api' ? apiStore : ccStore
-  const [confirming, setConfirming] = useState<null | 'forge' | 'compact'>(null)
+  const [confirming, setConfirming] = useState<null | 'forge' | 'compact' | 'prune'>(null)
   const [deletingConv, setDeletingConv] = useState<string | null>(null)
   // 模型下拉：从群聊后端统一拉取（自动含新模型），失败静默用兜底
   const [ccModels, setCcModels] = useState(CC_MODELS_FALLBACK)
@@ -1684,13 +1721,37 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
       if (ids.length) setCcModels(ids.map((v: string) => ({ value: v, label: shortModel(v) })))
     }).catch(() => {})
   }, [])
+  const [panelTab, setPanelTab] = useState<'cc' | 'api'>('cc')
+  const [apiKeepaliveOn, setApiKeepaliveOn] = useState<boolean | null>(null)
+  const [apiKeepaliveBusy, setApiKeepaliveBusy] = useState(false)
+  useEffect(() => {
+    if (channel !== 'cc') return
+    let cancelled = false
+    fetch('/api/sysstatus', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('sysstatus HTTP ' + r.status)))
+      .then(j => { if (!cancelled) setApiKeepaliveOn(j?.guard?.apikeepalive?.enabled !== false) })
+      .catch(e => console.error('API 保温开关读取失败:', e))
+    return () => { cancelled = true }
+  }, [channel])
+  const toggleApiKeepalive = async () => {
+    if (apiKeepaliveOn == null || apiKeepaliveBusy) return
+    const next = !apiKeepaliveOn
+    setApiKeepaliveBusy(true)
+    try {
+      const r = await fetch('/api/sysctl', { method: 'POST', credentials: 'include', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'guard-set', guard: { apikeepalive: { enabled: next } } }) })
+      const j = await r.json()
+      if (!r.ok || !j.ok) throw new Error(j?.error || 'sysctl HTTP ' + r.status)
+      setApiKeepaliveOn(next)
+    } catch (e) { console.error('API 保温开关保存失败:', e) }
+    finally { setApiKeepaliveBusy(false) }
+  }
   const { actionPending, actionResult } = store.useChatState()
   const confirmTimerRef = useRef<number | undefined>(undefined)
-  const tapAction = (a: 'forge' | 'compact') => {
+  const tapAction = (a: 'forge' | 'compact' | 'prune') => {
     if (confirming === a) {
       if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current)
       setConfirming(null)
-      onAction(a === 'forge' ? 'session_forge' : 'session_compact')
+      onAction(a === 'forge' ? 'session_forge' : a === 'prune' ? 'session_prune' : 'session_compact')
       return
     }
     if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current)
@@ -1706,6 +1767,9 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
   const u5 = usage?.five_hour?.utilization != null ? Math.round(usage.five_hour.utilization) : null
   const u7 = usage?.seven_day?.utilization != null ? Math.round(usage.seven_day.utilization) : null
   const u7o = usage?.seven_day_opus?.utilization != null ? Math.round(usage.seven_day_opus.utilization) : null
+  const u7f = usage?.seven_day_fable?.utilization != null ? Math.round(usage.seven_day_fable.utilization) : null
+  const usageAgeH = usage?.ts ? Math.floor((Date.now() - usage.ts) / 3600000) : null
+  const usageStale = usageAgeH != null && usageAgeH >= 2
 
   return (
     <div className="cc-modal-backdrop" onClick={onClose}>
@@ -1719,6 +1783,39 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
           <div className="cc-panel-loading">连接中…</div>
         ) : (
           <>
+            {channel === 'cc' ? (
+              <div style={{ display: 'flex', gap: 8, margin: '0 0 10px' }}>
+                <button className="cc-panel-action" style={{ flex: 1, opacity: panelTab === 'cc' ? 1 : 0.45 }} onClick={() => setPanelTab('cc')}>本体{(state as any)?.engine !== 'api' ? ' · 当班' : ''}</button>
+                <button className="cc-panel-action" style={{ flex: 1, opacity: panelTab === 'api' ? 1 : 0.45 }} onClick={() => setPanelTab('api')}>备用引擎{(state as any)?.engine === 'api' ? ' · 当班' : ''}</button>
+              </div>
+            ) : null}
+            {channel === 'cc' && panelTab === 'api' ? (<>
+            <div className="cc-panel-section">
+              <div className="cc-panel-section-title">备用引擎 · API 直连</div>
+              <div className="cc-panel-row"><span>状态</span><b>{(state as any)?.engine === 'api' ? shortModel((state as any)?.engineModel || '') + ' 当班（' + ((state as any)?.engineProvider || '') + '）' : '休息中 · 本体当班'}</b></div>
+              <select className="cc-model-select" style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', color: 'inherit' }} value={(state as any)?.engine === 'api' ? ((state as any)?.engineProvider || '') + '::' + ((state as any)?.engineModel || '') : ''} onChange={(e) => {
+                const v = e.target.value
+                if (!v) return
+                const i = v.indexOf('::')
+                store.sendSessionAction('set_engine', { engine: 'api', provider: v.slice(0, i), model: v.slice(i + 2) })
+              }}>
+                <option value="" disabled>选一个模型即切换当班 · 下条生效</option>
+                {(((state as any)?.engineProviders || []) as any[]).map((pv: any) => (
+                  <optgroup key={pv.key} label={pv.name || pv.key}>
+                    {(pv.models || []).map((m: string) => <option key={pv.key + '::' + m} value={pv.key + '::' + m}>{shortModel(m)}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+              {(state as any)?.engine === 'api' ? <button className="cc-panel-action" onClick={() => store.sendSessionAction('set_engine', { engine: 'claude' })}>切回本体当班</button> : null}
+              <div className="cc-panel-row"><span>API 保温 · 50 分钟一续(当班时生效)</span><button className="cc-panel-action" style={{ margin: 0, width: 'auto' }} disabled={apiKeepaliveOn == null || apiKeepaliveBusy} onClick={toggleApiKeepalive}>{apiKeepaliveOn == null ? '…' : apiKeepaliveOn ? 'on' : 'off'}</button></div>
+              <div className="cc-panel-meta" style={{ opacity: 0.7 }}>工具支持视模型而定 · Claude 系最稳，glm / deepseek / grok 可试</div>
+            </div>
+            <div className="cc-panel-section">
+              <div className="cc-panel-section-title">今日 · ${Number((state as any)?.apiToday?.cost || 0).toFixed(3)}（{(state as any)?.apiToday?.requests || 0} 次请求）</div>
+              <div className="cc-panel-row"><span>输入 / 输出</span><b>{kFormat((state as any)?.apiToday?.prompt || 0)} / {kFormat((state as any)?.apiToday?.completion || 0)}</b></div>
+              <div className="cc-panel-meta" style={{ opacity: 0.75 }}>工具与记忆两边共用 · 付款与联网搜索暂只在本体</div>
+            </div>
+            </>) : (<>
             {channel === 'cc' && (
             <div className="cc-panel-section">
               <div className="cc-panel-context-row">
@@ -1754,6 +1851,13 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
                 <i>{u7}%</i>
               </div>
               )}
+              {channel === 'cc' && u7f != null && (
+              <div className="cc-panel-bar">
+                <span>额度 Fable周</span>
+                <div className="cc-panel-bar-track"><div className="cc-panel-bar-fill" style={{ width: `${Math.min(100, u7f)}%` }} /></div>
+                <i>{u7f}%</i>
+              </div>
+              )}
               {channel === 'cc' && u7o != null && (
               <div className="cc-panel-bar">
                 <span>额度 Opus周</span>
@@ -1764,7 +1868,7 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
               {channel === 'cc' && usage && (u5 != null || u7 != null) && (
               <div className="cc-panel-row">
                 <span>额度重置</span>
-                <b>{[u5 != null && usage.five_hour?.resets_text ? `5h ${usage.five_hour.resets_text}` : '', u7 != null && usage.seven_day?.resets_text ? `周 ${usage.seven_day.resets_text}` : ''].filter(Boolean).join(' · ')}</b>
+                <b>{[u5 != null && usage.five_hour?.resets_text ? `5h ${usage.five_hour.resets_text}` : '', u7 != null && usage.seven_day?.resets_text ? `周 ${usage.seven_day.resets_text}` : ''].filter(Boolean).join(' · ')}{usageStale ? ` · ${usageAgeH}小时前` : ''}</b>
               </div>
               )}
               <div className="cc-panel-row">
@@ -1774,8 +1878,12 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
             </div>
 
             <div className="cc-panel-section">
-              <div className="cc-panel-section-title">切换模型 · 下条生效</div>
-              <select className="cc-model-select" style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', color: 'inherit' }} value={channel === 'api' ? (state.model || '') : curModel} onChange={(e) => store.sendSessionAction('session_set_model', { model: e.target.value })}>
+              <div className="cc-panel-section-title">切换模型 · 下条生效{channel !== 'api' && (state as any)?.engine === 'api' ? ' · 备用引擎当班（此处选本体模型即切回）' : ''}</div>
+              <select className="cc-model-select" style={{ width: '100%', padding: '6px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', color: 'inherit' }} value={channel === 'api' ? (state.model || '') : curModel} onChange={(e) => {
+                const v = e.target.value
+                if (channel !== 'api' && (state as any)?.engine === 'api') { store.sendSessionAction('set_engine', { engine: 'claude' }) }
+                store.sendSessionAction('session_set_model', { model: v })
+              }}>
                 {channel === 'api'
                   ? (state.models || []).map((m: string) => <option key={m} value={m}>{shortModel(m)}</option>)
                   : <>{curModel && !ccModels.some((mm) => mm.value === curModel) ? <option value={curModel}>{shortModel(curModel)}（当前）</option> : null}{ccModels.map((mm) => <option key={mm.value} value={mm.value}>{mm.label}</option>)}</>}
@@ -1792,6 +1900,12 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
                 <option value="low">low</option>
                 <option value="default">跟随 CLI 默认</option>
               </select>
+            </div>
+            )}
+            {channel !== 'api' && (
+            <div className="cc-panel-section">
+              <div className="cc-panel-section-title">工具与唤醒</div>
+              <button className="cc-panel-action" onClick={onOpenToolbox}>工具箱 · 开关与提示词</button>
             </div>
             )}
             {channel === 'api' && (
@@ -1877,16 +1991,22 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd }: {
               {state.autoLine ? <><span className="cc-panel-meta-sep">·</span><span>续 {kFormat(state.autoLine)}</span></> : null}
               {state.dangerLine ? <><span className="cc-panel-meta-sep">·</span><span>险 {kFormat(state.dangerLine)}</span></> : null}
             </div></>)}
+            </>)}
           </>
         )}
 
         {actionResult ? (
           <div className="cc-panel-meta" style={{ margin: '4px 0 6px', opacity: 0.8 }}>
-            {(actionResult.action === 'forge' ? '换窗' : '压缩') + (actionResult.ok ? '已完成' : '：' + (actionResult.note || '失败'))}
+            {(actionResult.action === 'forge' ? '换窗' : actionResult.action === 'prune' ? '洗窗' : '压缩') + (actionResult.ok ? ('已完成' + (actionResult.note ? '：' + actionResult.note : '')) : '：' + (actionResult.note || '失败'))}
           </div>
         ) : null}
         <div className="cc-modal-actions">
           {channel === 'cc' && (<>
+          <button
+            className={`cc-panel-action${confirming === 'prune' ? ' confirming' : ''}`}
+            onClick={() => tapAction('prune')}
+            title="洗窗：原窗口就地清理——聊过的话和窗口编号都不动，清早期旧工具小票/旧思考/重复风格卡；点完下一条消息会重建一次缓存"
+          >{actionPending === 'prune' ? '洗窗中…' : confirming === 'prune' ? '再点确认洗窗' : '洗窗'}</button>
           <button
             className={`cc-panel-action${confirming === 'forge' ? ' confirming' : ''}`}
             onClick={() => tapAction('forge')}
@@ -1982,6 +2102,15 @@ function HeartSvg() {
   )
 }
 
+function ClockSvg() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M 12 7.5 L 12 12 L 15.5 14" />
+    </svg>
+  )
+}
+
 function PhoneSvg() {
   return (
     <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="call-phone-svg">
@@ -1995,7 +2124,7 @@ function WhaleSvg() {
 }
 
 
-async function uploadToHub(file: File): Promise<{ url: string; name: string }> {
+export async function uploadToHub(file: File): Promise<{ url: string; name: string }> {
   const dataB64 = await new Promise<string>((resolve, reject) => {
     const r = new FileReader()
     r.onload = () => {

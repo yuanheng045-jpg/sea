@@ -2,13 +2,19 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } fr
 import type { Page } from './App'
 import { ToolRun } from './toolTales'
 import { Markdown } from './miniMarkdown'
+import { LiveText, onLiveGrow, liveKey, livePush, liveEnd, liveDrop, liveDropPrefix, TEXT_TUNING } from './liveStream'
+import { stripPaceMarks } from './paceMarks'
 
 type Role = 'yuanyao' | 'suxu' | 'suxu-api' | 'codex' | 'system' | 'tool'
 interface PermReq { path: string; reason?: string; status?: 'pending' | 'granted' | 'revoked' | 'failed'; minutes?: number; expiry?: number; error?: string }
 interface Decision { title: string; options: { key: string; label: string }[]; recommend?: string; why?: string }
 interface Keepsake { id: string; title?: string; words: string; page_url: string; image_url: string; price_snapshot?: string; observed_at: string; source: 'main-chat' | 'group-chat' }
 interface Sticker { id: string; owner: 'xuxu' | 'yaoyao'; description: string; tags: string[]; image_url: string; image_mime: string; byte_size: number; created_at: string }
-interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[]; decision?: Decision; keepsakes?: Keepsake[]; ticketStamp?: { id: string; title: string; result?: string }; decideFor?: number; choice?: string }
+interface Msg { id: number; role: Role; text: string; ts?: number; who?: string; label?: string; detail?: string; images?: string[]; files?: { url: string; name?: string }[]; perms?: PermReq[]; decision?: Decision; keepsakes?: Keepsake[]; ticketStamp?: { id: string; title: string; result?: string }; decideFor?: number; choice?: string; live?: boolean }
+// 客厅直播 sink 的 key（2026-09-09 weir）：token 不再逐个 setMsgs，直接经 liveStream 落 DOM
+const gKey = (id: number) => liveKey(`g${id}`, 'text')
+// <!--pace:*--> 语速标记只给排字器看：进 state 的文本一律剥干净
+const cleanGroupMsg = (m: Msg): Msg => (typeof m.text === 'string' && m.text.indexOf('<!--') !== -1) ? { ...m, text: stripPaceMarks(m.text) } : m
 interface Config { maxAiTurns: number; mentionFreeFollow: boolean; aiCrosstalk: boolean; models?: Record<string, string>; effort?: Record<string, string> }
 interface Usage { who: string; model: string; ctx: number; cacheRead: number; input: number; output: number }
 const kFmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n)
@@ -223,6 +229,8 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
     if (force || stickRef.current) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })
   }, [])
   const onScroll = () => { const el = feedRef.current; if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }
+  // weir 直播跟随：每帧落字后（已在 rAF 里）贴底就直接写 scrollTop
+  useEffect(() => onLiveGrow(() => { const el = feedRef.current; if (el && stickRef.current) el.scrollTop = el.scrollHeight }), [])
 
   // 客厅↔船坞滑动切换（T-8）：只在 r1/r2 之间，横向位移>60px 且明显横向才触发
   const onSwipeStart = (e: React.TouchEvent) => { const t = e.touches[0]; touchRef.current = { x: t.clientX, y: t.clientY } }
@@ -289,22 +297,31 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
       try {
         const data = await (await fetch(`${API}/history?room=${roomId}`, { credentials: 'same-origin' })).json()
         if (!alive) return
-        histRef.current = true; setMsgs(data.msgs || []); setBusy(!!data.busy); if (data.config) setCfg(data.config); setUsage(data.usage || null); setStatus(null)
+        liveDropPrefix('g')
+        histRef.current = true; setMsgs((data.msgs || []).map(cleanGroupMsg)); setBusy(!!data.busy); if (data.config) setCfg(data.config); setUsage(data.usage || null); setStatus(null)
         stickRef.current = true; scroll(true)
         es = new EventSource(`${API}/events?room=${roomId}`)
         es.addEventListener('usage', e => setUsage(JSON.parse((e as MessageEvent).data)))
-        es.addEventListener('msg', e => { setStatus(null); const m = JSON.parse((e as MessageEvent).data); setMsgs(p => [...p, m]); scroll() })
+        es.addEventListener('msg', e => { setStatus(null); const m = cleanGroupMsg(JSON.parse((e as MessageEvent).data)); setMsgs(p => [...p, m]); scroll() })
         es.addEventListener('status', e => setStatus(JSON.parse((e as MessageEvent).data).text))
         es.addEventListener('busy', e => { const b = JSON.parse((e as MessageEvent).data).busy; setBusy(b); if (!b) setStatus(null) })
-        es.addEventListener('begin', e => { setStatus(null); const d = JSON.parse((e as MessageEvent).data); setMsgs(p => [...p, { id: d.id, role: d.role, text: '' }]); scroll() })
-        es.addEventListener('token', e => { const d = JSON.parse((e as MessageEvent).data); setMsgs(p => p.map(m => m.id === d.id ? { ...m, text: m.text + d.text } : m)); scroll() })
-        es.addEventListener('done', e => { const m = JSON.parse((e as MessageEvent).data); setMsgs(p => p.map(x => x.id === m.id ? m : x)); scroll() })
-        es.addEventListener('cancel', e => { const d = JSON.parse((e as MessageEvent).data); setMsgs(p => p.filter(m => m.id !== d.id)) })
+        // 流式三件套（2026-09-09 weir）：begin 挂直播容器 → token 只喂 weir（不 setMsgs）→ done 等 DOM 吐完再换最终消息
+        es.addEventListener('begin', e => { setStatus(null); const d = JSON.parse((e as MessageEvent).data); liveDrop(gKey(d.id)); setMsgs(p => [...p, { id: d.id, role: d.role, text: '', live: true }]); scroll() })
+        es.addEventListener('token', e => { const d = JSON.parse((e as MessageEvent).data); livePush(gKey(d.id), d.text) })
+        es.addEventListener('done', e => {
+          const m = cleanGroupMsg(JSON.parse((e as MessageEvent).data))
+          liveEnd(gKey(m.id)).catch((err) => console.error('[group] live end', err)).then(() => {
+            if (!alive) return
+            setMsgs(p => p.some(x => x.id === m.id) ? p.map(x => x.id === m.id ? m : x) : [...p, m])
+            liveDrop(gKey(m.id)); scroll()
+          })
+        })
+        es.addEventListener('cancel', e => { const d = JSON.parse((e as MessageEvent).data); liveDrop(gKey(d.id)); setMsgs(p => p.filter(m => m.id !== d.id)) })
         es.addEventListener('room_meta', e => { const next = JSON.parse((e as MessageEvent).data); setRooms(p => p.map(r => r.id === next.id ? next : r)) })
-        es.addEventListener('window_clear', () => { setMsgs([]) }) // 船坞结项清窗（T-7）
+        es.addEventListener('window_clear', () => { liveDropPrefix('g'); setMsgs([]) }) // 船坞结项清窗（T-7）
       } catch {}
     })()
-    return () => { alive = false; if (es) es.close() }
+    return () => { alive = false; if (es) es.close(); liveDropPrefix('g') }
   }, [roomId, scroll])
 
   const send = async () => {
@@ -536,7 +553,9 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
             <div key={m.id} className={`cc-msg ${ROLE_CLASS[m.role]} gc-msg`}>
               <div className="cc-text-col">
                 <div className="gc-who">{NAME[m.role]}</div>
-                {(m.text || (!(m.images?.length || m.files?.length || m.keepsakes?.length) && !m.decision)) && (
+                {m.live ? (
+                  <LiveText id={`g${m.id}`} kind="text" className="cc-text cc-live" block="p" blockClass="cc-md-p" tuning={TEXT_TUNING} sealFormat />
+                ) : (m.text || (!(m.images?.length || m.files?.length || m.keepsakes?.length) && !m.decision)) && (
                   <div className="cc-text">{m.text ? <Markdown text={m.text} keyBase={`m${m.id}`} /> : '…'}</div>
                 )}
                 {Array.isArray(m.images) && m.images.map(u => <img key={u} className={`gc-img${u.startsWith('/group/sticker-images/') ? ' gc-sticker-msg' : ''}`} src={u} loading="lazy" />)}

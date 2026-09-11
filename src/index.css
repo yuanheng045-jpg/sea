@@ -1320,6 +1320,28 @@ button { font: inherit; cursor: pointer; color: inherit; }
 }
 
 /* — Status mini glass panel — */
+/* 心情按钮:贴在潮汐日历那条下面,只有图标 */
+.mood-row { display: flex; gap: 8px; padding: 2px 2px 2px 10px; }
+.mood-btn {
+  position: relative;
+  display: grid; place-items: center;
+  width: 34px; height: 34px; padding: 0;
+  border: 1px solid var(--glass-edge); background: oklch(1 0 0 / .42);
+  border-radius: 50%; cursor: pointer;
+  transition: transform .16s ease, background .16s ease;
+}
+.mood-btn.is-pressed { transform: scale(.88); background: oklch(1 0 0 / .62); }
+.mood-emoji { font-size: 16px; line-height: 1; }
+.mood-count {
+  position: absolute; top: -3px; right: -4px;
+  min-width: 15px; height: 15px; padding: 0 3px;
+  display: grid; place-items: center;
+  border-radius: 999px; background: oklch(1 0 0 / .82);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  color: var(--ink-soft); font-family: var(--font-display);
+  font-variant-numeric: tabular-nums lining-nums; font-size: 9px; line-height: 1;
+}
+
 .status-mini {
   display: flex;
   align-items: center;
@@ -3551,6 +3573,9 @@ body[data-power-save="true"] *::after {
 .cc-plus-item.health.on { color: oklch(0.62 0.13 256); }
 .cc-plus-item.health.off { color: var(--ink-faint); opacity: 0.45; }
 .cc-plus-item.health.on svg { filter: drop-shadow(0 0 3px oklch(0.62 0.13 256 / 0.4)); }
+.cc-plus-item.time.on { color: oklch(0.62 0.13 256); }
+.cc-plus-item.time.off { color: var(--ink-faint); opacity: 0.45; }
+.cc-plus-item.time.on svg { filter: drop-shadow(0 0 3px oklch(0.62 0.13 256 / 0.4)); }
 
 /* v61 输入栏附件：图缩略图 / 文件名 + 删除，挂在 pill 上方，可带文字一起发 */
 .cc-input-col { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -6152,3 +6177,50 @@ body[data-chat-bubbles="on"] .cc-paragraph.cc-md-block { white-space: normal; }
 /* 客厅没有气泡骨架，块间距在这里补；主聊天沿用 .cc-paragraph 既有间距 */
 .gc-msg .cc-text .cc-md-p { margin: 0; }
 .gc-msg .cc-text > * + * { margin-top: 0.5em; }
+
+/* === 工具箱(2026-08-26 原瑶): 聊天页的工具/唤醒/提示词总控台 === */
+.tb-page { position: fixed; inset: 0; z-index: 130; overflow-y: auto; -webkit-overflow-scrolling: touch; background: var(--bg, #edf0f5); padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px calc(env(safe-area-inset-bottom, 0px) + 28px); }
+.tb-header { display: flex; align-items: center; gap: 10px; max-width: 640px; margin: 0 auto 10px; }
+.tb-cards { max-width: 640px; margin: 0 auto; }
+.tb-err { max-width: 640px; margin: 0 auto 8px; font-size: 12.5px; color: oklch(0.5 0.16 25); }
+.tb-note { font-size: 11.5px; color: var(--ink-faint); line-height: 1.5; margin: -2px 0 4px; }
+.tb-master { padding: 2px 0 6px; border-bottom: 1px dashed oklch(0.6 0.02 250 / 0.25); margin-bottom: 2px; }
+.tb-group { margin-top: 8px; padding-top: 6px; border-top: 1px solid oklch(0.6 0.02 250 / 0.14); display: flex; flex-direction: column; gap: 6px; }
+.tb-group-head > span { font-weight: 500; }
+.tb-tool-row { padding-left: 14px; }
+.tb-tool-name { opacity: 0.9; font-size: 12.5px; }
+.tb-dim { opacity: 0.45; transition: opacity 240ms ease; }
+.tb-linkbtn { margin-left: 8px; font-size: 11px; padding: 0; background: transparent; border: none; color: inherit; opacity: 0.55; text-decoration: underline; cursor: pointer; }
+.tb-editor { padding: 4px 0 6px; display: flex; flex-direction: column; gap: 6px; }
+.tb-editor-hint { font-size: 11px; color: var(--ink-faint); }
+.tb-editor-loading { font-size: 12px; color: var(--ink-faint); padding: 6px 0; }
+.tb-textarea { width: 100%; font-size: 13px; line-height: 1.6; }
+.tb-editor-btns { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+.tb-chars { font-size: 11px; color: var(--ink-faint); margin-right: auto; }
+.tb-num { width: 4.5em; text-align: right; background: transparent; border: none; outline: none; padding: 2px 0; color: inherit; font: inherit; }
+.tb-time { width: auto; }
+.tb-chip { display: inline-block; font-size: 10px; font-style: normal; padding: 1px 5px; margin-right: 6px; border-radius: 6px; background: oklch(0.62 0.1 260 / 0.14); color: oklch(0.45 0.08 260); letter-spacing: 0.03em; vertical-align: 1px; }
+
+/* iOS: 开关状态变化只重绘开关，不重绘整张长卡；长文案按行舒展。 */
+.tb-page .st-card { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3); }
+.tb-page .st-card::after { display: none; }
+.tb-page .st-row { align-items: flex-start; min-height: 30px; padding-top: 3px; padding-bottom: 3px; line-height: 1.4; }
+.tb-page .st-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.tb-page .st-switch { margin-top: 3px; transition: none; touch-action: manipulation; }
+.tb-page .st-switch-knob { transition: none; }
+.tb-page .st-toast { backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* iOS 闪退减负(2026-08-27): 重页面(工具箱/花园)打开时,底层动画层不再参与合成;聊天列表藏而不卸,保滚动位置 */
+body.bg-off .bg-layer, body.bg-off .rainsnow, body.bg-off .chat-bg-img, body.bg-off .chat-bg-dim { display: none !important; }
+body.tb-open .cc-messages { visibility: hidden; }
+/* 工具箱打开时:自身玻璃降级平涂(底是纯色,视觉无差,少三层 blur 合成) */
+.tb-page .glass, .tb-page .glass::before, .tb-page .glass::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+
+/* === weir 顺滑流式（2026-09-09）：流式回复由 rAF 均速落字、每帧新字淡入。只动 opacity，不动布局 === */
+@keyframes weir-wet { from { opacity: 0; } to { opacity: 1; } }
+.weir-wet { animation: weir-wet var(--weir-fade, 300ms) ease-out both; }   /* 时长由排字器按消息档位写在容器的 --weir-fade 上 */
+/* 句末字（句末标点及其前一字，苏煦 2026-09-09）：更长更缓的沉底淡入，只动透明度 */
+.weir-wet-end { animation-duration: var(--weir-fade-end, 500ms); animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1); }
+@media (prefers-reduced-motion: reduce) { .weir-wet, .weir-wet-end { animation: none; } }
+/* 直播容器空着时不塌陷，第一个字落下时不跳 */
+.cc-live:empty { min-height: 1.2em; }

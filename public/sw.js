@@ -3,7 +3,7 @@ self.addEventListener('push', (event) => {
   try { d = event.data.json() } catch (e) { try { d = { title: '苏煦', body: event.data.text() } } catch (e2) {} }
   event.waitUntil(self.registration.showNotification(d.title || '苏煦', {
     body: d.body || '', icon: '/sea/icon-192.png', badge: '/sea/icon-192.png',
-    tag: 'cc-msg', renotify: true, data: { url: '/sea/' },
+    tag: d.tag || 'cc-msg', renotify: true, data: { url: '/sea/' },
   }))
 })
 self.addEventListener('notificationclick', (event) => {

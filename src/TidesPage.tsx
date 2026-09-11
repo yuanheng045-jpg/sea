@@ -22,14 +22,16 @@ interface CatchNetItem {
   sorted_at: string | null
   created_at: string
 }
+type LedgerKind = 'assigned' | 'debt_yao' | 'debt_suxu' | 'punishment'
 interface LedgerEntry {
   id: string
-  kind: 'assigned' | 'debt_yao' | 'debt_suxu' | 'punishment'
+  kind: LedgerKind
   content: string
   status: string
   interest_note: string | null
   deadline?: string | null
   due_has_time?: boolean
+  created_by_role?: 'yao' | 'suxu' | 'system'
 }
 interface CalendarMonth { month: string; waves: (Wave & { due_day: string })[]; ledger: (LedgerEntry & { due_day: string })[] }
 interface DayView {
@@ -41,7 +43,27 @@ interface DayView {
   gaze: { view_count: number; last_view_at: string | null; notes: { ts: string; note: string }[] }
   activity: { total_minutes: number; latest_active: string | null; compact: string; per_app: { app: string; minutes: number }[] }
 }
-const LEDGER_LABEL: Record<string, string> = { assigned: '布置', debt_yao: '原瑶欠', debt_suxu: '苏煦欠', punishment: '惩罚' }
+// 一条承诺有两重"谁":kind = 这是谁答应/谁布置的,created_by_role = 这条是谁记进来的(服务端签名,改不了)
+const LEDGER_LABEL: Record<string, string> = { assigned: '苏煦布置', debt_yao: '原瑶答应', debt_suxu: '苏煦答应', punishment: '惩罚' }
+const LEDGER_MINE: Record<string, string> = { debt_yao: '我答应的', debt_suxu: '他答应的', assigned: '他布置的', punishment: '惩罚' }
+const LEDGER_BY: Record<string, string> = { yao: '我记的', suxu: '苏煦记的', system: '自动记的' }
+const LEDGER_KINDS: LedgerKind[] = ['debt_yao', 'debt_suxu', 'assigned', 'punishment']
+function ledgerBy(x: LedgerEntry) { return LEDGER_BY[x.created_by_role || 'suxu'] || '苏煦记的' }
+type PromiseDraft = { kind: LedgerKind; content: string; due_date: string | null; due_time: string }
+
+interface RecentOp { id: string; table_name: string; op: string; ts: string; actor_role: string; label: string | null }
+const OP_LABEL: Record<string, string> = {
+  create: '记下了', edit: '改了', delete: '收起了', settle: '结清了', reschedule: '改了日子',
+  committed: '收进了今天', done: '划破了', sunk: '沉回了海里', skipped: '跳过了', update: '改了留言',
+}
+const OP_TABLE: Record<string, string> = { 'tide.ledger': '承诺', 'tide.waves': '浪', 'tide.drawer_notes': '抽屉留言' }
+function timeAgo(ts: string) {
+  const min = Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 60000))
+  if (min < 1) return '刚刚'
+  if (min < 60) return `${min} 分钟前`
+  const hr = Math.round(min / 60)
+  return hr < 24 ? `${hr} 小时前` : `${Math.round(hr / 24)} 天前`
+}
 
 const API = '/tide'
 const SOUND_KEY = 'sea:tide:sound'
@@ -241,6 +263,44 @@ function TagForm({ initial, onCancel, onSubmit }: {
   )
 }
 
+function PromiseForm({ initial, submitText, onCancel, onSubmit }: {
+  initial?: LedgerEntry
+  submitText: string
+  onCancel: () => void
+  onSubmit: (v: PromiseDraft) => void
+}) {
+  const p = dueParts(initial?.deadline)
+  const [content, setContent] = useState(initial?.content || '')
+  const [kind, setKind] = useState<LedgerKind>(initial?.kind || 'debt_yao')
+  const [dueDate, setDueDate] = useState(p.day)
+  const [dueTime, setDueTime] = useState(initial?.due_has_time ? p.time : '')
+  return (
+    <div className="td-promise-form">
+      <input className="td-input" placeholder="答应了什么" value={content} autoFocus
+        onChange={e => setContent(e.target.value)} />
+      <div className="td-seg td-seg-wrap">
+        {LEDGER_KINDS.map(k => (
+          <button type="button" key={k} className={kind === k ? 'active' : ''}
+            onClick={() => setKind(k)}>{LEDGER_MINE[k]}</button>
+        ))}
+      </div>
+      <div className="td-add-row">
+        <label className="td-slider-label">日子(可不填)
+          <input type="date" className="td-input td-date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+        </label>
+        {dueDate && <label className="td-slider-label">时间(可不填)
+          <input type="time" className="td-input td-date" value={dueTime} onChange={e => setDueTime(e.target.value)} />
+        </label>}
+      </div>
+      <div className="td-add-row">
+        <button type="button" className="td-btn td-btn-ghost" onClick={onCancel}>取消</button>
+        <button type="button" className="td-btn td-btn-break" disabled={!content.trim()}
+          onClick={() => onSubmit({ kind, content: content.trim(), due_date: dueDate || null, due_time: dueDate ? dueTime : '' })}>{submitText}</button>
+      </div>
+    </div>
+  )
+}
+
 export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   const [today, setToday] = useState<Wave[]>([])
   const [catchNet, setCatchNet] = useState<CatchNetItem[]>([])
@@ -261,6 +321,11 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
   const [editingDueId, setEditingDueId] = useState<string | null>(null)
   const [editDueDate, setEditDueDate] = useState('')
   const [editDueTime, setEditDueTime] = useState('')
+  const [recentOps, setRecentOps] = useState<RecentOp[]>([])
+  const [undoOpen, setUndoOpen] = useState(false)
+  const [lastUndo, setLastUndo] = useState<{ opId: string; text: string } | null>(null)
+  const [addingPromise, setAddingPromise] = useState(false)
+  const [editingLedgerId, setEditingLedgerId] = useState<string | null>(null)
   const [calendarExpanded, setCalendarExpanded] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [catchOpen, setCatchOpen] = useState(false)
@@ -304,15 +369,17 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
 
   const loadCalendar = useCallback(async (month: string, day: string) => {
     try {
-      const [monthData, selectedData, unfinishedData] = await Promise.all([
+      const [monthData, selectedData, unfinishedData, recent] = await Promise.all([
         tideFetch(`/stats/calendar/${month}`),
         tideFetch(`/stats/day/${day}`),
         tideFetch('/stats/unfinished'),
+        tideFetch('/op-log/recent?limit=20').catch(() => ({ ops: [] })),
       ])
       if (!mountedRef.current) return
       setCalendar(monthData)
       setDayView(selectedData)
       setUnfinished(unfinishedData)
+      setRecentOps(recent.ops || [])
       setError(null)
     } catch (e: any) {
       if (mountedRef.current) setError(e.message || 'calendar_failed')
@@ -465,6 +532,83 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
     } catch (e: any) { setError(e.message || 'delete_failed') }
   }, [load, loadCalendar, calendarMonth, selectedDay])
 
+  const refreshAll = useCallback(
+    () => Promise.all([load(), loadCalendar(calendarMonth, selectedDay)]),
+    [load, loadCalendar, calendarMonth, selectedDay])
+
+  // 撤销:窗口 7 天,补偿式回滚(不是硬删记录,op_log 会再落一笔 undo)
+  const undoOp = useCallback(async (opId: string) => {
+    try {
+      await tideFetch(`/op-log/${opId}/undo`, { method: 'POST', body: JSON.stringify({}) })
+      setLastUndo(cur => (cur && cur.opId === opId ? null : cur))
+      await refreshAll()
+    } catch (e: any) {
+      setError(e.message === 'window_expired' ? '过了 7 天,这一下撤不回来了'
+        : e.message === 'already_undone' ? '这一下已经撤过了' : (e.message || 'undo_failed'))
+    }
+  }, [refreshAll])
+
+  // 承诺(账本):她这边能记、能改、能收起来。署名由服务端认证身份决定,前端报什么都没用。
+  const addPromise = useCallback(async (v: PromiseDraft) => {
+    const body: Record<string, unknown> = { kind: v.kind, content: v.content, request_id: genId() }
+    if (v.due_date) { body.due_date = v.due_date; if (v.due_time) body.due_time = v.due_time }
+    try {
+      await tideFetch('/ledger', { method: 'POST', body: JSON.stringify(body) })
+      setAddingPromise(false)
+      await refreshAll()
+    } catch (e: any) {
+      if (e.network) { enqueue('/ledger', body); setAddingPromise(false); setOfflineNote(true) }
+      else setError(e.message || 'promise_failed')
+    }
+  }, [refreshAll])
+
+  const savePromise = useCallback(async (entry: LedgerEntry, v: PromiseDraft) => {
+    const p = dueParts(entry.deadline)
+    const oldTime = entry.due_has_time ? p.time : ''
+    try {
+      if (v.content !== entry.content || v.kind !== entry.kind) {
+        await tideFetch(`/ledger/${entry.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ content: v.content, kind: v.kind, request_id: genId() }),
+        })
+      }
+      if ((v.due_date || '') !== p.day || v.due_time !== oldTime) {
+        await tideFetch(`/ledger/${entry.id}/due`, {
+          method: 'PATCH',
+          body: JSON.stringify({ due_date: v.due_date, due_time: v.due_time || undefined, request_id: genId() }),
+        })
+      }
+      setEditingLedgerId(null)
+      await refreshAll()
+    } catch (e: any) { setError(e.message || 'promise_edit_failed') }
+  }, [refreshAll])
+
+  const settlePromise = useCallback(async (id: string) => {
+    const body = { request_id: genId() }
+    try {
+      const r = await tideFetch(`/ledger/${id}/settle`, { method: 'POST', body: JSON.stringify(body) })
+      if (soundOn) playChime()
+      if (r?.op_log_id) setLastUndo({ opId: r.op_log_id, text: `结清了「${r.content}」` })
+      await refreshAll()
+    } catch (e: any) {
+      if (e.network) { enqueue(`/ledger/${id}/settle`, body); setOfflineNote(true) }
+      else setError(e.message || 'settle_failed')
+    }
+  }, [refreshAll, soundOn])
+
+  const deletePromise = useCallback(async (id: string) => {
+    if (!window.confirm('把这条承诺收起来?30 天内还能撤回。')) return
+    const body = { request_id: genId() }
+    try {
+      const r = await tideFetch(`/ledger/${id}/delete`, { method: 'POST', body: JSON.stringify(body) })
+      if (r?.op_log_id) setLastUndo({ opId: r.op_log_id, text: '收起了一条承诺' })
+      await refreshAll()
+    } catch (e: any) {
+      if (e.network) { enqueue(`/ledger/${id}/delete`, body); setOfflineNote(true) }
+      else setError(e.message || 'promise_delete_failed')
+    }
+  }, [refreshAll])
+
   const markedDays = new Set([
     ...(calendar?.waves || []).map(x => x.due_day),
     ...(calendar?.ledger || []).map(x => x.due_day),
@@ -538,7 +682,12 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
           const overdue = !!p.day && p.day < todayKey && x.status !== 'settled'
           return <div key={x.id} className={`td-day-item promise${x.status === 'settled' ? ' done' : ''}${overdue ? ' overdue' : ''}`}>
             <time>{overdue ? `晚${Math.max(1, Math.round((new Date(`${todayKey}T00:00:00+08:00`).getTime() - new Date(`${p.day}T00:00:00+08:00`).getTime()) / 864e5))}天` : x.due_has_time ? p.time : '全天'}</time>
-            <div><strong>{x.content}</strong><span>{LEDGER_LABEL[x.kind] || '承诺'} · {x.status === 'settled' ? '已结清' : '还记着'}</span></div>
+            <div><strong>{x.content}</strong><span>{LEDGER_LABEL[x.kind] || '承诺'} · {ledgerBy(x)} · {x.status === 'settled' ? '已结清' : '还记着'}</span></div>
+            {x.status !== 'settled' && editingLedgerId !== x.id && <div className="td-inline-actions">
+              <button onClick={() => settlePromise(x.id)}>结清</button><button onClick={() => setEditingLedgerId(x.id)}>改</button><button onClick={() => deletePromise(x.id)}>删掉</button>
+            </div>}
+            {editingLedgerId === x.id && <PromiseForm initial={x} submitText="存好"
+              onCancel={() => setEditingLedgerId(null)} onSubmit={(v) => savePromise(x, v)} />}
           </div>
         })}
       </div>
@@ -560,6 +709,13 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
 
       {error && <div className="td-error">{error === 'today_full' ? '今天的海面满了' : '出了点小问题,稍后再试'}</div>}
       {offlineNote && <div className="td-error">现在断网,刚才那下已经记住了,等有网会自动补上</div>}
+      {lastUndo && <div className="td-undo-bar">
+        <span>{lastUndo.text}</span>
+        <div>
+          <button onClick={() => undoOp(lastUndo.opId)}>撤回</button>
+          <button className="td-undo-dismiss" onClick={() => setLastUndo(null)}>知道了</button>
+        </div>
+      </div>}
 
       <section className={`td-calendar-card${calendarExpanded ? ' expanded' : ''}`} aria-label="潮汐日历">
         <div className="td-cal-strip">
@@ -592,8 +748,8 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
       </div>
 
       <section className="td-section td-unfinished">
-        <h3 className="td-section-title">{UNFINISHED_TITLE} <span className="td-count">{shoreWaves.length + shoreLedger.length}</span></h3>
-        {!shoreWaves.length && !shoreLedger.length && <p className="td-empty">没有日期的事都收好了，这里暂时是空的</p>}
+        <h3 className="td-section-title">{UNFINISHED_TITLE} <span className="td-count">{shoreWaves.length}</span></h3>
+        {!shoreWaves.length && <p className="td-empty">没有日期的事都收好了，这里暂时是空的</p>}
         <div className="td-list">
           {shoreWaves.map(w => w.status === 'sunk' ? (
             <div key={w.id} className="td-card td-sunk-card">
@@ -605,9 +761,32 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
               onCommit={today.length < 3 && ['floating','surfaced'].includes(w.status) ? (id) => doAction(id, 'commit') : undefined}
               onSink={['floating','surfaced'].includes(w.status) ? (id) => doAction(id, 'sink') : undefined} />
           ))}
-          {shoreLedger.map(x => <div key={x.id} className="td-unfinished-row promise">
-            <span className="td-size">承诺</span><div><strong>{x.content}</strong><small>{LEDGER_LABEL[x.kind]} · 没定日子</small></div>
-          </div>)}
+        </div>
+      </section>
+
+      <section className="td-section td-promises">
+        <h3 className="td-section-title">承诺 <span className="td-count">{shoreLedger.length}</span>
+          <button className="td-promise-new" onClick={() => { setAddingPromise(v => !v); setEditingLedgerId(null) }}>
+            {addingPromise ? '收起' : '＋ 记一条'}
+          </button>
+        </h3>
+        {addingPromise && <PromiseForm submitText="记下" onCancel={() => setAddingPromise(false)} onSubmit={addPromise} />}
+        {!shoreLedger.length && !addingPromise && <p className="td-empty">没有还记着的承诺（定了日子的在上面的时间轴里）</p>}
+        <div className="td-list">
+          {shoreLedger.map(x => editingLedgerId === x.id ? (
+            <PromiseForm key={x.id} initial={x} submitText="存好"
+              onCancel={() => setEditingLedgerId(null)} onSubmit={(v) => savePromise(x, v)} />
+          ) : (
+            <div key={x.id} className="td-unfinished-row promise">
+              <span className="td-size">承诺</span>
+              <div><strong>{x.content}</strong><small>{LEDGER_LABEL[x.kind]} · {ledgerBy(x)} · 没定日子</small></div>
+              <div className="td-inline-actions">
+                <button onClick={() => settlePromise(x.id)}>结清</button>
+                <button onClick={() => { setEditingLedgerId(x.id); setAddingPromise(false) }}>改</button>
+                <button onClick={() => deletePromise(x.id)}>删掉</button>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -634,6 +813,23 @@ export function TidesPage({ onBack }: { onBack: (p: Page) => void }) {
             <span className="td-title">{item.content}</span>
             {promotingId === item.id ? <TagForm initial={{ size: 'small', stakes: 2, desire: 2 }} onCancel={() => setPromotingId(null)} onSubmit={(v) => promoteCatch(item.id, v)} />
               : <div className="td-card-actions"><button className="td-btn td-btn-ghost" onClick={() => discardCatch(item.id)}>丢回海里</button><button className="td-btn td-btn-break" onClick={() => setPromotingId(item.id)}>整理成浪</button></div>}
+          </div>)}
+        </div>}
+      </section>
+
+      <section className="td-section td-fold">
+        <button className="td-fold-head" onClick={() => setUndoOpen(v => !v)} aria-expanded={undoOpen}>
+          <span>最近改动 <small>7 天内可撤 · {recentOps.length}</small></span><b>{undoOpen ? '−' : '+'}</b>
+        </button>
+        {undoOpen && <div className="td-list td-fold-body">
+          {!recentOps.length && <p className="td-empty">这 7 天没有可撤的改动</p>}
+          {recentOps.map(o => <div key={o.id} className="td-unfinished-row">
+            <span className="td-size">{OP_TABLE[o.table_name] || '记录'}</span>
+            <div>
+              <strong>{o.label || '(没有文字)'}</strong>
+              <small>{OP_LABEL[o.op] || o.op} · {o.actor_role === 'yao' ? '我' : o.actor_role === 'suxu' ? '苏煦' : '自动'} · {timeAgo(o.ts)}</small>
+            </div>
+            <div className="td-inline-actions"><button onClick={() => undoOp(o.id)}>撤回</button></div>
           </div>)}
         </div>}
       </section>
@@ -769,6 +965,23 @@ const TD_CSS = `
 .td-seg button { border: none; background: none; padding: 6px 14px; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
 .td-seg button.active { background: var(--blue); color: white; }
 .td-slider-label { display: flex; flex-direction: column; font-size: 11px; color: var(--ink-faint); gap: 4px; flex: 1; }
+.td-undo-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--glass-bg); border: 1px solid var(--glass-edge); border-radius: 14px;
+  padding: 10px 12px; margin-bottom: 12px; font-size: 12px; color: var(--ink-soft);
+}
+.td-undo-bar > div { display: flex; gap: 6px; flex-shrink: 0; }
+.td-undo-bar button { border: 0; background: oklch(1 0 0 / .5); color: var(--blue-deep); border-radius: 999px; padding: 5px 12px; font-size: 11px; cursor: pointer; }
+.td-undo-bar .td-undo-dismiss { color: var(--ink-faint); background: transparent; }
+.td-promise-form {
+  background: var(--glass-bg); border: 1px solid var(--glass-edge); border-radius: 14px;
+  padding: 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow-glass);
+}
+.td-day-item .td-promise-form, .td-unfinished-row .td-promise-form { grid-column: 1 / -1; margin-top: 6px; }
+.td-seg-wrap { flex-wrap: wrap; border-radius: 12px; }
+.td-seg-wrap button { flex: 1 0 auto; padding: 6px 10px; font-size: 12px; }
+.td-promise-new { margin-left: auto; border: 0; background: oklch(1 0 0 / .45); color: var(--ink-soft); border-radius: 999px; padding: 5px 10px; font-size: 11px; cursor: pointer; }
+.td-promises .td-inline-actions { gap: 4px; }
 .td-wave-suxu { border-left: 3px solid var(--blue-deep); }
 .td-link { background: none; border: none; font-size: 12px; color: var(--ink-faint); cursor: pointer; padding: 2px 0; text-decoration: underline; text-underline-offset: 3px; }
 .td-drawer-card { opacity: 0.85; }

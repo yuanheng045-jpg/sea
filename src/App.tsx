@@ -150,12 +150,7 @@ export function App() {
             onClick={() => setPage('page2')}
           >☰</button>
         </div>
-        <button
-          className="dock-edge"
-          onClick={() => setPage('api')}
-        >
-          <IconSlot iconKey="api" fallback={<span className="dock-letters">API</span>} className="img-dock" />
-        </button>
+        {/* API 门独立入口 2026-08-30 随 engine-bus 五期退役（引擎切换收进 cc 页面板）；恢复=还原本块 */}
       </nav>
       )}
     </div>

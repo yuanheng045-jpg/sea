@@ -80,8 +80,9 @@ export function parseBlocks(src: string): MdBlock[] {
 
 // 行内标记：全部限定不跨行、内容里不含同一标记符，避免灾难性回溯。
 // 注意必须每次新建 RegExp：带 g 的正则有 lastIndex 状态，递归(粗体里再解析)共用会互相踩，会打成死循环。
-const INLINE_SRC = '`([^`\\n]+)`|\\*\\*([^\\n*]+)\\*\\*|\\*([^\\n*]+)\\*|~~([^\\n~]+)~~|\\[([^\\]\\n]{1,200})\\]\\(([^)\\s]{1,600})\\)'
-const SAFE_HREF = /^(https?:\/\/|mailto:|\/(?!\/))/i
+// （2026-09-09 导出给 liveStream：流式封口段落的行内排版复用同一套规则）
+export const INLINE_SRC = '`([^`\\n]+)`|\\*\\*([^\\n*]+)\\*\\*|\\*([^\\n*]+)\\*|~~([^\\n~]+)~~|\\[([^\\]\\n]{1,200})\\]\\(([^)\\s]{1,600})\\)'
+export const SAFE_HREF = /^(https?:\/\/|mailto:|\/(?!\/))/i
 
 export function renderInline(text: string, keyBase = 'i'): ReactNode {
   if (!text) return text

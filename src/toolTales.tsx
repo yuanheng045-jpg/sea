@@ -74,6 +74,7 @@ const SUXU_TOOL_ALIASES: Record<string, string> = {
   garden_read: 'garden_read',
   garden_act: 'garden_act',
   peek_screen: 'peek_screen',
+  look_home: 'look_home',
   status: 'status',
   locate: 'locate',
   play_music: 'play_music',
@@ -110,8 +111,7 @@ function toolKind(m: ToolTale) {
 function memoryFeelText(m: ToolTale) {
   const kind = String(toolObject(m)?.kind || '')
   if (kind === 'night_note') return '苏煦写了今天的夜记'
-  if (kind === '飞鸟集') return '苏煦往朋友圈丢了颗石子'
-  if (kind === '便利贴') return '苏煦给小狗贴了张纸条'
+  if (kind === '浮石') return '苏煦放了块浮石浮上水面'
   if (kind === '海沟') return '苏煦沉了一段话进海沟'
   return '苏煦落了一笔'
 }
@@ -131,6 +131,7 @@ const SUXU_TOOL_TEXT: Record<string, ToolText> = {
   garden_read: () => '苏煦翻了翻花园',
   garden_act: () => '苏煦在花园里留了个印',
   peek_screen: () => '苏煦偷瞄了一眼',
+  look_home: () => '苏煦往家里看了一眼',
   status: () => '苏煦看了看小狗',
   locate: () => '苏煦找了找小狗在哪',
   play_music: () => '苏煦点了一首歌',

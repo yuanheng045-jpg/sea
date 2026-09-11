@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useAppearance, updateAppearance, type Appearance } from './appearance'
 import { useChatState, setTextColor } from './chatStore'
 import { switchConversation } from './apiChat'
-import { ClaudeSparkle } from './CCPage'
+import { ClaudeSparkle, uploadToHub } from './CCPage'
 import { MusicHall } from './MusicHall'
 
 type SessionMeta = {
@@ -357,24 +357,28 @@ function AppearancePanel({ appearance: a, textColors }: {
   textColors: { su: string; you: string }
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [bgUploading, setBgUploading] = useState(false)
   const textSize = a.textSize > 0 ? a.textSize : (a.bubbles ? 14.5 : 13)
   const thinkingSize = a.thinkingSize > 0 ? a.thinkingSize : 12.5
-  const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      alert('图片太大(>2MB),换一张再传')
-      e.target.value = ''
+    e.target.value = ''
+    if (!file || bgUploading) return
+    if (file.size > 60 * 1024 * 1024) {
+      alert('图片超过60MB，这已经不是壁纸是艺术品原件了，压一下再来')
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      const url = reader.result as string
-      const next = [...a.bgImages, url]
+    setBgUploading(true)
+    try {
+      const { url } = await uploadToHub(file)
+      const full = url.startsWith('/uploads/') ? '/cc-api' + url : url
+      const next = [...a.bgImages, full]
       updateAppearance({ bgImages: next, bgCurrent: next.length - 1, bgMode: 'image' })
+    } catch (err) {
+      alert('上传失败：' + (err instanceof Error ? err.message : String(err)) + '，网络稳一点再试')
+    } finally {
+      setBgUploading(false)
     }
-    reader.readAsDataURL(file)
-    e.target.value = ''
   }
   const delImg = (i: number) => {
     const next = a.bgImages.filter((_, j) => j !== i)
@@ -429,7 +433,7 @@ function AppearancePanel({ appearance: a, textColors }: {
                   >×</button>
                 </div>
               ))}
-              <button className="ap-thumb ap-thumb-add" onClick={() => fileRef.current?.click()} aria-label="上传图片">+</button>
+              <button className="ap-thumb ap-thumb-add" onClick={() => fileRef.current?.click()} aria-label="上传图片" disabled={bgUploading}>{bgUploading ? '…' : '+'}</button>
               <input ref={fileRef} type="file" accept="image/*" hidden onChange={onUpload} />
             </div>
             {a.bgImages.length > 0 && (

@@ -2,6 +2,8 @@
 // 实现与 chatStore 兼容的接口,让 CCPage 能 channel='api' 无缝切到它
 import { useSyncExternalStore } from 'react'
 import type { ChatMessage } from './chatStore'
+import { livePush, liveEnd, liveCatchUp, liveDropPrefix, liveKey } from './liveStream'
+import { stripPaceMarks } from './paceMarks'
 
 type ApiState = {
   messages: ChatMessage[]
@@ -26,6 +28,7 @@ let _todayCost: any = null
 let _cacheTtl = '1h'
 let _hints = true
 let _health = false
+let _time = true
 let _rollKeepRounds = 4
 let _nightRoll = true
 let _contCount = 6
@@ -74,7 +77,7 @@ export async function initApi() {
       try {
         const d = await fetch('/api/conversations/' + convId, { credentials: 'include' }).then((r) => r.json())
         const hist = d?.messages || []
-        msgs = hist.map((m: any, i: number): ChatMessage => ({ id: 'h' + i, role: m.role === 'user' ? 'user' : 'assistant', content: m.content || '', thinking: m.thinking || undefined, ts: 0 }))
+        msgs = hist.map((m: any, i: number): ChatMessage => ({ id: 'h' + i, role: m.role === 'user' ? 'user' : 'assistant', content: stripPaceMarks(m.content || ''), thinking: m.thinking || undefined, ts: 0 }))
       } catch {}
     }
     set({ providerId: or?.id ?? null, model, models, convId, messages: msgs, ready: true })
@@ -88,7 +91,21 @@ export async function initApi() {
 }
 
 function updateAi(id: string, content: string, thinking: string, hits: any[] | undefined, pending = true) {
-  _s = { ..._s, messages: _s.messages.map((m) => m.id === id ? { ...m, content, thinking: thinking || undefined, memoryHits: hits, pending } : m) }
+  _s = { ..._s, messages: _s.messages.map((m) => m.id === id ? { ...m, content, thinking: thinking || undefined, memoryHits: hits, pending, live: undefined } : m) }
+  emit()
+}
+
+// 流式直播（2026-09-09 weir）：delta 走 liveStream 直接落 DOM，state 只在开播/收尾各动一次
+function markLiveApi(id: string, kind: 'text' | 'thinking') {
+  const m = _s.messages.find((x) => x.id === id)
+  if (!m || m.live?.[kind]) return
+  _s = { ..._s, messages: _s.messages.map((x) => x.id === id ? { ...x, live: { ...(x.live ?? {}), [kind]: true } } : x) }
+  _panelVer++
+  emit()
+}
+function patchAi(id: string, patch: Partial<ChatMessage>) {
+  _s = { ..._s, messages: _s.messages.map((m) => m.id === id ? { ...m, ...patch } : m) }
+  _panelVer++
   emit()
 }
 
@@ -148,6 +165,8 @@ export function sendMessage(text: string, _extra?: any) {
       let hits: any[] | undefined
       let usage: any = undefined
       let memSaved: any = undefined
+      let textLive = false
+      const textKey = liveKey(aiId, 'text'), thinkKey = liveKey(aiId, 'thinking')
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
@@ -160,8 +179,8 @@ export function sendMessage(text: string, _extra?: any) {
           if (data === '[DONE]') continue
           let p: any
           try { p = JSON.parse(data) } catch { continue }
-          if (p.error) { content += '\n[错误] ' + p.error; continue }
-          if (p.type === 'memory_hits') hits = p.hits
+          if (p.error) { const err = '\n[错误] ' + p.error; content += err; if (!textLive) { textLive = true; markLiveApi(aiId, 'text') } livePush(textKey, err); continue }
+          if (p.type === 'memory_hits') { hits = p.hits; patchAi(aiId, { memoryHits: hits }) }
           if (p.type === 'msg_saved') usage = p.usage
           if (p.type === 'memory_saved') memSaved = { ok: !!p.ok, content: p.content || '' }
           if (p.type === 'content_final') content = typeof p.content === 'string' ? p.content : content
@@ -174,15 +193,22 @@ export function sendMessage(text: string, _extra?: any) {
             })
           }
           const delta = p.choices?.[0]?.delta
-          if (delta?.thinking) thinking += delta.thinking
-          if (delta?.content) content += delta.content
-          updateAi(aiId, content, thinking, hits)
+          if (delta?.thinking) { thinking += delta.thinking; markLiveApi(aiId, 'thinking'); livePush(thinkKey, delta.thinking) }
+          if (delta?.content) {
+            if (!textLive) { textLive = true; liveCatchUp(thinkKey); markLiveApi(aiId, 'text') }   // 正文开口：思维链先落完
+            content += delta.content
+            livePush(textKey, delta.content)
+          }
         }
       }
-      updateAi(aiId, content, thinking, hits, false)
+      // 等 weir 把缓冲里的尾巴均速吐完（DOM 完整）再换成最终渲染
+      await Promise.all([liveEnd(textKey), liveEnd(thinkKey)]).catch((err) => console.error('[api] live end', err))
+      updateAi(aiId, stripPaceMarks(content), thinking, hits, false)
+      liveDropPrefix(aiId + ':')
       if (usage || memSaved) { _s = { ..._s, messages: _s.messages.map((m) => m.id === aiId ? { ...m, usage, memSaved } : m) }; _panelVer++; emit() }
       refreshCost(); refreshConvs()
     } catch (e: any) {
+      liveDropPrefix(aiId + ':')
       updateAi(aiId, '[连接失败] ' + (e?.message || e), '', undefined, false)
     } finally { set({ streaming: false }) }
   })()
@@ -194,7 +220,7 @@ export async function switchConversation(id: string) {
   try {
     const d = await fetch('/api/conversations/' + id, { credentials: 'include' }).then((r) => r.json())
     const hist = d?.messages || []
-    const msgs: ChatMessage[] = hist.map((m: any, i: number) => ({ id: 'h' + i, role: m.role === 'user' ? 'user' : 'assistant', content: m.content || '', thinking: m.thinking || undefined, ts: 0 }))
+    const msgs: ChatMessage[] = hist.map((m: any, i: number) => ({ id: 'h' + i, role: m.role === 'user' ? 'user' : 'assistant', content: stripPaceMarks(m.content || ''), thinking: m.thinking || undefined, ts: 0 }))
     set({ convId: id, messages: msgs, ready: true })
   } catch { set({ ready: true }) }
 }
@@ -253,6 +279,9 @@ export async function setHealthEnabled(v: boolean) {
   _health = v; _panelVer++; emit()
   try { await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ health_enabled: v }) }) } catch {}
 }
+export async function setTimeEnabled(v: boolean) {
+  _time = v; _panelVer++; emit()
+}
 export async function setNightRoll(v: boolean) {
   _nightRoll = v; _panelVer++; emit()
   try { await fetch('/api/config/chat', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ night_roll_enabled: v }) }) } catch {}
@@ -303,6 +332,7 @@ function _viewCache() {
     actionPending: null,
     hintsEnabled: _hints,
     healthEnabled: _health,
+    timeEnabled: _time,
     textColors: loadColors(),
     claudemd: { content: _persona, lastSave: _claudemdSave },
     continuity: _continuity,

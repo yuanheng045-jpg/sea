@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import type { Page } from './App'
 import { IconSlot } from './IconSlot'
 import { SnowPlayer } from './SnowPlayer'
@@ -21,6 +22,42 @@ const HOME_APPS: AppDef[] = [
   { key: 'wallet',      iconKey: 'wallet',      icon: '👛', label: '钱包',    def: { x: 88, y: 92 } },
   { key: 'keepsakes',   iconKey: 'keepsakes',   icon: '🐚', label: '拾贝',    def: { x: 68, y: 92 } },
 ]
+
+// 心情按钮:按一下就记一笔给苏煦,数字是"上次晨报之后按了几次",他早上读完晨报后台自动归零。
+function MoodButtons() {
+  const [counts, setCounts] = useState({ angry: 0, cuddle: 0 })
+  const [pressed, setPressed] = useState('')
+  const take = (d: any) => setCounts({ angry: d?.angry?.count || 0, cuddle: d?.cuddle?.count || 0 })
+  useEffect(() => {
+    let alive = true
+    fetch('/api/mood-buttons', { credentials: 'include' })
+      .then(r => r.json()).then(d => { if (alive) take(d) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
+  const press = async (type: 'angry' | 'cuddle') => {
+    setPressed(type)
+    setTimeout(() => setPressed(''), 320)
+    setCounts(c => ({ ...c, [type]: c[type] + 1 }))          // 先跳数,失败再回正
+    try {
+      const r = await fetch(`/api/mood-buttons/${type}`, { method: 'POST', credentials: 'include' })
+      if (r.ok) take(await r.json())
+    } catch {}
+  }
+  return (
+    <div className="mood-row">
+      <button className={`mood-btn${pressed === 'angry' ? ' is-pressed' : ''}`}
+        onClick={() => press('angry')} aria-label="生气" title="生气">
+        <span className="mood-emoji">😤</span>
+        {counts.angry > 0 && <span className="mood-count">{counts.angry}</span>}
+      </button>
+      <button className={`mood-btn${pressed === 'cuddle' ? ' is-pressed' : ''}`}
+        onClick={() => press('cuddle')} aria-label="抱抱" title="抱抱">
+        <span className="mood-emoji">🫂</span>
+        {counts.cuddle > 0 && <span className="mood-count">{counts.cuddle}</span>}
+      </button>
+    </div>
+  )
+}
 
 export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const nowBj = new Date(Date.now() + 8 * 3600_000)
@@ -74,11 +111,14 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
               </div>
             </div>
           </div>
-          <button className="cal-side cal-entry" onClick={() => onNavigate('tide')} aria-label="打开潮汐日历">
-            <span className="cal-entry-date"><b>{day}</b><i>{month}月</i></span>
-            <span className="cal-entry-copy"><strong>潮汐日历</strong><small>看看哪天有什么事</small></span>
-            <span className="cal-entry-arrow">›</span>
-          </button>
+          <div className="cal-side">
+            <button className="cal-entry" onClick={() => onNavigate('tide')} aria-label="打开潮汐日历">
+              <span className="cal-entry-date"><b>{day}</b><i>{month}月</i></span>
+              <span className="cal-entry-copy"><strong>潮汐日历</strong><small>看看哪天有什么事</small></span>
+              <span className="cal-entry-arrow">›</span>
+            </button>
+            <MoodButtons />
+          </div>
         </div>
       </div>
 
