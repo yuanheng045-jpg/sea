@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useAppearance, updateAppearance, type Appearance } from './appearance'
 import { useChatState, setTextColor } from './chatStore'
 import { switchConversation } from './apiChat'
+import { getPin } from './chatClient'
 import { ClaudeSparkle, uploadToHub } from './CCPage'
 import { MusicHall } from './MusicHall'
 import { Workbench } from './Workbench'
@@ -390,6 +391,14 @@ function AppearancePanel({ appearance: a, textColors }: {
     }
   }
   const delImg = (i: number) => {
+    // 联动删（2026-09-11 原瑶拍板A方案真删）：URL型壁纸删引用同时焚服务器原件；data:老壁纸只删引用
+    const target = a.bgImages[i]
+    if (target && target.startsWith('/cc-api/uploads/')) {
+      const filename = target.slice('/cc-api/uploads/'.length)
+      fetch('/cc-api/api/upload/' + encodeURIComponent(filename), {
+        method: 'DELETE', credentials: 'include', headers: { 'X-Channel-Pin': getPin() },
+      }).catch(() => {})
+    }
     const next = a.bgImages.filter((_, j) => j !== i)
     const cur = Math.max(0, Math.min(a.bgCurrent, next.length - 1))
     updateAppearance({
