@@ -5,6 +5,7 @@ import { useChatState, setTextColor } from './chatStore'
 import { switchConversation } from './apiChat'
 import { ClaudeSparkle, uploadToHub } from './CCPage'
 import { MusicHall } from './MusicHall'
+import { Workbench } from './Workbench'
 
 type SessionMeta = {
   id: string
@@ -17,6 +18,7 @@ type SessionMeta = {
 type QuickItem = { key: string; label: string; url?: string }
 
 const QUICK_ITEMS: QuickItem[] = [
+  { key: 'workbench', label: '监工台', url: '#workbench' },
   { key: 'music',   label: '音乐播放器', url: '#music-hall' },
   { key: 'reading', label: '共读' },
   { key: 'slot',    label: '抽卡' },
@@ -41,6 +43,7 @@ export function Sidebar({
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [overlay, setOverlay] = useState<{ url: string; title: string } | null>(null)
   const [musicOpen, setMusicOpen] = useState(false)
+  const [wbOpen, setWbOpen] = useState(false)
   const [dndCc, setDndCc] = useState<boolean | null>(null)
   const [dndApi, setDndApi] = useState<boolean | null>(null)
   const appearance = useAppearance()
@@ -213,7 +216,7 @@ export function Sidebar({
           <div className="sb-section-title">永久组件</div>
           <div className="sb-quick-grid">
             {QUICK_ITEMS.map(q => (
-              <button key={q.key} className="sb-quick-item" onClick={() => q.url === '#music-hall' ? setMusicOpen(true) : q.url ? setOverlay({ url: q.url, title: q.label }) : showToast(q.label + '·构建中')}>
+              <button key={q.key} className="sb-quick-item" onClick={() => q.url === '#music-hall' ? setMusicOpen(true) : q.url === '#workbench' ? setWbOpen(true) : q.url ? setOverlay({ url: q.url, title: q.label }) : showToast(q.label + '·构建中')}>
                 <span className="sb-q-label">{q.label}</span>
                 <span className="sb-q-tag">{q.url ? '进入' : '构建中'}</span>
               </button>
@@ -313,6 +316,7 @@ export function Sidebar({
       )}
 
       {musicOpen && <MusicHall onClose={() => setMusicOpen(false)} />}
+      {wbOpen && <Workbench onClose={() => setWbOpen(false)} />}
       {toast && <div className="sb-toast">{toast}</div>}
     </div>,
     document.body,
