@@ -21,6 +21,16 @@ const kFmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) +
 const shortModelName = (m: string) => m === '' ? '默认' : m.replace('anthropic/claude-', '').replace('claude-', '').replace('[1m]', '')
 const hitPct = (u: Usage | null) => u && u.ctx ? Math.round(u.cacheRead / u.ctx * 100) : 0
 interface Room { id: string; name: string; members: string[]; memory?: string; inject?: boolean; keepalive?: boolean; stamp?: { no: string; count: number } | null }
+// T-39：工单队列状态条
+interface Ticket {
+  id: string
+  title: string
+  room: string
+  status: 'open' | 'blocked' | 'done' | 'closed' | 'cancelled'
+  dispatch?: 'direct' | 'active' | 'queued' | 'awaiting_review' | 'finished'
+  queue_position?: number
+  ts_created?: number
+}
 interface RosterItem { id: string; name: string; label: string; desc: string }
 
 const API = '/group'
@@ -198,6 +208,8 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   const [editor, setEditor] = useState<{ who: string; label: string; draft: string; loading: boolean; save: 'ok' | 'fail' | null } | null>(null)
   const [nb, setNb] = useState<{ active: string[]; archived: string[] } | null>(null)
   const [usage, setUsage] = useState<Usage | null>(null)
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [queueOpen, setQueueOpen] = useState(false)
   const [pendImgs, setPendImgs] = useState<string[]>([])
   const [pendFiles, setPendFiles] = useState<{ url: string; name?: string }[]>([])
   const [uploading, setUploading] = useState(false)
@@ -231,6 +243,32 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
   const onScroll = () => { const el = feedRef.current; if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }
   // weir 直播跟随：每帧落字后（已在 rAF 里）贴底就直接写 scrollTop
   useEffect(() => onLiveGrow(() => { const el = feedRef.current; if (el && stickRef.current) el.scrollTop = el.scrollHeight }), [])
+
+  // T-39：队列没有独立 SSE 事件，沿用现有 /tickets 接口轻量轮询；失败时保留上次成功结果。
+  useEffect(() => {
+    if (gate !== 'ok') return
+    let alive = true
+    const refresh = async () => {
+      try {
+        const r = await fetch(`${API}/tickets?status=all&limit=200`, { credentials: 'same-origin' })
+        if (!r.ok) throw new Error(`tickets ${r.status}`)
+        const data = await r.json()
+        if (alive) setTickets(Array.isArray(data.tickets) ? data.tickets : [])
+      } catch (e) { console.error('读取工单队列失败:', e) }
+    }
+    refresh()
+    const timer = window.setInterval(refresh, 10000)
+    return () => { alive = false; window.clearInterval(timer) }
+  }, [gate])
+
+  const liveTickets = tickets.filter(t => ['open', 'blocked', 'done'].includes(t.status))
+  const currentTicket = liveTickets.find(t => t.dispatch === 'active') || liveTickets.find(t => t.dispatch === 'awaiting_review') || null
+  const queuedTickets = liveTickets.filter(t => t.dispatch === 'queued').sort((a, b) =>
+    (a.queue_position || Number.MAX_SAFE_INTEGER) - (b.queue_position || Number.MAX_SAFE_INTEGER) ||
+    (a.ts_created || 0) - (b.ts_created || 0))
+  const ticketRoomName = (t: Ticket) => rooms.find(r => r.id === t.room)?.name || t.room
+  const ticketState = (t: Ticket) => t.status === 'blocked' ? '卡住' : t.status === 'done' ? '待终验' : '进行中'
+  const queueEmpty = !currentTicket && queuedTickets.length === 0
 
   // 客厅↔船坞滑动切换（T-8）：只在 r1/r2 之间，横向位移>60px 且明显横向才触发
   const onSwipeStart = (e: React.TouchEvent) => { const t = e.touches[0]; touchRef.current = { x: t.clientX, y: t.clientY } }
@@ -534,6 +572,39 @@ export function GroupPage({ onBack }: { onBack: (p: Page) => void }) {
           <button className={roomId === 'r2' ? 'on' : ''} onClick={() => selectRoom('r2')}>船 坞</button>
         </div>
       )}
+      <section className={`gc-queue${queueOpen ? ' open' : ''}${queueEmpty ? ' empty' : ''}`} aria-label="工单队列">
+        <button className="gc-queue-head" type="button" onClick={() => setQueueOpen(o => !o)} aria-expanded={queueOpen}>
+          <span className="gc-queue-dot" />
+          {queueEmpty ? (
+            <span className="gc-queue-main">工地清净</span>
+          ) : currentTicket ? (
+            <>
+              <span className="gc-queue-room">{ticketRoomName(currentTicket)}</span>
+              <span className="gc-queue-id">{currentTicket.id}</span>
+              <span className="gc-queue-title" title={currentTicket.title}>{currentTicket.title}</span>
+              <span className={`gc-queue-state ${currentTicket.status}`}>{ticketState(currentTicket)}</span>
+            </>
+          ) : (
+            <span className="gc-queue-main">等待开工</span>
+          )}
+          {!queueEmpty && <span className="gc-queue-count">后面 {queuedTickets.length}</span>}
+          {!queueEmpty && <span className="gc-queue-caret">{queueOpen ? '⌃' : '⌄'}</span>}
+        </button>
+        {queueOpen && !queueEmpty && (
+          <div className="gc-queue-detail">
+            {currentTicket && (
+              <div className="gc-queue-current">
+                <span>当前</span><b>{currentTicket.id}</b><span>{ticketRoomName(currentTicket)}</span><strong>{currentTicket.title}</strong><em>{ticketState(currentTicket)}</em>
+              </div>
+            )}
+            {queuedTickets.length ? queuedTickets.map(t => (
+              <div className="gc-queue-item" key={t.id} title={t.title}>
+                <b>{t.queue_position || '·'}</b><span>{t.id}</span><strong>{t.title}</strong><em>{ticketRoomName(t)}</em>
+              </div>
+            )) : <div className="gc-queue-none">后面没有排队单</div>}
+          </div>
+        )}
+      </section>
       {showDigest && (
         <div className="gc-digest-overlay">
           <div className="gc-digest-head"><span className="gc-digest-title">日报</span><button className="gc-digest-close" onClick={() => setShowDigest(false)} aria-label="关闭">✕</button></div>
@@ -1037,4 +1108,30 @@ const GC_CSS = `
 .gc-dec-btn.primary:active{filter:brightness(.94)}
 .gc-dec-btn.ghost{border-color:rgba(120,110,90,.2);background:transparent;color:var(--ink-soft,#8a8478)}
 .gc-dec-badge{display:inline-block;margin-top:6px;font-size:12px;color:#6f9a6f;padding:4px 8px;border-radius:8px;background:rgba(120,180,120,.1)}
+.gc-queue{flex:0 0 auto;margin:0 14px 4px;border:1px solid rgba(126,116,99,.12);border-radius:11px;background:rgba(255,253,249,.48);overflow:hidden;color:var(--ink-soft,#81796d)}
+.gc-queue.empty{border-color:transparent;background:transparent;opacity:.7}
+.gc-queue-head{width:100%;height:29px;display:flex;align-items:center;gap:6px;padding:0 9px;border:0;background:transparent;color:inherit;font:11px/1.2 var(--font-body,inherit);text-align:left;min-width:0}
+.gc-queue-dot{flex:0 0 auto;width:5px;height:5px;border-radius:50%;background:#8eaa87;box-shadow:0 0 0 3px rgba(142,170,135,.1)}
+.gc-queue.empty .gc-queue-dot{background:#b8b2a6;box-shadow:none}
+.gc-queue-main{flex:1;min-width:0;color:var(--ink-faint,#a8a294);letter-spacing:.05em}
+.gc-queue-room,.gc-queue-id{flex:0 0 auto;color:var(--ink-faint,#9d968a)}
+.gc-queue-id{font-variant-numeric:tabular-nums}
+.gc-queue-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink,#5d574e)}
+.gc-queue-state{flex:0 0 auto;border-radius:6px;padding:2px 5px;background:rgba(116,145,107,.1);color:#708669}
+.gc-queue-state.blocked{background:rgba(180,126,102,.1);color:#a2705a}.gc-queue-state.done{background:rgba(174,145,91,.1);color:#967e50}
+.gc-queue-count,.gc-queue-caret{flex:0 0 auto;color:var(--ink-faint,#aaa397)}
+.gc-queue-caret{width:9px;text-align:center}
+.gc-queue-detail{border-top:1px solid rgba(126,116,99,.1);padding:5px 9px 7px;display:flex;flex-direction:column;gap:4px;font-size:11px}
+.gc-queue-current,.gc-queue-item{display:flex;align-items:center;gap:7px;min-width:0;line-height:1.45}
+.gc-queue-current>span:first-child,.gc-queue-item>b{flex:0 0 27px;text-align:center;color:#9a8662;font-weight:600}
+.gc-queue-current>b,.gc-queue-item>span{flex:0 0 auto;color:var(--ink-faint,#9d968a);font-weight:500}
+.gc-queue-current>strong,.gc-queue-item>strong{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink,#5d574e);font-weight:500}
+.gc-queue-current>em,.gc-queue-item>em{flex:0 0 auto;color:var(--ink-faint,#aaa397);font-style:normal}
+.gc-queue-none{padding:2px 0 1px 34px;color:var(--ink-faint,#aaa397)}
+@media(max-width:520px){
+  .gc-queue{margin:0 10px 2px;border-radius:9px}
+  .gc-queue-head{height:25px;padding:0 7px;font-size:10.5px;gap:5px}
+  .gc-queue-room{display:none}.gc-queue-count{white-space:nowrap}.gc-queue-state{padding:1px 4px}
+  .gc-queue-detail{padding:5px 7px 6px}.gc-queue-current>span:nth-of-type(2),.gc-queue-item>em{display:none}
+}
 `
