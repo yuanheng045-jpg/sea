@@ -916,8 +916,11 @@ const GC_CSS = `
 .gc-dots span{width:4px;height:4px;border-radius:50%;background:var(--ink-soft,#9a948a)}
 .gc-dots:active{background:rgba(0,0,0,.05)}
 .gc-need{margin:8px 16px;text-align:center;font-size:13px;color:#b58a8a;background:rgba(255,255,255,.4);border-radius:12px;padding:10px}
-.gc-feed{flex:1 1 auto;overflow-y:auto;padding:8px 16px 10px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:18px}
-.gc-msg{margin:0;animation:gc-rise .3s ease}
+.gc-feed{flex:1 1 auto;min-width:0;overflow-x:hidden;overflow-y:auto;padding:8px 16px 10px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:18px}
+.gc-msg{width:100%;max-width:100%;min-width:0;margin:0;animation:gc-rise .3s ease}
+.gc-msg>.cc-text-col{width:100%;max-width:100%;min-width:0}
+.gc-msg .cc-text{max-width:min(22em,100%);min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.gc-msg .cc-text>*{max-width:100%;min-width:0;overflow-wrap:anywhere;word-break:break-word}
 @keyframes gc-rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .gc-who{font-size:11px;color:var(--ink-faint,#a8a294);letter-spacing:.06em;margin-bottom:3px}
 .cc-msg.user .gc-who{color:#b79a63}.cc-msg.assistant .gc-who{color:#6f97b4}
