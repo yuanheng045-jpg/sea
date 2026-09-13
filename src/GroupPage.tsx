@@ -925,7 +925,7 @@ const GC_CSS = `
 .gc-who{font-size:11px;color:var(--ink-faint,#a8a294);letter-spacing:.06em;margin-bottom:3px}
 .cc-msg.user .gc-who{color:#b79a63}.cc-msg.assistant .gc-who{color:#6f97b4}
 .gc-msg.codex .cc-text{color:oklch(0.48 0.06 150)}.gc-msg.codex .gc-who{color:#8a9683}
-.gc-sys{align-self:center;text-align:center;font-size:12px;color:var(--ink-faint,#aca596);margin:2px auto;letter-spacing:.05em}
+.gc-sys{align-self:center;text-align:center;font-size:12px;color:var(--ink-faint,#aca596);margin:2px auto;letter-spacing:.05em;max-width:100%;min-width:0;overflow-wrap:anywhere;word-break:break-word}
 .gc-digest-btn{border:none;background:transparent;font-size:13px;color:var(--ink-soft,#8a8071);letter-spacing:.14em;padding:0 8px;height:40px;cursor:pointer;margin-left:auto}
 .gc-digest-overlay{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;background:#faf8f5}
 .gc-digest-head{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 8px) 16px 10px;border-bottom:1px solid #eee7dc;flex:0 0 auto}
