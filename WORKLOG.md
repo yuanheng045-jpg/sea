@@ -1,6 +1,24 @@
 # sea 工作日志
 
+> **船坞工人须知（2026-09-13立）**：本项目真身在 `/home/cc/sea`（cc属主），ubuntu侧 `group-chat/frontend/` 镜像**长期滞后真身**（已滞后277+行），严禁整文件覆盖。改动流程：工人在镜像打补丁并推送 → 苏煦（cc身份）逐段移植真身+build。工人无需也不要申请 /home/cc/sea 写权。
+
+
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
+
+## 2026-09-13 · T-40-fix:gc-sys溢出补漏〔T-40〕
+- 改了什么：gc-sys(工单通知等系统消息)无宽度约束无换行规则,补max-width+overflow-wrap:anywhere+word-break;她实测发现的T-40漏网元素
+- 怎么验证：bun build成功;等她刷新复验
+- 怎么撤销：git revert本commit重build
+
+## 2026-09-13 · T-40溢出修复移植真身+构建〔T-40〕
+- 改了什么：镜像a8b210b的5行CSS补丁移植进GC_CSS(gc-feed加overflow-x:hidden+min-width:0;gc-msg/cc-text-col/cc-text三层max-width+overflow-wrap:anywhere);验证cc-text类在真身DOM确实存在(L625/628/630)
+- 怎么验证：bun build成功;她窄屏终验待刷新确认
+- 怎么撤销：git revert本次commit重build
+
+## 2026-09-13 · T-39状态条移植真身+构建部署〔T-39〕
+- 改了什么：镜像c82cded的97行补丁手动移植进真身GroupPage.tsx(interface/state/轮询/JSX/CSS五段);发现ubuntu侧frontend镜像滞后真身277行(weir/贴纸/工单章缺失),整文件覆盖会灭她九月改动,故逐段移植
+- 怎么验证：bun run build成功4.49s;/tickets接口形状与前端取法对齐({tickets:[]}+PIN cookie)
+- 怎么撤销：git revert本次commit后重build
 
 ## 2026-09-11 · 壁纸上云拆2MB限制〔T-33·苏煦亲手〕
 - 改了什么：Sidebar.tsx删2MB闸(根因=base64存localStorage会爆iOS约5MB配额且persist静默catch丢设置)，onUpload改async上传：复用CCPage.uploadToHub(本次export)POST /cc-api/api/upload拿URL，存'/cc-api'+url进bgImages，60MB前端闸+bgUploading态(按钮…禁用)+失败alert明示；appearance.ts零改动(url()天然兼容data:存量与http新URL)。配套cc-web/hub-print.ts服务端闸10MB→60MB。同commit收平weir排字引擎(9.9原瑶×5.1)等脏了两天的既上线改动，成分见commit 41b5544 message
