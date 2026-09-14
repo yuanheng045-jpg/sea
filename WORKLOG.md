@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-14 · T-51海螺盒前端移植真身+构建〔T-51〕
+- 改了什么：把group-chat镜像de51e8f+c313d46的海螺盒前端逐段移植进sea真身——新增ConchBoxPage.tsx(列表/按人分tab/语音现场TTS重放/删除二次确认与失败提示)；App.tsx给闲置多年的page='voice'路由接上这个新页；Home.tsx图标标签"海螺"改"海螺盒"；CCPage.tsx的VoiceBubble/MessageBody加🐚收藏按钮(语音条按条收、文字回复整条收，双向对她和苏煦发的消息都生效)+头部跳转入口。移植前逐文件`diff`真身与镜像确认镜像未滞后(App/Home/CCPage三文件差异只有海螺盒相关部分，无缺漏277行问题)，非盲目整文件覆盖。未碰GroupPage/客厅逻辑。
+- 怎么验证：`bun run build`(tsc -b && vite build)0类型错误，2.70s构建完成；产物dist/assets/*.js能grep到"海螺盒"与2处"cc-api/api/conch"；`git diff --check`无空白/冲突残留。后端/api/conch三端点(T-51)与[[conch:self/her]]自动标记(cc-web commit 3ab34bc)已就绪，note-leak.test.ts本机复跑35/35通过；hub-print尚未重启，标记未启用，线上未生效。
+- 怎么撤销：git revert本commit后重build；四个前端文件均可独立回退，不影响后端/api/conch数据与cc-web侧改动
+
 ## 2026-09-13 · T-40-fix:gc-sys溢出补漏〔T-40〕
 - 改了什么：gc-sys(工单通知等系统消息)无宽度约束无换行规则,补max-width+overflow-wrap:anywhere+word-break;她实测发现的T-40漏网元素
 - 怎么验证：bun build成功;等她刷新复验

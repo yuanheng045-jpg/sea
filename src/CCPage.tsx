@@ -425,7 +425,7 @@ function MdParagraphs({ text, fresh, keyBase }: { text: string; fresh?: boolean;
   )
 }
 
-function TextBlock({ text, fresh }: { text: string; fresh?: boolean }) {
+function TextBlock({ text, fresh, msgId, role }: { text: string; fresh?: boolean; msgId?: string; role?: 'user' | 'assistant' }) {
   const segs = useMemo(() => parseVoiceSegments(text), [text])
   const hasVoice = segs.some((s) => s.type === 'voice')
   if (!hasVoice) return <MdParagraphs text={text} fresh={fresh} keyBase="t" />
@@ -433,19 +433,62 @@ function TextBlock({ text, fresh }: { text: string; fresh?: boolean }) {
     <>
       {segs.map((seg, si) => (
         seg.type === 'voice'
-          ? <VoiceBubble key={'v' + si} text={seg.val} />
+          ? <VoiceBubble key={'v' + si} text={seg.val} msgId={msgId} role={role} />
           : <MdParagraphs key={'t' + si} text={seg.val} fresh={fresh} keyBase={'t' + si} />
       ))}
     </>
   )
 }
 
-function MessageBody({ text, fresh, ts, onDoubleTap }: {
+// 海螺盒（T-51）收藏按钮：语音条按单条 voice 段收，整条文字回复按消息收；双向——她收苏煦的，也能收自己说的
+function ConchButton({ msgId, role, kind, text }: { msgId?: string; role?: 'user' | 'assistant'; kind: 'text' | 'voice'; text: string }) {
+  const [state, setState] = useState<'idle' | 'busy' | 'done' | 'fail'>('idle')
+  if (!msgId || !role || !text.trim()) return null
+  const save = async () => {
+    if (state === 'busy' || state === 'done') return
+    setState('busy')
+    try {
+      const r = await fetch('/cc-api/api/conch', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Channel-Pin': getPin() },
+        body: JSON.stringify({ msgId, role, kind, text }),
+      })
+      if (!r.ok) throw new Error(String(r.status))
+      setState('done')
+    } catch (error) {
+      console.error('收进海螺盒失败:', error)
+      setState('fail')
+      setTimeout(() => setState('idle'), 1500)
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={save}
+      disabled={state === 'busy'}
+      aria-label={state === 'done' ? '已收进海螺盒' : '收进海螺盒'}
+      title={state === 'done' ? '已收进海螺盒' : '收进海螺盒'}
+      style={{
+        border: 'none', background: 'transparent', cursor: state === 'busy' ? 'default' : 'pointer',
+        fontSize: 13, lineHeight: 1, padding: '2px 4px', marginLeft: 4,
+        opacity: state === 'idle' || state === 'busy' ? 0.45 : 1,
+        verticalAlign: 'middle', flex: '0 0 auto',
+      }}
+    >
+      {state === 'fail' ? '⚠︎' : '🐚'}
+    </button>
+  )
+}
+
+function MessageBody({ text, fresh, ts, onDoubleTap, msgId, role }: {
   text: string
   fresh?: boolean
   ts?: number
   onDoubleTap?: () => void
+  msgId?: string
+  role?: 'user' | 'assistant'
 }) {
+  const plainText = useMemo(() => text.replace(/<voice>[\s\S]*?<\/voice>/g, '').trim(), [text])
   const blocks = useMemo(() => parseAttachBlocks(text), [text])
   const pointerDownRef = useRef<{ x: number; y: number; at: number } | null>(null)
   const lastTapRef = useRef<{ x: number; y: number; at: number } | null>(null)
@@ -491,14 +534,17 @@ function MessageBody({ text, fresh, ts, onDoubleTap }: {
             <FileIconInline /> {b.name ?? '文件'}
           </a>
         )
-        return <TextBlock key={bi} text={b.v} fresh={fresh} />
+        return <TextBlock key={bi} text={b.v} fresh={fresh} msgId={msgId} role={role} />
       })}
-      <span className="cc-msg-time cc-msg-time-block">{formatTsShort(ts)}</span>
+      <span className="cc-msg-time cc-msg-time-block">
+        {formatTsShort(ts)}
+        <ConchButton msgId={msgId} role={role} kind="text" text={plainText} />
+      </span>
     </div>
   )
 }
 
-function VoiceBubble({ text }: { text: string }) {
+function VoiceBubble({ text, msgId, role }: { text: string; msgId?: string; role?: 'user' | 'assistant' }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'fail'>('idle')
   const [dur, setDur] = useState(0)
   const [cur, setCur] = useState(0)
@@ -563,6 +609,7 @@ function VoiceBubble({ text }: { text: string }) {
         ))}
       </div>
       <span className="cc-voice-time" onClick={() => setOpen((o) => !o)}>{timeLabel}</span>
+      <ConchButton msgId={msgId} role={role} kind="voice" text={text} />
       {open && <div className="cc-voice-text">{text}</div>}
     </div>
   )
@@ -572,7 +619,6 @@ function VoiceBubble({ text }: { text: string }) {
 const STYLES_KEY = 'sea-userstyles'
 
 export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => void; onNavigate: (p: Page) => void; channel?: 'cc' | 'api' }) {
-  void onNavigate
   const store = channel === 'api' ? apiStore : ccStore
   const stylesKey = channel === 'api' ? 'sea-userstyles-api' : STYLES_KEY
   const {
@@ -1100,6 +1146,15 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
         <div className="cc-top-right">
           <button
             className="cc-whale-btn"
+            onClick={() => onNavigate('voice')}
+            aria-label="海螺盒"
+            title="海螺盒 · 收藏的语音和话"
+            style={{ fontSize: 18 }}
+          >
+            🐚
+          </button>
+          <button
+            className="cc-whale-btn"
             onClick={() => setPanelOpen(true)}
             aria-label="面板"
           >
@@ -1584,6 +1639,8 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
             fresh={message.fresh}
             ts={message.ts}
             onDoubleTap={isAssistant && hasThinking ? onToggleThinking : undefined}
+            msgId={message.id}
+            role={isAssistant ? 'assistant' : 'user'}
           />
         )}
         {message.image && (

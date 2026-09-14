@@ -23,6 +23,7 @@ import { MidRoomPage } from './MidRoomPage'
 import { WindowsillPage } from './WindowsillPage'
 import { WalletPage } from './WalletPage'
 import { KeepsakesPage } from './KeepsakesPage'
+import { ConchBoxPage } from './ConchBoxPage'
 import './appearance'  // 启动时 apply 外观偏好
 
 export type Page = 'cc' | 'home' | 'page2' | 'theme' | 'status' | 'api' | 'voice' | 'reading' | 'play' | 'memory' | 'garden' | 'projects' | 'group' | 'tide' | 'moon' | 'personal' | 'callhistory' | 'echo' | 'midroom' | 'windowsill' | 'wallet' | 'keepsakes'
@@ -110,6 +111,7 @@ export function App() {
         {page === 'windowsill' && <WindowsillPage onBack={() => setPage('home')} />}
         {page === 'wallet' && <WalletPage onBack={() => setPage('home')} />}
         {page === 'keepsakes' && <KeepsakesPage onBack={setPage} />}
+        {page === 'voice' && <ConchBoxPage onBack={setPage} />}
         {page === 'tide' && <TidesPage onBack={setPage} />}
         {page === 'moon' && <MoonPage onBack={setPage} />}
         {page === 'personal' && <PersonalPage onBack={setPage} />}
@@ -121,13 +123,13 @@ export function App() {
         {page === 'status' && <StatusPage onBack={() => setPage('page2')} />}
         {page === 'cc'    && <CCPage onBack={() => setPage('home')} onNavigate={setPage} />}
         {page === 'api'   && <CCPage channel="api" onBack={() => setPage('home')} onNavigate={setPage} />}
-        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && page !== 'personal' && page !== 'callhistory' && page !== 'reading' && page !== 'midroom' && page !== 'windowsill' && page !== 'wallet' && page !== 'keepsakes' && (
+        {page !== 'home' && page !== 'page2' && page !== 'theme' && page !== 'status' && page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'tide' && page !== 'moon' && page !== 'personal' && page !== 'callhistory' && page !== 'reading' && page !== 'midroom' && page !== 'windowsill' && page !== 'wallet' && page !== 'keepsakes' && page !== 'voice' && (
           <div className="empty-page">
             <span className="empty-label">{page}</span>
           </div>
         )}
       </div>
-      {page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'reading' && page !== 'midroom' && page !== 'windowsill' && page !== 'wallet' && page !== 'keepsakes' && (
+      {page !== 'cc' && page !== 'api' && page !== 'group' && page !== 'reading' && page !== 'midroom' && page !== 'windowsill' && page !== 'wallet' && page !== 'keepsakes' && page !== 'voice' && (
       <nav className="dock">
         <button
           className="dock-edge"

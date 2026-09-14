@@ -6,7 +6,7 @@ import { OctopusDoggy } from './OctopusDoggy'
 import { AppCanvas, type AppDef } from './AppCanvas'
 
 const HOME_APPS: AppDef[] = [
-  { key: 'voice',   iconKey: 'voice',   icon: '🐚', label: '海螺', def: { x: 28, y: 10 } },
+  { key: 'voice',   iconKey: 'voice',   icon: '🐚', label: '海螺盒', def: { x: 28, y: 10 } },
   { key: 'reading', iconKey: 'reading', icon: '📖', label: '书',   def: { x: 67, y: 30 } },
   { key: 'play',    iconKey: 'play',    icon: '🍎', label: '苹果', def: { x: 39, y: 62 } },
   { key: 'memory',  iconKey: 'memory',  icon: '🌙', label: '记忆', def: { x: 72, y: 76 } },
