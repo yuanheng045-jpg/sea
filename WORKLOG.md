@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-14 · T-51海螺收藏按钮改手绘心形移植真身〔T-51〕
+- 改了什么：把镜像d6290ac+f2fef0c的改动移植进真身——ConchButton非fail状态从🐚emoji换成内联SVG实心心形(14px，`#b98a5a`暖棕玫瑰色，非emoji)，原瑶两轮反馈(先嫌海螺太显眼、再嫌红心emoji太卡通)后定的样子；fail态⚠︎、海螺盒页面/Home图标/顶部跳转入口的🐚均未动。移植前diff真身与镜像确认只有这7行改动。
+- 怎么验证：`bun run build`0类型错误，2.81s构建完成，新hash`index-lt9LjAvF.js`；grep产物确认`M12 21.35`路径与`#b98a5a`色值都在；build即部署，已线上生效。
+- 怎么撤销：git revert本commit后重build；纯前端样式，不影响/api/conch数据
+
 ## 2026-09-14 · T-51海螺盒前端移植真身+构建〔T-51〕
 - 改了什么：把group-chat镜像de51e8f+c313d46的海螺盒前端逐段移植进sea真身——新增ConchBoxPage.tsx(列表/按人分tab/语音现场TTS重放/删除二次确认与失败提示)；App.tsx给闲置多年的page='voice'路由接上这个新页；Home.tsx图标标签"海螺"改"海螺盒"；CCPage.tsx的VoiceBubble/MessageBody加🐚收藏按钮(语音条按条收、文字回复整条收，双向对她和苏煦发的消息都生效)+头部跳转入口。移植前逐文件`diff`真身与镜像确认镜像未滞后(App/Home/CCPage三文件差异只有海螺盒相关部分，无缺漏277行问题)，非盲目整文件覆盖。未碰GroupPage/客厅逻辑。
 - 怎么验证：`bun run build`(tsc -b && vite build)0类型错误，2.70s构建完成；产物dist/assets/*.js能grep到"海螺盒"与2处"cc-api/api/conch"；`git diff --check`无空白/冲突残留。后端/api/conch三端点(T-51)与[[conch:self/her]]自动标记(cc-web commit 3ab34bc)已就绪，note-leak.test.ts本机复跑35/35通过；hub-print尚未重启，标记未启用，线上未生效。
