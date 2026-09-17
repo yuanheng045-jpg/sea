@@ -1603,13 +1603,15 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
   const showThinking = thinkingActive || hasThinking
   // T-59 2026-09-17：thinkingAutoExpand=false(模式B)时，生成中也不强制展开，只认 expanded(手动展开)
   const thinkingExpanded = (thinkingAutoExpand && thinkingActive) || expanded
-  // T-60 2026-09-17：双击"展开"那一下把视口定位到思维链开头（收起/live自动展开不触发）
+  // T-60/T-61 2026-09-17：双击"展开"那一下把视口对齐到消息正文尾部，不再对齐思维链开头——
+  // 思维链在正文上方，对齐开头会把正文顶到屏幕外，用户还得手动下拉才看得到回复（T-61修正）
   const thinkingToggleRef = useRef<HTMLButtonElement>(null)
+  const textColRef = useRef<HTMLDivElement>(null)
   const handleThinkingDoubleTap = () => {
     const willExpand = !thinkingExpanded
     onToggleThinking()
     if (willExpand) {
-      requestAnimationFrame(() => { thinkingToggleRef.current?.scrollIntoView({ block: 'start' }) })
+      requestAnimationFrame(() => { textColRef.current?.scrollIntoView({ block: 'end' }) })
     }
   }
   // T-58 2026-09-17：折叠标识默认收着，双击才展开/收回；单击不再触发，减少误触
@@ -1623,7 +1625,7 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
           className="cc-avatar-slot"
         />
       </div>
-      <div className="cc-text-col">
+      <div className="cc-text-col" ref={textColRef}>
         {showThinking && (
           <button
             type="button"

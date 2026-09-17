@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-18 · T-61思维链双击展开改对齐消息正文尾部〔T-61〕
+- 改了什么：T-60做的是展开后scrollIntoView(思维链按钮,block:'start')把开头贴视口顶部,但思维链在正文上方,长思维链一展开就把正文挤到视口外,用户还得手动下拉才看到回复——不符合'展开后不需要额外滑动就能继续看对话'的验收要求。MessageRow内新增textColRef挂在cc-text-col(思维链+正文+图片等整条消息内容的外层容器)上;handleThinkingDoubleTap展开分支里滚动目标从thinkingToggleRef改成textColRef、对齐方式从block:'start'改成block:'end',让这条消息内容的底边贴视口底边——展开后直接看到正文(结尾),不用再拉。thinkingToggleRef声明保留(仍挂在按钮ref上,未来可能还有用,不为收窄diff额外动它)。不碰useDoubleTap双击判定本身、不碰模式A/B开关(T-59)、不碰thinking内容渲染、收起与生成中自动展开路径(willExpand为真才触发,逻辑未变)。
+- 怎么验证：npm run build(tsc -b && vite build)0类型错误2.66s构建完成,index-CFWt_o9M.js(CSS未变仍index-V_VOpn3V.css,本次未碰样式);grep产物确认scrollIntoView({block:"end"}存在且block:"start"计数为0,新旧对齐方式精确替换无残留。working tree混有此前多笔历史遗留(09-16月亮开关/液态玻璃hyalite、usageAuthDays授权到期提示)未提交改动,沿用T-59/T-60先例:git diff导出CCPage.tsx全量patch后按hunk边界精确切出仅属于T-61的两段(注释+textColRef声明+scrollIntoView调用改动段、cc-text-col的ref挂载段),git apply --cached --check校验通过后分离,本commit只含T-61,历史遗留继续留在working tree未动。真机验证待原瑶:双击展开长思维链,视口应能直接看到消息正文不需手动下拉;双击收起、生成中自动展开的既有体验不受影响。
+- 怎么撤销：git revert对应commit后npm run build;纯前端UI副作用改动(scrollIntoView目标+对齐方式各一处),不影响thinking数据存储与T-58/T-59/T-60的双击手势/开关逻辑
+
 ## 2026-09-17 · T-60思维链双击展开定位到内容开头〔T-60〕
 - 改了什么：双击展开思维链(Undercurrent)时，之前展开后视口位置不变，长内容常年只露出末尾要手动往上拉。MessageRow内加thinkingToggleRef(挂在cc-thinking-toggle按钮上)，把原来直接传给useDoubleTap的onToggleThinking包一层handleThinkingDoubleTap：调用前先记下"当前是否折叠"(willExpand=!thinkingExpanded)，调用后仅在willExpand为真(即这一下是展开而非收起)时rAF里scrollIntoView({block:'start'})把按钮顶部贴到视口顶部。收起动作、生成中(thinkingActive)由thinkingAutoExpand驱动的live自动展开均不触发(willExpand在那些场景要么为false要么走的不是这条路径)。不碰useDoubleTap手势判定本身、不碰模式A/B开关(T-59)、不碰thinking内容渲染。
 - 怎么验证：tsc -b && vite build 0类型错误3.31s构建完成，index-EmchEBd_.js(CSS未变仍index-V_VOpn3V.css)；grep产物确认scrollIntoView/"start"已在bundle里。working tree混有09-16两笔历史遗留(月亮开关/主题液态玻璃hyalite)未提交改动，沿用T-59先例：git diff导出CCPage.tsx全量patch后按hunk边界切出仅属于T-60的两段(MessageRow内thinkingToggleRef声明段+按钮ref属性段)，`git apply --cached`精确分离后本commit只含T-60，那两笔历史遗留继续留在working tree未动。真机验证待原瑶：双击折叠标识展开长思维链，视口应停在内容开头而不是末尾；双击收起、以及生成中自动展开的既有体验不受影响。
