@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-18 · T-59思维链自动展开开关(模式A/B可选)〔T-59〕
+- 改了什么：在设置面板(SessionPanel「显示」区)加开关,localStorage(sea-thinking-auto-expand)持久化,默认沿用T-58后既有行为(模式A/自动展开)。核心改动:MessageRow内thinkingExpanded从'thinkingActive||expanded'改为'(thinkingAutoExpand&&thinkingActive)||expanded'——关掉开关后thinkingActive不再强制展开生成中的思维链;CCPage传入MessageRow的expanded计算同步加thinkingAutoExpand门控(否则流结束后autoExpanded仍会绕过开关展开);toggleThinking的isAutoExpanded参数同步改为thinkingAutoExpand门控后的值,保证模式B下双击一次就能展开/收起(不依赖autoExpanded字段)。不碰T-58的useDoubleTap/双击逻辑,不碰thinking数据传输存储。
+- 怎么验证：tsc -b && vite build 0类型错误2.74s构建完成,index-cklbrfmb.js(CSS未变仍index-V_VOpn3V.css);grep产物确认sea-thinking-auto-expand字符串与显示区文案都在。发现working tree混有09-16两笔(月亮开关/未知usageAuthDays)历史遗留未提交改动,已用git apply --cached手写patch做hunk级精确分离,本commit只含T-59;那两笔历史遗留仍留在working tree未动,已在群里报给原瑶另行处理,commit前二次build已排除误回退线上功能的风险。真机验证待原瑶:设置面板「显示」区开关,关闭后生成中思维链保持折叠、双击可临时展开,刷新页面记住选择。
+- 怎么撤销：git revert 对应commit后bun run build;纯前端UI状态位改动,不影响thinking数据存储与T-58双击逻辑
+
 ## 2026-09-17 · T-58思维链折叠改双击展开〔T-58〕
 - 改了什么：cc-thinking-toggle折叠标识(Undercurrent标签+小图标)默认折叠态本身没动，只改触发方式：原来单击(onClick)就展开，现在改双击才展开/收起，单击不再触发，减少误触。抽了个可复用的useDoubleTap(onDoubleTap,excludeSelector)hook——把MessageBody正文原来手写的pointerdown/pointerup双击判定(360ms/28px阈值)搬进去，折叠标识按钮和正文双击收起共用同一套逻辑与参数(此前正文双击已能收起，现在标识本身也能双击触发)。不碰thinking内容传输/存储，不碰其他消息类型/工具调用展示。
 - 怎么验证：tsc -b && vite build 0类型错误2.81s构建完成，index-D8m3_Ffk.js(CSS未变仍index-V_VOpn3V.css，本次未碰样式)；grep产物确认touchAction/manipulation双击手势代码在。生成中(autoExpanded)思维链自动展开的既有体验未动——thinkingActive优先级仍高于双击态，不受本次改动影响。真机验证待原瑶：历史消息默认只见Undercurrent标识，单击不再展开，双击标识或双击正文可展开，再双击收起。

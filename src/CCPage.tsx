@@ -627,6 +627,7 @@ function VoiceBubble({ text, msgId, role }: { text: string; msgId?: string; role
 
 
 const STYLES_KEY = 'sea-userstyles'
+const THINKING_AUTO_EXPAND_KEY = 'sea-thinking-auto-expand'  // T-59 2026-09-17: 思维链生成时是否自动展开，未设置过=旧行为(模式A/自动展开)
 
 export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => void; onNavigate: (p: Page) => void; channel?: 'cc' | 'api' }) {
   const store = channel === 'api' ? apiStore : ccStore
@@ -676,6 +677,17 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const styleSaveTimer = useRef<number | undefined>(undefined)
   const moonClickTimer = useRef<number | undefined>(undefined)
   const [panelOpen, setPanelOpen] = useState(false)
+  // T-59 2026-09-17: 思维链自动展开模式，localStorage 持久化，默认沿用 T-58 后的既有行为(模式A/自动展开)
+  const [thinkingAutoExpand, setThinkingAutoExpand] = useState(() => {
+    try { return localStorage.getItem(THINKING_AUTO_EXPAND_KEY) !== '0' } catch { return true }
+  })
+  const toggleThinkingAutoExpand = () => {
+    setThinkingAutoExpand((prev) => {
+      const next = !prev
+      try { localStorage.setItem(THINKING_AUTO_EXPAND_KEY, next ? '1' : '0') } catch {}
+      return next
+    })
+  }
   const [claudemdOpen, setClaudemdOpen] = useState(false)
   const [toolboxOpen, setToolboxOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -1183,8 +1195,9 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
           <Fragment key={m.id}>
             <MessageRow
               message={di ? di.msg : m}
-              expanded={expandedThinking.has(m.id) || !!m.autoExpanded}
-              onToggleThinking={() => toggleThinking(m.id, !!m.autoExpanded)}
+              expanded={expandedThinking.has(m.id) || (thinkingAutoExpand && !!m.autoExpanded)}
+              onToggleThinking={() => toggleThinking(m.id, thinkingAutoExpand && !!m.autoExpanded)}
+              thinkingAutoExpand={thinkingAutoExpand}
             />
             {di && <ApDecisionCard d={di.decision} answeredChoice={decisionInfo.answered.get(di.decision.title)} onDecide={(t) => store.sendMessage(t)} />}
             {m.memoryHits && m.memoryHits.length > 0 && (
@@ -1455,6 +1468,8 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
           onAction={(a) => store.sendSessionAction(a)}
           onEditClaudemd={() => { setPanelOpen(false); setClaudemdOpen(true); store.sendClaudemdGet() }}
           onOpenToolbox={() => { setPanelOpen(false); setToolboxOpen(true) }}
+          thinkingAutoExpand={thinkingAutoExpand}
+          onToggleThinkingAutoExpand={toggleThinkingAutoExpand}
         />
       )}
 
@@ -1561,10 +1576,11 @@ function KeepsakeChatCard({ card }: { card: Keepsake }) {
   )
 }
 
-const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinking }: {
+const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinking, thinkingAutoExpand }: {
   message: ChatMessage
   expanded: boolean
   onToggleThinking: () => void
+  thinkingAutoExpand: boolean
 }) {
   const toolTales = activityToolTales(message.activities, message.id)
   if (message.role === 'activity') {
@@ -1585,7 +1601,8 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
   const hasThinking = isAssistant && ((typeof message.thinking === 'string' && message.thinking.length > 0) || liveThinking)
   const thinkingActive = isAssistant && !!message.pending && text.length === 0 && !liveText
   const showThinking = thinkingActive || hasThinking
-  const thinkingExpanded = thinkingActive || expanded
+  // T-59 2026-09-17：thinkingAutoExpand=false(模式B)时，生成中也不强制展开，只认 expanded(手动展开)
+  const thinkingExpanded = (thinkingAutoExpand && thinkingActive) || expanded
   // T-58 2026-09-17：折叠标识默认收着，双击才展开/收回；单击不再触发，减少误触
   const thinkingTapProps = useDoubleTap<HTMLButtonElement>(hasThinking ? onToggleThinking : undefined)
   return (
@@ -1772,13 +1789,15 @@ function formatTs(ms: number | undefined): string {
   return new Date(ms).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd, onOpenToolbox }: {
+function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd, onOpenToolbox, thinkingAutoExpand, onToggleThinkingAutoExpand }: {
   channel: 'cc' | 'api'
   state: Record<string, any> | null
   onClose: () => void
   onAction: (action: string) => void
   onEditClaudemd: () => void
   onOpenToolbox: () => void
+  thinkingAutoExpand: boolean
+  onToggleThinkingAutoExpand: () => void
 }) {
   const store = channel === 'api' ? apiStore : ccStore
   const [confirming, setConfirming] = useState<null | 'forge' | 'compact' | 'prune'>(null)
@@ -1847,6 +1866,21 @@ function SessionPanel({ channel, state, onClose, onAction, onEditClaudemd, onOpe
         <div className="cc-panel-head">
           <ClaudeSparkle />
           <h3 className="cc-panel-h3">苏煦 <em>SESSION</em></h3>
+        </div>
+
+        <div className="cc-panel-section">
+          <div className="cc-panel-section-title">显示</div>
+          <div className="cc-panel-row">
+            <span>思维链生成时自动展开</span>
+            <button
+              type="button"
+              className={`ap-toggle${thinkingAutoExpand ? ' on' : ''}`}
+              role="switch"
+              aria-checked={thinkingAutoExpand}
+              onClick={onToggleThinkingAutoExpand}
+              title={thinkingAutoExpand ? '开：生成时思维链自动展开，双击可收起' : '关：思维链始终折叠，双击才展开'}
+            ><span className="ap-toggle-knob" /></button>
+          </div>
         </div>
 
         {!state ? (
