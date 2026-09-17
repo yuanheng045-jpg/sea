@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-17 · T-58思维链折叠改双击展开〔T-58〕
+- 改了什么：cc-thinking-toggle折叠标识(Undercurrent标签+小图标)默认折叠态本身没动，只改触发方式：原来单击(onClick)就展开，现在改双击才展开/收起，单击不再触发，减少误触。抽了个可复用的useDoubleTap(onDoubleTap,excludeSelector)hook——把MessageBody正文原来手写的pointerdown/pointerup双击判定(360ms/28px阈值)搬进去，折叠标识按钮和正文双击收起共用同一套逻辑与参数(此前正文双击已能收起，现在标识本身也能双击触发)。不碰thinking内容传输/存储，不碰其他消息类型/工具调用展示。
+- 怎么验证：tsc -b && vite build 0类型错误2.81s构建完成，index-D8m3_Ffk.js(CSS未变仍index-V_VOpn3V.css，本次未碰样式)；grep产物确认touchAction/manipulation双击手势代码在。生成中(autoExpanded)思维链自动展开的既有体验未动——thinkingActive优先级仍高于双击态，不受本次改动影响。真机验证待原瑶：历史消息默认只见Undercurrent标识，单击不再展开，双击标识或双击正文可展开，再双击收起。
+- 怎么撤销：git revert 对应commit后bun run build；纯前端交互改动，不影响thinking数据存储
+
 ## 2026-09-14 · T-51海螺收藏按钮改手绘心形移植真身〔T-51〕
 - 改了什么：把镜像d6290ac+f2fef0c的改动移植进真身——ConchButton非fail状态从🐚emoji换成内联SVG实心心形(14px，`#b98a5a`暖棕玫瑰色，非emoji)，原瑶两轮反馈(先嫌海螺太显眼、再嫌红心emoji太卡通)后定的样子；fail态⚠︎、海螺盒页面/Home图标/顶部跳转入口的🐚均未动。移植前diff真身与镜像确认只有这7行改动。
 - 怎么验证：`bun run build`0类型错误，2.81s构建完成，新hash`index-lt9LjAvF.js`；grep产物确认`M12 21.35`路径与`#b98a5a`色值都在；build即部署，已线上生效。

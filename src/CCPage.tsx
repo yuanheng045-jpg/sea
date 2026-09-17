@@ -484,26 +484,19 @@ function ConchButton({ msgId, role, kind, text }: { msgId?: string; role?: 'user
   )
 }
 
-function MessageBody({ text, fresh, ts, onDoubleTap, msgId, role }: {
-  text: string
-  fresh?: boolean
-  ts?: number
-  onDoubleTap?: () => void
-  msgId?: string
-  role?: 'user' | 'assistant'
-}) {
-  const plainText = useMemo(() => text.replace(/<voice>[\s\S]*?<\/voice>/g, '').trim(), [text])
-  const blocks = useMemo(() => parseAttachBlocks(text), [text])
+// 双击手势（2026-09-17 T-58）：pointerdown/pointerup 手动判定，兼容触屏+鼠标。
+// excludeSelector 用于容器类场景——命中容器内部的链接/按钮/音频等交互元素时不算一次有效 tap；
+// 独立可点击元素（如折叠标识按钮自身）不传，整个元素表面都算数。
+function useDoubleTap<T extends HTMLElement = HTMLElement>(onDoubleTap?: () => void, excludeSelector?: string) {
   const pointerDownRef = useRef<{ x: number; y: number; at: number } | null>(null)
   const lastTapRef = useRef<{ x: number; y: number; at: number } | null>(null)
-  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+  const handlePointerDown = (e: ReactPointerEvent<T>) => {
     if (!onDoubleTap) return
     pointerDownRef.current = { x: e.clientX, y: e.clientY, at: Date.now() }
   }
-  const handlePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = (e: ReactPointerEvent<T>) => {
     if (!onDoubleTap) return
-    const target = e.target as HTMLElement
-    if (target.closest('a, button, audio, input, textarea')) {
+    if (excludeSelector && (e.target as HTMLElement).closest(excludeSelector)) {
       lastTapRef.current = null
       return
     }
@@ -523,12 +516,25 @@ function MessageBody({ text, fresh, ts, onDoubleTap, msgId, role }: {
     }
     lastTapRef.current = { x: e.clientX, y: e.clientY, at: now }
   }
+  if (!onDoubleTap) return {}
+  return { onPointerDown: handlePointerDown, onPointerUp: handlePointerUp, style: { touchAction: 'manipulation' as const } }
+}
+
+function MessageBody({ text, fresh, ts, onDoubleTap, msgId, role }: {
+  text: string
+  fresh?: boolean
+  ts?: number
+  onDoubleTap?: () => void
+  msgId?: string
+  role?: 'user' | 'assistant'
+}) {
+  const plainText = useMemo(() => text.replace(/<voice>[\s\S]*?<\/voice>/g, '').trim(), [text])
+  const blocks = useMemo(() => parseAttachBlocks(text), [text])
+  const tapProps = useDoubleTap<HTMLDivElement>(onDoubleTap, 'a, button, audio, input, textarea')
   return (
     <div
       className="cc-text"
-      onPointerDown={onDoubleTap ? handlePointerDown : undefined}
-      onPointerUp={onDoubleTap ? handlePointerUp : undefined}
-      style={onDoubleTap ? { touchAction: 'manipulation' } : undefined}
+      {...tapProps}
     >
       {blocks.map((b, bi) => {
         if (b.t === 'img') return <ImgOrLink key={bi} url={b.v} />
@@ -1580,6 +1586,8 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
   const thinkingActive = isAssistant && !!message.pending && text.length === 0 && !liveText
   const showThinking = thinkingActive || hasThinking
   const thinkingExpanded = thinkingActive || expanded
+  // T-58 2026-09-17：折叠标识默认收着，双击才展开/收回；单击不再触发，减少误触
+  const thinkingTapProps = useDoubleTap<HTMLButtonElement>(hasThinking ? onToggleThinking : undefined)
   return (
     <div className={`cc-msg ${message.role}${message.pending ? ' pending' : ''}`}>
       <div className="cc-avatar-col">
@@ -1594,8 +1602,9 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
           <button
             type="button"
             className={`cc-thinking-toggle${thinkingActive ? ' active' : ''}${thinkingExpanded ? ' open' : ''}`}
-            onClick={hasThinking ? onToggleThinking : undefined}
             aria-expanded={thinkingExpanded}
+            title="双击展开/收起"
+            {...thinkingTapProps}
           >
             <span className="cc-undercurrent-label">Undercurrent</span>
             {thinkingActive && (
