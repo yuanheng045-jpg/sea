@@ -1605,13 +1605,24 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
   const thinkingExpanded = (thinkingAutoExpand && thinkingActive) || expanded
   // T-60/T-61 2026-09-17：双击"展开"那一下把视口对齐到消息正文尾部，不再对齐思维链开头——
   // 思维链在正文上方，对齐开头会把正文顶到屏幕外，用户还得手动下拉才看得到回复（T-61修正）
+  // T-61-fix：scrollIntoView({block:'end'}) 贴的是 .cc-messages 的 padding-box 底边，
+  // 而 padding-bottom 那 110px+kb 本就是垫给 fixed 输入栏的遮挡区——贴那条线等于把正文
+  // 滚到输入栏正后方。改成实测 .cc-input-bar 当前真实屏幕位置，手动顶开被遮住的量。
   const thinkingToggleRef = useRef<HTMLButtonElement>(null)
   const textColRef = useRef<HTMLDivElement>(null)
   const handleThinkingDoubleTap = () => {
     const willExpand = !thinkingExpanded
     onToggleThinking()
     if (willExpand) {
-      requestAnimationFrame(() => { textColRef.current?.scrollIntoView({ block: 'end' }) })
+      requestAnimationFrame(() => {
+        const el = textColRef.current
+        const scroller = el?.closest('.cc-messages') as HTMLElement | null
+        if (!el || !scroller) return
+        const bar = document.querySelector('.cc-input-bar') as HTMLElement | null
+        const visibleBottom = bar ? bar.getBoundingClientRect().top : window.innerHeight
+        const overflow = el.getBoundingClientRect().bottom - visibleBottom
+        if (overflow > 0) scroller.scrollTop += overflow + 12
+      })
     }
   }
   // T-58 2026-09-17：折叠标识默认收着，双击才展开/收回；单击不再触发，减少误触

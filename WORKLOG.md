@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-18 · T-61-fix思维链展开对齐正文尾部被输入栏遮挡修正〔T-61〕
+- 改了什么：原瑶实测反馈:双击展开后正文还是被顶到输入栏下面。查到根因:scrollIntoView({block:'end'})对齐的是.cc-messages滚动容器的padding-box底边,而.cc-messages有padding-bottom:calc(110px+var(--kb,0px))——这110px+键盘高度本就是特意垫出来给position:fixed的.cc-input-bar腾地方的遮挡区(正常滚到底最后一条消息也是靠这块padding才不被输入栏挡住)。贴那条padding-box底边=直接把正文糊到输入栏正后方,跟'只做了自动展开模式'无关——自动展开(thinkingActive/thinkingAutoExpand)那条路径本来就没有任何scrollIntoView代码,两条路径不共享这段逻辑,不存在漏改双击的情况,纯粹是对齐基准选错了。改法:不再用原生scrollIntoView,rAF里手动测量textColRef.getBoundingClientRect().bottom和document.querySelector('.cc-input-bar').getBoundingClientRect().top(输入栏当前真实屏幕位置,键盘弹出/多行输入框变高时title会跟着变,天然兼容),算出被遮住的量(overflow)后直接scroller.scrollTop+=overflow+12(scroller=el.closest('.cc-messages'),12px余量)。overflow<=0(本来就没被挡)时不触发滚动,避免无谓跳动。
+- 怎么验证：npm run build(tsc -b && vite build)0类型错误2.69s构建完成,index-BO0qBu0o.js(CSS未变仍index-V_VOpn3V.css);grep产物确认scrollIntoView字符串已归零(全项目唯一一处调用点已替换为手动scrollTop计算)、cc-input-bar与.cc-messages查询字符串均在。working tree混有此前多笔历史遗留(09-16月亮开关/液态玻璃hyalite等)未提交改动,沿用先例git apply --cached做hunk级精确分离,本commit只含这1处MessageRow内的改动。真机验证待原瑶:双击展开长思维链,正文应完整露在输入栏上方不被遮挡,不需要额外手动滑动;键盘弹出时同样成立。
+- 怎么撤销：git revert对应commit后npm run build;纯前端UI副作用改动(rAF内一段测量+scrollTop计算),不影响thinking数据存储与T-58/T-59/T-60的双击手势/开关逻辑
+
 ## 2026-09-18 · T-61思维链双击展开改对齐消息正文尾部〔T-61〕
 - 改了什么：T-60做的是展开后scrollIntoView(思维链按钮,block:'start')把开头贴视口顶部,但思维链在正文上方,长思维链一展开就把正文挤到视口外,用户还得手动下拉才看到回复——不符合'展开后不需要额外滑动就能继续看对话'的验收要求。MessageRow内新增textColRef挂在cc-text-col(思维链+正文+图片等整条消息内容的外层容器)上;handleThinkingDoubleTap展开分支里滚动目标从thinkingToggleRef改成textColRef、对齐方式从block:'start'改成block:'end',让这条消息内容的底边贴视口底边——展开后直接看到正文(结尾),不用再拉。thinkingToggleRef声明保留(仍挂在按钮ref上,未来可能还有用,不为收窄diff额外动它)。不碰useDoubleTap双击判定本身、不碰模式A/B开关(T-59)、不碰thinking内容渲染、收起与生成中自动展开路径(willExpand为真才触发,逻辑未变)。
 - 怎么验证：npm run build(tsc -b && vite build)0类型错误2.66s构建完成,index-CFWt_o9M.js(CSS未变仍index-V_VOpn3V.css,本次未碰样式);grep产物确认scrollIntoView({block:"end"}存在且block:"start"计数为0,新旧对齐方式精确替换无残留。working tree混有此前多笔历史遗留(09-16月亮开关/液态玻璃hyalite、usageAuthDays授权到期提示)未提交改动,沿用T-59/T-60先例:git diff导出CCPage.tsx全量patch后按hunk边界精确切出仅属于T-61的两段(注释+textColRef声明+scrollIntoView调用改动段、cc-text-col的ref挂载段),git apply --cached --check校验通过后分离,本commit只含T-61,历史遗留继续留在working tree未动。真机验证待原瑶:双击展开长思维链,视口应能直接看到消息正文不需手动下拉;双击收起、生成中自动展开的既有体验不受影响。
