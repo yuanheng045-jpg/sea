@@ -671,6 +671,8 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   const [styleTexts, setStyleTexts] = useState<{ c: string; f: string; e: string }>({ c: '', f: '', e: '' })
   const [styleCarry, setStyleCarry] = useState<'always' | 'interval'>(channel === 'api' ? 'always' : 'interval')
   const [styleInterval, setStyleInterval] = useState(30)
+  const [styleEnabled, setStyleEnabled] = useState(true)   // 月亮总开关(2026-09-16 原瑶): 关=主聊天/备用引擎都不携带 style, 存进同一个 blob 的 enabled
+  const [intervalDraft, setIntervalDraft] = useState('30')  // 定时分钟输入框草稿: 允许清空重打, 只在合法时落库(以前空串立刻被打回 30, 等于改不了)
   const styleBlobRef = useRef<any>({})
   const styleReadyRef = useRef(false)
   const [styleReady, setStyleReady] = useState(false)
@@ -774,10 +776,12 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
           setStyleCarry(v.carry === 'always' || v.carry === 'interval' ? v.carry : (channel === 'api' ? 'always' : 'interval'))
           const iv = parseInt(v.interval, 10)
           setStyleInterval(iv > 0 ? iv : 30)
+          setIntervalDraft(String(iv > 0 ? iv : 30))
+          setStyleEnabled(v.enabled !== false)
           styleBlobRef.current = { ...v, ...next }
           try { localStorage.setItem(stylesKey, JSON.stringify(next)) } catch {}
         } else {
-          styleBlobRef.current = { ...localTexts, phase: 'c', carry: channel === 'api' ? 'always' : 'interval', interval: 30 }
+          styleBlobRef.current = { ...localTexts, phase: 'c', carry: channel === 'api' ? 'always' : 'interval', interval: 30, enabled: true }
         }
         styleReadyRef.current = true
         setStyleReady(true)
@@ -814,7 +818,10 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
   }
   const savePhase = (ph: 'c' | 'f' | 'e') => { setMoonPhase(ph); putStyleBlob({ phase: ph }, 200) }
   const saveCarry = (v: 'always' | 'interval') => { setStyleCarry(v); putStyleBlob({ carry: v }, 200) }
-  const saveInterval = (n: number) => { const v = n > 0 ? n : 30; setStyleInterval(v); putStyleBlob({ interval: v }, 400) }
+  const saveInterval = (n: number) => { if (!(n > 0)) return; setStyleInterval(n); putStyleBlob({ interval: n }, 400) }
+  const onIntervalInput = (raw: string) => { const s = raw.replace(/[^0-9]/g, ''); setIntervalDraft(s); const n = parseInt(s, 10); if (n > 0) saveInterval(n) }
+  const onIntervalBlur = () => { const n = parseInt(intervalDraft, 10); if (n > 0) saveInterval(n); else setIntervalDraft(String(styleInterval)) }
+  const saveEnabled = (on: boolean) => { setStyleEnabled(on); putStyleBlob({ enabled: on }, 200) }
   const handleMoonClick = () => {
     if (!styleReadyRef.current) return
     if (moonClickTimer.current) window.clearTimeout(moonClickTimer.current)
@@ -979,7 +986,7 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
     // CC 通道 style 由 hub 服务端携带(连夜巡唤醒也带); API 通道客户端携带+常驻/定时门控
     const activeStyle = (moonPhase === 'f' ? styleTexts.f : moonPhase === 'e' ? styleTexts.e : styleTexts.c).trim()
     let active = ''
-    if (channel === 'api' && activeStyle) {
+    if (channel === 'api' && activeStyle && styleEnabled) {
       const lk = 'sea-style-lastcarry-' + stylesKey
       let due = true
       if (styleCarry === 'interval') {
@@ -1156,12 +1163,12 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
           )}
         </div>
         <button
-          className="cc-moon"
+          className={`cc-moon${styleEnabled ? '' : ' off'}`}
           onClick={handleMoonClick}
           onDoubleClick={handleMoonDoubleClick}
           disabled={!styleReady}
           aria-label="单击切换 style · 双击编辑"
-          title={styleReady ? '单击切换 style · 双击编辑' : '正在读取 style…'}
+          title={!styleReady ? '正在读取 style…' : styleEnabled ? '单击切换 style · 双击编辑' : 'style 已关闭 · 双击编辑'}
         >
           <MoonSvg phase={moonPhase} />
         </button>
@@ -1423,13 +1430,17 @@ export function CCPage({ onBack, onNavigate, channel = 'cc' }: { onBack: () => v
               placeholder={`${editingStyle === 'c' ? '弯月' : editingStyle === 'f' ? '满月' : '月食'} 的 user style，写你想要的语气、口吻、规则…`}
               rows={6}
             />
-            <div className="cc-style-tabs" style={{ marginTop: 8 }}>
+            <div className="cc-style-switch-row">
+              <span>开关<small>{styleEnabled ? '每条消息随月相携带 style' : '已关 · 消息不带 style'}</small></span>
+              <button type="button" className={`st-switch${styleEnabled ? ' on' : ''}`} disabled={!styleReady} aria-pressed={styleEnabled} onClick={() => saveEnabled(!styleEnabled)}><span className="st-switch-knob" /></button>
+            </div>
+            <div className="cc-style-tabs" style={{ marginTop: 8, opacity: styleEnabled ? 1 : 0.45 }}>
               <button disabled={!styleReady} className={`cc-style-tab${styleCarry === 'always' ? ' active' : ''}`} onClick={() => saveCarry('always')}>常驻</button>
               <button disabled={!styleReady} className={`cc-style-tab${styleCarry === 'interval' ? ' active' : ''}`} onClick={() => saveCarry('interval')}>定时</button>
               {styleCarry === 'interval' && (
-                <input type="number" min={1} max={600} value={styleInterval} disabled={!styleReady}
-                  onChange={(e) => saveInterval(parseInt(e.target.value, 10) || 0)}
-                  style={{ width: 52, background: 'transparent', border: '1px solid rgba(127,127,127,.35)', borderRadius: 6, textAlign: 'center', color: 'inherit', fontSize: 12 }} />
+                <input type="text" inputMode="numeric" pattern="[0-9]*" value={intervalDraft} disabled={!styleReady}
+                  onChange={(e) => onIntervalInput(e.target.value)} onBlur={onIntervalBlur}
+                  style={{ width: 56, background: 'transparent', border: '1px solid rgba(127,127,127,.35)', borderRadius: 6, textAlign: 'center', color: 'inherit', fontSize: 12 }} />
               )}
               {styleCarry === 'interval' && <span style={{ fontSize: 12, opacity: 0.65, alignSelf: 'center' }}>分钟</span>}
             </div>

@@ -35,6 +35,11 @@
 - 怎么验证：tsc -b && vite build 0类型错误2.81s构建完成，index-D8m3_Ffk.js(CSS未变仍index-V_VOpn3V.css，本次未碰样式)；grep产物确认touchAction/manipulation双击手势代码在。生成中(autoExpanded)思维链自动展开的既有体验未动——thinkingActive优先级仍高于双击态，不受本次改动影响。真机验证待原瑶：历史消息默认只见Undercurrent标识，单击不再展开，双击标识或双击正文可展开，再双击收起。
 - 怎么撤销：git revert 对应commit后bun run build；纯前端交互改动，不影响thinking数据存储
 
+## 2026-09-16 · 月亮 user style 总开关 + 定时分钟任意输入
+- 改了什么：CCPage.tsx: blob 新增 enabled(默认true), 编辑器加一行开关(复用工具箱 st-switch), 关=备用引擎客户端不带 style、月亮图标变淡(.cc-moon.off); 定时分钟输入框改草稿态(intervalDraft, type=text+inputMode=numeric), 空/非法不再立刻打回30, 失焦才回落, 去掉max=600任意正整数; index.css 末尾追加 .cc-moon.off/.cc-style-switch-row. 主聊天侧配套见 cc-web 台账同日条目
+- 怎么验证：tsc -b && vite build 通过(index-BlfwPBL-.js / index-BACslG9u.css), dist 已含 cc-style-switch-row; 原瑶真机: 双击月亮→开关关掉→发消息看 hub 日志不再带 userStyle
+- 怎么撤销：cp src/CCPage.tsx.bak-20260916-stylegate src/CCPage.tsx; cp src/index.css.bak-20260916-stylegate src/index.css; bun run build
+
 ## 2026-09-14 · T-51海螺收藏按钮改手绘心形移植真身〔T-51〕
 - 改了什么：把镜像d6290ac+f2fef0c的改动移植进真身——ConchButton非fail状态从🐚emoji换成内联SVG实心心形(14px，`#b98a5a`暖棕玫瑰色，非emoji)，原瑶两轮反馈(先嫌海螺太显眼、再嫌红心emoji太卡通)后定的样子；fail态⚠︎、海螺盒页面/Home图标/顶部跳转入口的🐚均未动。移植前diff真身与镜像确认只有这7行改动。
 - 怎么验证：`bun run build`0类型错误，2.81s构建完成，新hash`index-lt9LjAvF.js`；grep产物确认`M12 21.35`路径与`#b98a5a`色值都在；build即部署，已线上生效。

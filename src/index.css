@@ -6247,3 +6247,9 @@ body.tb-open .cc-messages { visibility: hidden; }
 .wb-detail { color: #6f7d9e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 .wb-say .wb-detail { color: #a8b3cf; }
 .wb-foot { text-align: center; font-size: 10.5px; color: #4d5a78; padding: 8px; border-top: 1px solid rgba(120,150,220,.1); letter-spacing: .08em; }
+
+/* ===== user style 月亮开关（2026-09-16 原瑶）：关了月亮变淡；编辑器里一行开关，复用工具箱的 st-switch ===== */
+.cc-moon.off { opacity: 0.38; }
+.cc-style-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 0 4px; font-size: 12.5px; color: var(--ink-soft); }
+.cc-style-switch-row small { display: block; font-size: 10.5px; color: var(--ink-faint); margin-top: 2px; }
+.cc-style-switch-row .st-switch:disabled { opacity: 0.55; cursor: default; }
