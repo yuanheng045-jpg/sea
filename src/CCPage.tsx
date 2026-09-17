@@ -1603,8 +1603,17 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
   const showThinking = thinkingActive || hasThinking
   // T-59 2026-09-17：thinkingAutoExpand=false(模式B)时，生成中也不强制展开，只认 expanded(手动展开)
   const thinkingExpanded = (thinkingAutoExpand && thinkingActive) || expanded
+  // T-60 2026-09-17：双击"展开"那一下把视口定位到思维链开头（收起/live自动展开不触发）
+  const thinkingToggleRef = useRef<HTMLButtonElement>(null)
+  const handleThinkingDoubleTap = () => {
+    const willExpand = !thinkingExpanded
+    onToggleThinking()
+    if (willExpand) {
+      requestAnimationFrame(() => { thinkingToggleRef.current?.scrollIntoView({ block: 'start' }) })
+    }
+  }
   // T-58 2026-09-17：折叠标识默认收着，双击才展开/收回；单击不再触发，减少误触
-  const thinkingTapProps = useDoubleTap<HTMLButtonElement>(hasThinking ? onToggleThinking : undefined)
+  const thinkingTapProps = useDoubleTap<HTMLButtonElement>(hasThinking ? handleThinkingDoubleTap : undefined)
   return (
     <div className={`cc-msg ${message.role}${message.pending ? ' pending' : ''}`}>
       <div className="cc-avatar-col">
@@ -1618,6 +1627,7 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
         {showThinking && (
           <button
             type="button"
+            ref={thinkingToggleRef}
             className={`cc-thinking-toggle${thinkingActive ? ' active' : ''}${thinkingExpanded ? ' open' : ''}`}
             aria-expanded={thinkingExpanded}
             title="双击展开/收起"

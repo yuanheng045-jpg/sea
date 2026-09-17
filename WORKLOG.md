@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-17 · T-60思维链双击展开定位到内容开头〔T-60〕
+- 改了什么：双击展开思维链(Undercurrent)时，之前展开后视口位置不变，长内容常年只露出末尾要手动往上拉。MessageRow内加thinkingToggleRef(挂在cc-thinking-toggle按钮上)，把原来直接传给useDoubleTap的onToggleThinking包一层handleThinkingDoubleTap：调用前先记下"当前是否折叠"(willExpand=!thinkingExpanded)，调用后仅在willExpand为真(即这一下是展开而非收起)时rAF里scrollIntoView({block:'start'})把按钮顶部贴到视口顶部。收起动作、生成中(thinkingActive)由thinkingAutoExpand驱动的live自动展开均不触发(willExpand在那些场景要么为false要么走的不是这条路径)。不碰useDoubleTap手势判定本身、不碰模式A/B开关(T-59)、不碰thinking内容渲染。
+- 怎么验证：tsc -b && vite build 0类型错误3.31s构建完成，index-EmchEBd_.js(CSS未变仍index-V_VOpn3V.css)；grep产物确认scrollIntoView/"start"已在bundle里。working tree混有09-16两笔历史遗留(月亮开关/主题液态玻璃hyalite)未提交改动，沿用T-59先例：git diff导出CCPage.tsx全量patch后按hunk边界切出仅属于T-60的两段(MessageRow内thinkingToggleRef声明段+按钮ref属性段)，`git apply --cached`精确分离后本commit只含T-60，那两笔历史遗留继续留在working tree未动。真机验证待原瑶：双击折叠标识展开长思维链，视口应停在内容开头而不是末尾；双击收起、以及生成中自动展开的既有体验不受影响。
+- 怎么撤销：git revert 对应commit后bun run build；纯前端UI副作用改动(一次rAF+scrollIntoView)，不影响thinking数据存储与T-58/T-59的双击/开关逻辑
+
 ## 2026-09-18 · T-59思维链自动展开开关(模式A/B可选)〔T-59〕
 - 改了什么：在设置面板(SessionPanel「显示」区)加开关,localStorage(sea-thinking-auto-expand)持久化,默认沿用T-58后既有行为(模式A/自动展开)。核心改动:MessageRow内thinkingExpanded从'thinkingActive||expanded'改为'(thinkingAutoExpand&&thinkingActive)||expanded'——关掉开关后thinkingActive不再强制展开生成中的思维链;CCPage传入MessageRow的expanded计算同步加thinkingAutoExpand门控(否则流结束后autoExpanded仍会绕过开关展开);toggleThinking的isAutoExpanded参数同步改为thinkingAutoExpand门控后的值,保证模式B下双击一次就能展开/收起(不依赖autoExpanded字段)。不碰T-58的useDoubleTap/双击逻辑,不碰thinking数据传输存储。
 - 怎么验证：tsc -b && vite build 0类型错误2.74s构建完成,index-cklbrfmb.js(CSS未变仍index-V_VOpn3V.css);grep产物确认sea-thinking-auto-expand字符串与显示区文案都在。发现working tree混有09-16两笔(月亮开关/未知usageAuthDays)历史遗留未提交改动,已用git apply --cached手写patch做hunk级精确分离,本commit只含T-59;那两笔历史遗留仍留在working tree未动,已在群里报给原瑶另行处理,commit前二次build已排除误回退线上功能的风险。真机验证待原瑶:设置面板「显示」区开关,关闭后生成中思维链保持折叠、双击可临时展开,刷新页面记住选择。
