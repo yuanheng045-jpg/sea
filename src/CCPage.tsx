@@ -1691,7 +1691,7 @@ const MessageRow = memo(function MessageRow({ message, expanded, onToggleThinkin
             text={text}
             fresh={message.fresh}
             ts={message.ts}
-            onDoubleTap={isAssistant && hasThinking ? onToggleThinking : undefined}
+            onDoubleTap={isAssistant && hasThinking ? handleThinkingDoubleTap : undefined}
             msgId={message.id}
             role={isAssistant ? 'assistant' : 'user'}
           />

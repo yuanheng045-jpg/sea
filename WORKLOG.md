@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-18 · T-61-fix2思维链双击正文入口漏接滚动补偿〔T-61〕
+- 改了什么：原瑶二次实测:双击展开思维链后仍被顶到下面(跟输入栏无关这次没提输入栏,更像补偿完全没触发)。回头查发现双击其实有两个独立触发入口——折叠标识按钮(thinkingTapProps,T-60/T-61改的就是这条路径)和消息正文本身(MessageBody内部useDoubleTap,T-58设计里双击正文既能收起也能展开)。第1705行MessageBody的onDoubleTap prop从T-58起就一直直接传裸的onToggleThinking,完全没接入T-60/T-61包装出来的handleThinkingDoubleTap(带滚动补偿的那个)——两次T-61改动都只改了标识按钮那条入口,正文这条入口一直在裸奔没有任何滚动补偿。这次把onDoubleTap={...onToggleThinking}改成onDoubleTap={...handleThinkingDoubleTap},统一两个入口共用同一套willExpand判定+补偿逻辑。不新增/改变滚动补偿算法本身(仍是T-61-fix那版measure真实input-bar位置的写法),不碰按钮那条入口(它本身逻辑未变,只是这次一并确认没问题)。
+- 怎么验证：npm run build(tsc -b && vite build)0类型错误2.84s构建完成,index-BKygIvo3.js(CSS未变仍index-V_VOpn3V.css);tsc通过即证明handleThinkingDoubleTap(类型()=>void)与MessageBody.onDoubleTap prop签名(()=>void|undefined)兼容,替换前后类型一致。这处改动是纯函数引用替换,压缩后变量名会被mangle,不像字符串字面量能grep验证,以tsc 0错误+hash变化(内容寻址,变了说明字节级有差异)作为构建层证据。working tree混有历史遗留,awk按hunk计数(而非行号硬编码,上次T-61-fix1曾因硬编码行号踩坑误把历史遗留一起staged)精确取出仅这1处改动的hunk。真机验证待原瑶:这次麻烦区分一下双击的具体位置——点的是消息上方小小的Undercurrent标识,还是直接双击了消息正文,方便进一步定位若仍有问题该看哪条入口。
+- 怎么撤销：git revert对应commit后npm run build;单行prop替换,不影响thinking数据存储与T-58双击收起/T-59开关逻辑
+
 ## 2026-09-18 · T-61-fix思维链展开对齐正文尾部被输入栏遮挡修正〔T-61〕
 - 改了什么：原瑶实测反馈:双击展开后正文还是被顶到输入栏下面。查到根因:scrollIntoView({block:'end'})对齐的是.cc-messages滚动容器的padding-box底边,而.cc-messages有padding-bottom:calc(110px+var(--kb,0px))——这110px+键盘高度本就是特意垫出来给position:fixed的.cc-input-bar腾地方的遮挡区(正常滚到底最后一条消息也是靠这块padding才不被输入栏挡住)。贴那条padding-box底边=直接把正文糊到输入栏正后方,跟'只做了自动展开模式'无关——自动展开(thinkingActive/thinkingAutoExpand)那条路径本来就没有任何scrollIntoView代码,两条路径不共享这段逻辑,不存在漏改双击的情况,纯粹是对齐基准选错了。改法:不再用原生scrollIntoView,rAF里手动测量textColRef.getBoundingClientRect().bottom和document.querySelector('.cc-input-bar').getBoundingClientRect().top(输入栏当前真实屏幕位置,键盘弹出/多行输入框变高时title会跟着变,天然兼容),算出被遮住的量(overflow)后直接scroller.scrollTop+=overflow+12(scroller=el.closest('.cc-messages'),12px余量)。overflow<=0(本来就没被挡)时不触发滚动,避免无谓跳动。
 - 怎么验证：npm run build(tsc -b && vite build)0类型错误2.69s构建完成,index-BO0qBu0o.js(CSS未变仍index-V_VOpn3V.css);grep产物确认scrollIntoView字符串已归零(全项目唯一一处调用点已替换为手动scrollTop计算)、cc-input-bar与.cc-messages查询字符串均在。working tree混有此前多笔历史遗留(09-16月亮开关/液态玻璃hyalite等)未提交改动,沿用先例git apply --cached做hunk级精确分离,本commit只含这1处MessageRow内的改动。真机验证待原瑶:双击展开长思维链,正文应完整露在输入栏上方不被遮挡,不需要额外手动滑动;键盘弹出时同样成立。
