@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { startDaylight, stopDaylight } from './daylight'
+import { applyGlass, hyaliteSupported, normalizeGlass, GLASS_DEFAULTS, type GlassMode, type GlassParams, type GlassSetting } from './glass'
 
 type Ctrl =
   | { key: string; label: string; type: 'color'; default: string }
@@ -52,6 +53,21 @@ const SECTIONS: { title: string; controls: Ctrl[] }[] = [
   },
 ]
 
+// 液态玻璃（hyalite）参数滑杆：范围照引擎 LIMITS 收窄到日常可用区间，默认值取自引擎 DEFAULTS
+type GlassCtrl = { key: keyof GlassParams; label: string; unit: string; min: number; max: number; step: number }
+const GLASS_CONTROLS: GlassCtrl[] = [
+  { key: 'bevel',      label: '倒角', unit: 'px', min: 1,    max: 120, step: 1    },
+  { key: 'thickness',  label: '厚度', unit: 'px', min: 0,    max: 200, step: 1    },
+  { key: 'slope',      label: '折叠', unit: '',   min: 0.2,  max: 4,   step: 0.1  },
+  { key: 'blur',       label: '磨砂', unit: 'px', min: 0,    max: 12,  step: 0.5  },
+  { key: 'dispersion', label: '色散', unit: 'px', min: 0,    max: 6,   step: 0.1  },
+  { key: 'shade',      label: '压暗', unit: '',   min: 0,    max: 2,   step: 0.02 },
+  { key: 'rim',        label: '边光', unit: '',   min: 0,    max: 4,   step: 0.02 },
+  { key: 'sat',        label: '饱和', unit: '',   min: 0,    max: 3,   step: 0.02 },
+  { key: 'edge',       label: '描边', unit: '',   min: 0,    max: 2,   step: 0.02 },
+  { key: 'light',      label: '光向', unit: '°',  min: -180, max: 180, step: 5    },
+]
+
 const TABS = [
   { key: 'morning' as const, label: '早晨', time: '06:00' },
   { key: 'noon'    as const, label: '中午', time: '12:00' },
@@ -62,7 +78,7 @@ type Tab = typeof TABS[number]['key']
 
 type Vars = Record<string, string>
 type Presets = Record<Tab, Vars>
-type ThemeData = { manual: Vars; presets: Presets; daylight: boolean }
+type ThemeData = { manual: Vars; presets: Presets; daylight: boolean; glass: GlassSetting }
 
 const DEFAULT_PRESETS: Presets = {
   morning: {
@@ -125,6 +141,7 @@ function migrate(value: any): ThemeData {
         night:   { ...DEFAULT_PRESETS.night,   ...value.presets?.night   },
       },
       daylight: Boolean((value as any).daylight),
+      glass: normalizeGlass((value as any).glass),
     }
   }
   const flat = (value && typeof value === 'object') ? value as Vars : {}
@@ -137,6 +154,7 @@ function migrate(value: any): ThemeData {
       night:   { ...DEFAULT_PRESETS.night },
     },
     daylight: false,
+    glass: normalizeGlass(null),
   }
 }
 
@@ -245,6 +263,11 @@ export function ThemePanel({ onBack }: { onBack?: () => void }) {
     applyVars(data.presets[tab])
   }, [tab, data.presets])
 
+  // 玻璃是全局的（不分时段），改了就立刻套到整站；退出面板不用还原
+  useEffect(() => {
+    applyGlass(data.glass)
+  }, [data.glass])
+
   // Save: localStorage + debounce push
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
@@ -280,6 +303,15 @@ export function ThemePanel({ onBack }: { onBack?: () => void }) {
   const toggleDaylight = () =>
     setData(d => ({ ...d, daylight: !d.daylight }))
 
+  const setGlassMode = (mode: GlassMode) =>
+    setData(d => ({ ...d, glass: { ...d.glass, mode } }))
+
+  const updateGlass = (key: keyof GlassParams, value: number) =>
+    setData(d => ({ ...d, glass: { ...d.glass, params: { ...d.glass.params, [key]: value } } }))
+
+  const resetGlass = () =>
+    setData(d => ({ ...d, glass: { ...d.glass, params: { ...GLASS_DEFAULTS } } }))
+
   const exportCSS = async () => {
     const vars = data.presets[tab]
     const lines: string[] = [`/* sea-theme · ${TABS.find(t => t.key === tab)?.label} */`, ':root {']
@@ -301,6 +333,8 @@ export function ThemePanel({ onBack }: { onBack?: () => void }) {
 
   const currentVars = data.presets[tab]
   const currentTab = TABS.find(t => t.key === tab)!
+  const glass = data.glass
+  const liquid = glass.mode === 'hyalite'
 
   return (
     <div className="theme-panel">
@@ -320,6 +354,58 @@ export function ThemePanel({ onBack }: { onBack?: () => void }) {
           <button className="tp-btn tp-btn-primary" onClick={exportCSS}>导出 CSS</button>
         </div>
       </header>
+
+      <details className="glass tp-section" open>
+        <summary className="tp-summary">玻璃 · 全局</summary>
+        <div className="tp-controls">
+          <div className="tp-tabs">
+            <button
+              className={`tp-tab${!liquid ? ' active' : ''}`}
+              onClick={() => setGlassMode('soft')}
+            >
+              <span>柔玻璃</span>
+              <small>现用 · 全设备</small>
+            </button>
+            <button
+              className={`tp-tab${liquid ? ' active' : ''}`}
+              onClick={() => setGlassMode('hyalite')}
+            >
+              <span>液态玻璃</span>
+              <small>hyalite · 真折射</small>
+            </button>
+          </div>
+          {liquid && !hyaliteSupported() && (
+            <div className="tp-hint">
+              这台设备的浏览器还画不出真折射（iPhone 上所有浏览器都是 WebKit，Apple 的实现仍在评审），
+              这里先照旧显示柔玻璃；PC 的 Chrome / Edge 打开就是液态玻璃
+            </div>
+          )}
+          {liquid && GLASS_CONTROLS.map(c => (
+            <div key={c.key} className="tp-row">
+              <label className="tp-label">{c.label}</label>
+              <div className="tp-range-wrap">
+                <input
+                  type="range"
+                  min={c.min}
+                  max={c.max}
+                  step={c.step}
+                  value={glass.params[c.key]}
+                  onChange={e => updateGlass(c.key, parseFloat(e.target.value))}
+                />
+                <span className="tp-value">{glass.params[c.key]}{c.unit}</span>
+              </div>
+            </div>
+          ))}
+          {liquid && (
+            <div className="tp-hint">描边 0 = 沿用原来的 135° 渐隐描边，只换折射 · 折叠 &gt; 1 才有液态漩涡</div>
+          )}
+          {liquid && (
+            <div className="tp-actions">
+              <button className="tp-btn" onClick={resetGlass}>重置玻璃参数</button>
+            </div>
+          )}
+        </div>
+      </details>
 
       <div className="tp-tabs">
         {TABS.map(t => (

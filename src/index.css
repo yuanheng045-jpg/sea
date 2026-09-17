@@ -6253,3 +6253,47 @@ body.tb-open .cc-messages { visibility: hidden; }
 .cc-style-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 0 4px; font-size: 12.5px; color: var(--ink-soft); }
 .cc-style-switch-row small { display: block; font-size: 10.5px; color: var(--ink-faint); margin-top: 2px; }
 .cc-style-switch-row .st-switch:disabled { opacity: 0.55; cursor: default; }
+
+
+/* ====== 玻璃 B · 液态玻璃 hyalite（2026-09-16 原瑶）======
+   主题面板「玻璃 · 全局」二选一，写进 sea-theme.glass 跨设备同步（src/glass.ts）。
+   html[data-glass=hyalite] 只在 Chromium 出现（glass.ts 先问 Hyalite.supported()）；
+   iPhone/Safari 落 data-glass=hyalite-fallback = 柔玻璃原样不动（WebKit 的 backdrop-filter:url() 仍在评审）。
+   引擎往每个挂上的元素写 --hyalite（折射滤镜）与 --hyalite-edge（inset 描边）；
+   描边滑杆 = 0 → data-glass-edge=off：不接管 box-shadow / ::after，沿用原 135° 渐隐描边 + 七层阴影，只换折射。
+   引擎源码 src/vendor/hyalite.js（VII-Cae/hyalite--liquid-glass v0.5.0 @b9f2719，MIT，原样未改）。
+   ⚠️ 不挂的面：.cc-modal / .st-modal（父层 *-modal-backdrop 自带 backdrop-filter，成了 backdrop root，
+   SVG 滤镜只看得到那层半透明压暗、被引擎钉成不透明后整块发黑）、.tb-page 里的（本就关滤镜防发热）。
+   这些排除项与 glass.ts 的 GLASS_SELECTOR 必须一致。 */
+html[data-glass="hyalite"] .glass:not(.cc-modal):not(.st-modal):not(.tb-page *),
+html[data-glass="hyalite"] .dock-edge,
+html[data-glass="hyalite"] .dock-pill,
+html[data-glass="hyalite"] .cc-input-pill {
+  backdrop-filter: var(--hyalite, blur(5px) saturate(120%));
+  -webkit-backdrop-filter: var(--hyalite, blur(5px) saturate(120%));
+}
+html[data-glass="hyalite"][data-glass-edge="on"] .glass:not(.cc-modal):not(.st-modal):not(.tb-page *),
+html[data-glass="hyalite"][data-glass-edge="on"] .dock-edge,
+html[data-glass="hyalite"][data-glass-edge="on"] .dock-pill,
+html[data-glass="hyalite"][data-glass-edge="on"] .cc-input-pill {
+  /* 引擎描边 + 只保留原来的落影，其余内阴影交给滤镜里的 shade/rim */
+  box-shadow: var(--hyalite-edge, 0 0 0 0 transparent), 0 22px 50px rgba(0, 0, 0, 0.08);
+}
+html[data-glass="hyalite"][data-glass-edge="on"] .glass:not(.cc-modal):not(.st-modal):not(.tb-page *)::after,
+html[data-glass="hyalite"][data-glass-edge="on"] .dock-edge::after,
+html[data-glass="hyalite"][data-glass-edge="on"] .dock-pill::after,
+html[data-glass="hyalite"][data-glass-edge="on"] .cc-input-pill::after {
+  display: none;
+}
+/* 页面入场 home-in 是 opacity+translate 且 fill-mode both：Chromium 里祖先的 opacity 动画（哪怕结束后停在 1）
+   会让整页变成一个 backdrop root，页里的 SVG backdrop 滤镜就只看得到透明，引擎钉不透明后整块发黑（首屏黑卡就是它）。
+   液态玻璃模式下入场只做位移不做淡入（transform 动画不隔离 backdrop，实测 2026-09-16 Chrome 152）。柔玻璃不受影响，原样。 */
+@keyframes glass-in {
+  from { transform: translateY(8px); }
+  to   { transform: translateY(0); }
+}
+html[data-glass="hyalite"] .home,
+html[data-glass="hyalite"] .theme-panel,
+html[data-glass="hyalite"] .status-page {
+  animation-name: glass-in;
+}

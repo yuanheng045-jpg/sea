@@ -12,12 +12,13 @@ import './index.css'
 import { startDaylight, type Presets } from './daylight'
 import { bootstrapIcons } from './icons'
 import { bootstrapAppPos } from './appPos'
+import { applyGlass, normalizeGlass } from './glass'
 
 const STORAGE_KEY = 'sea:theme:v2'
 const LEGACY_KEY = 'sea:theme:v1'
 
 type Vars = Record<string, string>
-type ThemeData = { manual: Vars; presets: Presets; daylight?: boolean }
+type ThemeData = { manual: Vars; presets: Presets; daylight?: boolean; glass?: unknown }
 
 function applyVarsFromObject(vars: Vars) {
   for (const [k, v] of Object.entries(vars)) {
@@ -32,6 +33,7 @@ function isThemeData(x: any): x is ThemeData {
 function applyTheme(value: unknown) {
   if (!value || typeof value !== 'object') return
   if (isThemeData(value)) {
+    applyGlass(normalizeGlass(value.glass))   // 玻璃引擎（柔/液态）全局，与 blob 变量一起首屏就位
     if (value.daylight) {
       startDaylight(value.presets)
     } else {

@@ -35,6 +35,11 @@
 - 怎么验证：tsc -b && vite build 0类型错误2.81s构建完成，index-D8m3_Ffk.js(CSS未变仍index-V_VOpn3V.css，本次未碰样式)；grep产物确认touchAction/manipulation双击手势代码在。生成中(autoExpanded)思维链自动展开的既有体验未动——thinkingActive优先级仍高于双击态，不受本次改动影响。真机验证待原瑶：历史消息默认只见Undercurrent标识，单击不再展开，双击标识或双击正文可展开，再双击收起。
 - 怎么撤销：git revert 对应commit后bun run build；纯前端交互改动，不影响thinking数据存储
 
+## 2026-09-16 · 主题面板加第二种玻璃：液态玻璃 hyalite（全局二选一）〔PC 端 CC〕
+- 改了什么：原瑶要在主题设置里再加一种玻璃、自己选全局用哪种，第二种按 VII-Cae/hyalite--liquid-glass 做。新增 src/vendor/hyalite.js + hyalite.d.ts（v0.5.0 @b9f2719 原样，MIT）、src/glass.ts（GlassSetting{mode:soft|hyalite, params 十个滑杆}、applyGlass 写 html[data-glass]/[data-glass-edge] + Hyalite.watch(body, GLASS_SELECTOR)）；ThemePanel.tsx 顶部新 section「玻璃 · 全局」（tp-tabs 二选一 + 液态时十个参数滑杆 + 重置），存进 sea-theme.glass 随原有 KV 跨设备同步；main.tsx applyTheme 首屏顺手 applyGlass；index.css 末尾「玻璃 B」块：四个玻璃面 backdrop-filter 换 var(--hyalite, 原 blur)，描边>0 时 box-shadow 换引擎描边+原落影、藏原 ::after 描边，描边=0 沿用原描边只换折射。踩到两个坑都在 CSS 注释里：①页面根 .home/.theme-panel/.status-page 的 home-in 是 opacity 动画且 fill both，Chromium 把它当 backdrop root，SVG backdrop 滤镜只看到透明、被引擎钉不透明后整块发黑（首屏黑卡）→ 液态模式下入场改 transform-only 的 glass-in；②.cc-modal/.st-modal 父层自带 backdrop-filter 同理会黑 → 排除不挂（与 .tb-page 一起写死在 GLASS_SELECTOR 和 CSS :not 两处，改要同步）。只有 Chromium 会渲染折射；iPhone/Safari（原瑶 95% 流量）引擎不写任何变量，落 data-glass=hyalite-fallback = 柔玻璃原样，面板里有一行提示。
+- 怎么验证：tsc -b && vite build 通过（index-BlGEPWhM.js / index-V_VOpn3V.css，线上已是这个）；本机 Chrome 152 走 puppy.atlantis-sy.blue/sea/：主题面板切液态→主页卡片/雪花播放器/dock/状态页 st-card 边缘可见折射与描边，冷刷新（localStorage 里存着液态）首屏不再黑；alpha 探针滤镜（透明→红/不透明→绿）验证 .home 下 backdrop 可见；切回柔玻璃原样恢复。/api 未鉴权所以本机看到「同步失败」属预期，她的设备正常同步。iPhone 真机没法在这边测，只保证不变样。
+- 怎么撤销：cp src/ThemePanel.tsx.bak-20260916-glass src/ThemePanel.tsx; cp src/main.tsx.bak-20260916-glass src/main.tsx; cp src/index.css.bak-20260916-glass src/index.css; rm -rf src/glass.ts src/vendor; bun run build（KV 里多出的 sea-theme.glass 字段旧代码会忽略）
+
 ## 2026-09-16 · 月亮 user style 总开关 + 定时分钟任意输入
 - 改了什么：CCPage.tsx: blob 新增 enabled(默认true), 编辑器加一行开关(复用工具箱 st-switch), 关=备用引擎客户端不带 style、月亮图标变淡(.cc-moon.off); 定时分钟输入框改草稿态(intervalDraft, type=text+inputMode=numeric), 空/非法不再立刻打回30, 失焦才回落, 去掉max=600任意正整数; index.css 末尾追加 .cc-moon.off/.cc-style-switch-row. 主聊天侧配套见 cc-web 台账同日条目
 - 怎么验证：tsc -b && vite build 通过(index-BlfwPBL-.js / index-BACslG9u.css), dist 已含 cc-style-switch-row; 原瑶真机: 双击月亮→开关关掉→发消息看 hub 日志不再带 userStyle
