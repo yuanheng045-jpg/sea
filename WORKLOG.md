@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-18 · T-62核验:T-61问题已在过程中修复,补齐部署链路验证〔T-62〕
+- 改了什么：T-62描述的'T-61(70b4e30)未生效,双击展开仍未对齐'这个问题,在T-62工单派发前后已经在同一条对话线程里被发现并修完——原瑶两次追加反馈(先是'被顶到输入栏下面',再是'还是被顶到下面去了')分别对应两个真实bug:(1)T-61-fix(2dabf15)修正对齐基准选错——scrollIntoView(block:'end')贴的是.cc-messages给fixed输入栏留白的padding区,不是可见区域;(2)T-61-fix2(1a641a6)修正双击有两个独立入口(折叠标识按钮/消息正文本身),T-60/T-61只接了标识按钮那条,正文双击一直在裸奔没有滚动补偿。两轮修完后原瑶回复'现在成功了!'确认验收通过。T-62的三点具体要求逐条核验:①js hash——线上不是70b4e30(index-CFWt_o9M.js)而是1a641a6版本的index-BKygIvo3.js,这是正确的预期状态(70b4e30本身是有bug的中间版本,不该固化线上);②本地真实打开验证——环境里没有playwright/puppeteer/chromium等浏览器自动化工具(which查无),做不到无头浏览器点击模拟,退而求其次用curl从外部域名(https://puppy.atlantis-sy.blue/sea/)实际请求验证部署链路:拿到的index.html引用的js/css hash与本地dist目录逐字节比对一致,线上js文件能正常访问且含cc-messages字样(T-61-fix2里滚动补偿用到的选择器)、scrollIntoView计数为0(确认旧的有bug实现已被完全替换,没有CDN/nginx缓存住旧版本);③真机行为验证——原瑶iPhone真机双击点击反馈'现在成功了',这是比我本地任何模拟都更权威的证据。
+- 怎么验证：npm run build 0类型错误;curl线上域名比对index.html引用hash与本地dist一致;curl线上js文件grep确认新逻辑特征在、旧逻辑特征计数0;原瑶真机反馈'现在成功了'为最终验收凭证。
+- 怎么撤销：如需回退,依次revert 1a641a6→2dabf15→70b4e30三个commit(注意顺序,后进先出)后重新build;纯前端UI改动不涉及数据
+
 ## 2026-09-18 · T-61-fix2思维链双击正文入口漏接滚动补偿〔T-61〕
 - 改了什么：原瑶二次实测:双击展开思维链后仍被顶到下面(跟输入栏无关这次没提输入栏,更像补偿完全没触发)。回头查发现双击其实有两个独立触发入口——折叠标识按钮(thinkingTapProps,T-60/T-61改的就是这条路径)和消息正文本身(MessageBody内部useDoubleTap,T-58设计里双击正文既能收起也能展开)。第1705行MessageBody的onDoubleTap prop从T-58起就一直直接传裸的onToggleThinking,完全没接入T-60/T-61包装出来的handleThinkingDoubleTap(带滚动补偿的那个)——两次T-61改动都只改了标识按钮那条入口,正文这条入口一直在裸奔没有任何滚动补偿。这次把onDoubleTap={...onToggleThinking}改成onDoubleTap={...handleThinkingDoubleTap},统一两个入口共用同一套willExpand判定+补偿逻辑。不新增/改变滚动补偿算法本身(仍是T-61-fix那版measure真实input-bar位置的写法),不碰按钮那条入口(它本身逻辑未变,只是这次一并确认没问题)。
 - 怎么验证：npm run build(tsc -b && vite build)0类型错误2.84s构建完成,index-BKygIvo3.js(CSS未变仍index-V_VOpn3V.css);tsc通过即证明handleThinkingDoubleTap(类型()=>void)与MessageBody.onDoubleTap prop签名(()=>void|undefined)兼容,替换前后类型一致。这处改动是纯函数引用替换,压缩后变量名会被mangle,不像字符串字面量能grep验证,以tsc 0错误+hash变化(内容寻址,变了说明字节级有差异)作为构建层证据。working tree混有历史遗留,awk按hunk计数(而非行号硬编码,上次T-61-fix1曾因硬编码行号踩坑误把历史遗留一起staged)精确取出仅这1处改动的hunk。真机验证待原瑶:这次麻烦区分一下双击的具体位置——点的是消息上方小小的Undercurrent标识,还是直接双击了消息正文,方便进一步定位若仍有问题该看哪条入口。
