@@ -5,6 +5,11 @@
 
 > 最新在最上面。格式见 /home/cc/WORKLOG-SPEC.md（新窗口先读这份，别重新摸一遍代码）。
 
+## 2026-09-19 · T-64 sea主界面加棋牌室外链入口〔T-64〕
+- 改了什么：HOME_APPS(Home.tsx)新增棋牌室图标(♟️,坐标8,20可拖拽调)；AppCanvas.tsx的AppDef加可选href字段区分内部路由/外链入口，onClick里a.href存在时window.open新tab打开而不走onNavigate，不影响其它14个入口原有逻辑；icons.ts加'qipai'到IconKey类型+DEFAULT。href写死为https://puppy.atlantis-sy.blue/cc-api/qipai/?key=<QIPAI_HOME_KEY>，配合qipai端同日commit的免登录旁路，点击即带登录态直达棋盘不经过暗号输入页。
+- 怎么验证：bun run build 0类型错误2.79s；grep产物确认棋牌室/href字符串/window.open逻辑都在；grep确认其它14个入口label(海螺盒/书/苹果/记忆/花园/项目/客厅/潮汐/随身/通话/回声/合相间/窗台/钱包/拾贝)计数与改动前一致，无回归；线上curl比对index.html引用hash与本地dist一致(index-BOvST6Zn.js)，build即部署已生效。working tree混有CCPage.tsx历史遗留(usageAuthDays授权到期提示,09-16遗留)未提交改动，本次git add精确排除只commit了4个属于T-64的文件，未动它。
+- 怎么撤销：git revert ab5961b后bun run build；纯前端新增入口+类型放宽，不影响其它13个既有入口与sea任何数据
+
 ## 2026-09-18 · T-62核验:T-61问题已在过程中修复,补齐部署链路验证〔T-62〕
 - 改了什么：T-62描述的'T-61(70b4e30)未生效,双击展开仍未对齐'这个问题,在T-62工单派发前后已经在同一条对话线程里被发现并修完——原瑶两次追加反馈(先是'被顶到输入栏下面',再是'还是被顶到下面去了')分别对应两个真实bug:(1)T-61-fix(2dabf15)修正对齐基准选错——scrollIntoView(block:'end')贴的是.cc-messages给fixed输入栏留白的padding区,不是可见区域;(2)T-61-fix2(1a641a6)修正双击有两个独立入口(折叠标识按钮/消息正文本身),T-60/T-61只接了标识按钮那条,正文双击一直在裸奔没有滚动补偿。两轮修完后原瑶回复'现在成功了!'确认验收通过。T-62的三点具体要求逐条核验:①js hash——线上不是70b4e30(index-CFWt_o9M.js)而是1a641a6版本的index-BKygIvo3.js,这是正确的预期状态(70b4e30本身是有bug的中间版本,不该固化线上);②本地真实打开验证——环境里没有playwright/puppeteer/chromium等浏览器自动化工具(which查无),做不到无头浏览器点击模拟,退而求其次用curl从外部域名(https://puppy.atlantis-sy.blue/sea/)实际请求验证部署链路:拿到的index.html引用的js/css hash与本地dist目录逐字节比对一致,线上js文件能正常访问且含cc-messages字样(T-61-fix2里滚动补偿用到的选择器)、scrollIntoView计数为0(确认旧的有bug实现已被完全替换,没有CDN/nginx缓存住旧版本);③真机行为验证——原瑶iPhone真机双击点击反馈'现在成功了',这是比我本地任何模拟都更权威的证据。
 - 怎么验证：npm run build 0类型错误;curl线上域名比对index.html引用hash与本地dist一致;curl线上js文件grep确认新逻辑特征在、旧逻辑特征计数0;原瑶真机反馈'现在成功了'为最终验收凭证。
