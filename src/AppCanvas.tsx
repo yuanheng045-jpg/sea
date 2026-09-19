@@ -4,7 +4,8 @@ import { IconSlot } from './IconSlot'
 import type { IconKey } from './icons'
 import { useAppPos, setAppPos, type Pos } from './appPos'
 
-export type AppDef = { key: Page; iconKey: IconKey; icon: string; label: string; def: Pos }
+// href 有值时视为外链入口（如棋牌室），点击直接开新 tab，不走 onNavigate/sea 内部路由；key 此时仅作拖拽定位标识用
+export type AppDef = { key: Page | string; iconKey: IconKey; icon: string; label: string; def: Pos; href?: string }
 
 export function AppCanvas({ apps, onNavigate, panel }: {
   apps: AppDef[]
@@ -53,7 +54,8 @@ export function AppCanvas({ apps, onNavigate, panel }: {
 
   const onClick = (a: AppDef) => {
     if (draggedRef.current) { draggedRef.current = false; return }
-    onNavigate(a.key)
+    if (a.href) { window.open(a.href, '_blank', 'noopener,noreferrer'); return }
+    onNavigate(a.key as Page)
   }
 
   return (

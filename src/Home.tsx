@@ -21,6 +21,9 @@ const HOME_APPS: AppDef[] = [
   { key: 'windowsill',  iconKey: 'windowsill',  icon: '🌱', label: '窗台',    def: { x: 50, y: 24 } },
   { key: 'wallet',      iconKey: 'wallet',      icon: '👛', label: '钱包',    def: { x: 88, y: 92 } },
   { key: 'keepsakes',   iconKey: 'keepsakes',   icon: '🐚', label: '拾贝',    def: { x: 68, y: 92 } },
+  // T-64：外链入口，点开新 tab 直达棋牌室并带登录态，href 带的 key 见 qipai/.env QIPAI_HOME_KEY
+  { key: 'qipai',       iconKey: 'qipai',       icon: '♟️', label: '棋牌室',  def: { x: 8, y: 20 },
+    href: 'https://puppy.atlantis-sy.blue/cc-api/qipai/?key=44e59c4c4c96f4bb1a5242e042cb08ac15fcffc94394598d' },
 ]
 
 // 心情按钮:按一下就记一笔给苏煦,数字是"上次晨报之后按了几次",他早上读完晨报后台自动归零。
