@@ -2717,6 +2717,111 @@ button { font: inherit; cursor: pointer; color: inherit; }
 .cc-claudemd-hint.ok { color: oklch(0.45 0.12 150); }
 .cc-claudemd-hint.fail { color: oklch(0.50 0.16 25); }
 
+/* —— CLAUDE.md 编辑记录(2026-09-26 原瑶) —— */
+.cc-modal-actions .cmh-left { margin-right: auto; }
+.cmh-scroll {
+  max-height: min(60vh, 540px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+.cmh-day {
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  margin: 14px 2px 6px;
+}
+.cmh-scroll > div:first-child > .cmh-day { margin-top: 2px; }
+.cmh-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 0 0 6px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 0.5px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.24);
+  color: var(--ink);
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+.cmh-row:hover { background: rgba(255, 255, 255, 0.34); }
+.cmh-row:disabled { cursor: default; }
+.cmh-row-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; font-size: 13px; }
+.cmh-time { font-variant-numeric: tabular-nums; }
+.cmh-tag {
+  font-size: 10.5px;
+  line-height: 1.6;
+  padding: 0 7px;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: rgba(74, 140, 199, 0.09);
+}
+.cmh-tag.now { color: var(--panel-sea); background: rgba(74, 140, 199, 0.15); }
+.cmh-stat { margin-left: auto; display: inline-flex; gap: 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.cmh-mod { color: oklch(0.50 0.07 250); }
+.cmh-add { color: oklch(0.52 0.09 150); }
+.cmh-del { color: oklch(0.56 0.12 25); }
+.cmh-snippet {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmh-empty { padding: 18px 0; text-align: center; font-size: 12px; color: var(--ink-soft); }
+.cmh-sub { margin-top: -6px; text-align: center; font-size: 11.5px; color: var(--ink-soft); }
+.cmh-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(150, 180, 220, 0.12); }
+.cmh-tab {
+  flex: 1;
+  padding: 5px 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+.cmh-tab.on { background: rgba(255, 255, 255, 0.55); color: var(--ink); box-shadow: 0 1px 3px rgba(20, 40, 80, 0.06); }
+.cmh-legend { margin: 2px 2px 8px; font-size: 11px; color: var(--ink-soft); }
+.cmh-diff, .cmh-full { font-family: var(--font-body); font-size: 12.5px; line-height: 1.6; color: var(--ink); }
+.cmh-line { display: flex; gap: 6px; padding: 1px 6px; border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+.cmh-line.eq { color: var(--ink-soft); }
+.cmh-line.del { background: oklch(0.70 0.10 25 / 0.10); }
+.cmh-line.add { background: oklch(0.72 0.09 150 / 0.12); }
+.cmh-line.mod { background: rgba(74, 140, 199, 0.06); }
+.cmh-line ins { color: inherit; text-decoration: none; background: oklch(0.72 0.11 150 / 0.30); border-radius: 3px; }
+.cmh-line del {
+  color: oklch(0.48 0.12 25);
+  background: oklch(0.70 0.12 25 / 0.16);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.56 0.12 25 / 0.55);
+  border-radius: 3px;
+}
+.cmh-mark { flex: none; width: 10px; text-align: center; color: var(--ink-faint); }
+.cmh-line.del .cmh-mark { color: oklch(0.56 0.12 25); }
+.cmh-line.add .cmh-mark { color: oklch(0.52 0.09 150); }
+.cmh-text { flex: 1; min-width: 0; }
+.cmh-gap {
+  display: block;
+  width: 100%;
+  margin: 4px 0;
+  padding: 3px 0;
+  border: none;
+  border-radius: 8px;
+  background: rgba(150, 180, 220, 0.08);
+  color: var(--ink-faint);
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.cmh-full { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.cmh-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 /* === Compress dialog === */
 .cc-compress { width: min(92vw, 380px); }
 .cc-compress-opts {
@@ -2982,10 +3087,11 @@ body[data-chat-bubbles="off"] .cc-msg.assistant .cc-text {
   flex-direction: row !important;
   align-items: flex-end !important;
   gap: 6px !important;
-  min-height: 52px !important;
+  /* 2026-09-30 原瑶：按 iMessage 比例收薄 52 → 41（按钮 36 同 iMessage 发送键，打字区上下 7） */
+  min-height: 40px !important;
   max-height: 50vh !important;
-  padding: 4px 6px !important;
-  border-radius: 26px !important;
+  padding: 2px 4px !important;
+  border-radius: 20px !important;
 }
 .cc-input-pill textarea {
   flex: 1 1 auto !important;
@@ -2997,7 +3103,7 @@ body[data-chat-bubbles="off"] .cc-msg.assistant .cc-text {
   font-size: 15px !important;
   font-family: var(--font-body) !important;
   line-height: 1.5 !important;
-  padding: 10px 8px !important;
+  padding: 7px 6px !important;
   max-height: 160px !important;
   min-height: 22px !important;
   align-self: auto !important;
@@ -3008,8 +3114,8 @@ body[data-chat-bubbles="off"] .cc-msg.assistant .cc-text {
 }
 .cc-input-pill .cc-plus,
 .cc-input-pill .cc-send {
-  width: 44px !important;
-  height: 44px !important;
+  width: 36px !important;
+  height: 36px !important;
   flex: 0 0 auto !important;
 }
 .cc-input-actions { display: contents !important; }  /* JSX 还包了 actions wrapper，扁平化它 */
@@ -3519,9 +3625,10 @@ body[data-power-save="true"] *::after {
 }
 
 
-/* v60 命中记忆折叠条：微透明玻璃，挂在 user message 之后（视觉在下条 thinking 之上）*/
+/* v60 命中记忆折叠条：微透明玻璃，挂在 user message 之后（视觉在下条 thinking 之上）
+   2026-10-16 原瑶说"歪的"：左边 28px 是以前给头像让的位置（10-08 头像去掉后没跟着改），改成左右各 10px，跟两边气泡外沿对齐 */
 .cc-memory-hits {
-  margin: 4px 0 4px 28px;
+  margin: 4px 10px;
   padding: 6px 12px;
   background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(4px) saturate(110%);
@@ -4501,6 +4608,8 @@ body[data-power-save] .gear, body[data-power-save] .butterfly, body[data-power-s
 .ap-font-row { padding-top: 5px; padding-bottom: 5px; }
 .ap-font-row .ap-dim-label { min-width: 26px; }
 .ap-font-row .ap-dim-val { min-width: 42px; text-align: right; }
+/* 背景「压暗」「模糊」（10-07 深夜加的模糊）：右边数字同宽，两条滑杆一样长 */
+.ap-bg-row .ap-dim-val { min-width: 34px; text-align: right; }
 .ap-range {
   appearance: none;
   -webkit-appearance: none;
@@ -4614,6 +4723,13 @@ body[data-chat-bg-mode="image"] .chat-bg-img {
   background-position: center;
   background-repeat: no-repeat;
 }
+/* 外观 → 背景「模糊」（10-07 深夜原瑶"我还想加一个背景图模糊的滑杆"）：这条 CSS 滤镜只在"糊好的那张还没做出来"时顶一下
+   （拖滑杆的时候、刚打开的头一下）；做好了 appearance.ts 直接换成糊好的图、去掉 data-bg-blur。
+   10-08 早她说四边有一圈光：滤镜把屏幕外当透明一起糊进来，iPhone 上往外多铺的那圈也不认，所以不能一直靠它 */
+body[data-chat-bg-mode="image"][data-bg-blur] .chat-bg-img {
+  filter: blur(var(--chat-bg-blur, 0px));
+  inset: calc(var(--chat-bg-blur, 0px) * -2);
+}
 body[data-chat-bg-mode="image"] .chat-bg-dim {
   display: block;
   background: rgba(0, 0, 0, var(--chat-bg-dim, 0.18));
@@ -4623,8 +4739,8 @@ body[data-chat-bg-mode="image"] .bg-layer { display: none; }
 
 /* ================= 气泡 v4 · pill 形 · 小红书可爱风 ============
    - 双方同款:白色半透明 pill + 浅灰 0.5px 描边 + 极轻阴影
-   - 圆角 999px(单行 pill、多行椭圆形端)
-   - padding 瘦扁(7/16),line-height 1.45 紧凑
+   - 圆角 1.2em(单行仍是 pill)
+   - padding 按 iMessage 比例 0.41em/0.82em(2026-09-30),跟字号走;line-height 1.5
    - 时间 absolute 贴气泡下方外侧,不挤气泡也不占行
    - 气泡消息固定 6px，时间放在间隙里
    - 零 backdrop-filter / 零动画 / 零渐变 防发热 */
@@ -4660,12 +4776,13 @@ body[data-chat-bubbles="on"] .cc-text {
 }
 body[data-chat-bubbles="on"] .cc-paragraph {
   max-width: min(94%, 620px);
-  padding: 8px 22px 9px;
+  /* 2026-09-30 原瑶：按 iMessage 比例收紧（17 号字上下 7、左右 14），用 em 跟着字号走 */
+  padding: 0.41em 0.82em;
   margin: 0;
   line-height: 1.5;
   word-break: break-word;
   white-space: pre-wrap;
-  border-radius: 24px;
+  border-radius: 1.2em;
   position: relative;
   /* 严格照搬 .mc-card 玻璃容器:极淡蓝灰 + 顶黑底白微渐变,5px blur */
   background:
@@ -4761,87 +4878,67 @@ body[data-chat-bubbles="on"] .cc-thinking-body {
 }
 
 
-/* ================= <voice> 语音条(玻璃风) ================= */
+/* ================= <voice> 语音条：没有气泡，一排小四芒星（2026-10-04 原瑶） =================
+   "不要气泡，竖条动起来的时候看起来像拉长的星星一样；中间不要播放键；深色的时候白色，浅色的时候深色；展开了以后其他语言会自动翻译为中文"
+   星星画在 canvas 上（voiceStars.ts），颜色跟 chatTone 判的 data-tone 走（规则在「顶栏短句 + 黑白」块里）。
+   点星星播放 / 暂停，点时间展开文字。星星那段的长度按预估时长，90–200px；整行按内容收，展开的字最宽到八成。没有底色，所以阴影开关、边框线都不管它 */
 .cc-voice {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  column-gap: 2px;
   width: fit-content;
-  max-width: min(78%, 330px);
-  padding: 8px 14px 8px 9px;
-  margin: 5px 0;
-  border-radius: 18px;
-  /* 玻璃(照 mc-card 静态,无 backdrop-filter 防发热) */
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(255,255,255,0.06) 100%),
-    rgba(150, 180, 220, 0.07);
-  border: 0.5px solid rgba(255, 255, 255, 0.42);
-  box-shadow: 0 1px 2px rgba(20, 40, 80, 0.05), inset 0 1px 0 rgba(255,255,255,0.4);
+  max-width: 80%;
+  margin: 3px 0;
+  -webkit-tap-highlight-color: transparent;
 }
-.cc-voice-btn {
-  flex: 0 0 auto;
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  border: 0;
-  background: #4a8cc7;
-  color: #fff;
-  display: grid; place-items: center;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(74, 140, 199, 0.22);
-  transition: transform 0.1s;
-}
-.cc-voice-btn:active { transform: scale(0.92); }
-.cc-voice-btn svg { display: block; margin-left: 1px; }
-.cc-voice.fail .cc-voice-btn { background: linear-gradient(180deg, rgba(190,90,90,0.85), rgba(170,70,70,0.7)); }
 .cc-voice-wave {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 24px;
-  min-width: 88px;
+  position: relative;
+  flex: 0 0 auto;
+  height: 36px;
+  border-radius: 8px;
   cursor: pointer;
+  color: oklch(0.26 0.03 252);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
-.cc-voice-bar {
-  flex: 1 1 0;
-  min-width: 2px;
-  max-width: 3px;
-  border-radius: 2px;
-  background: rgba(120, 150, 190, 0.38);
-  transition: background 0.15s;
-}
-.cc-voice-bar.on { background: #4a8cc7; }
-.cc-voice.loading .cc-voice-wave { opacity: 0.45; }
+/* 画布四周比星星那段各大 10px，光晕淡得完，不被画布边裁出直边；点击还是落在 .cc-voice-wave 上 */
+.cc-voice-wave canvas { position: absolute; left: -10px; top: -10px; width: calc(100% + 20px); height: calc(100% + 20px); display: block; pointer-events: none; }
+.cc-voice-wave:focus-visible { outline: 2px solid oklch(0.55 0.13 250 / 0.6); outline-offset: 2px; }
+.cc-voice.fail .cc-voice-wave { opacity: 0.4; }
 .cc-voice-time {
   flex: 0 0 auto;
+  border: 0;
+  background: none;
+  padding: 10px 2px 10px 8px;
+  min-width: 34px;
   font-size: 11px;
-  color: oklch(0.5 0.04 250);
   font-variant-numeric: tabular-nums;
-  min-width: 30px;
   text-align: right;
+  color: oklch(0.26 0.03 252 / 0.5);
   cursor: pointer;
   user-select: none;
+  transition: color 0.45s ease;
 }
+.cc-voice.fail .cc-voice-time { color: #c0605a; }
 .cc-voice-text {
   flex-basis: 100%;
-  font-size: 13px;
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  line-height: 1.6;
   color: var(--ink);
-  margin-top: 4px;
-  padding-top: 6px;
-  border-top: 0.5px solid rgba(150, 170, 200, 0.22);
-  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
+  letter-spacing: 0.04em;   /* 中文照顶栏点开浮出的那句 */
+  transition: color 0.45s ease;
 }
-.cc-voice-spin {
-  width: 14px; height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: cc-voice-spin 0.7s linear infinite;
-}
-@keyframes cc-voice-spin { to { transform: rotate(360deg); } }
+/* 外语原文用顶栏短句那款字（10-04 原瑶：字体和顶栏用的一样）；左对齐，两端对齐会把词撑得很开 */
+.cc-voice-orig { font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 16px; line-height: 1.35; letter-spacing: 0.05em; text-align: start; }
+.cc-voice-zh { margin-top: 4px; }
+.cc-voice-zh.pending { opacity: 0.45; }
+.cc-voice-zh.retry { display: block; border: 0; background: none; padding: 0; font: inherit; color: inherit; opacity: 0.6; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 /* voice 混合消息的尾部时间戳 */
 .cc-msg-time-block {
   display: block;
@@ -4855,6 +4952,9 @@ body[data-chat-bubbles="on"] .cc-msg-time-block {
   position: static;
   inset: auto;
   bottom: auto;
+  /* 上面浮在气泡外那版的 .cc-msg-time 设了 pointer-events: none（怕挡住点气泡）；这里时间是正常排的一行，
+     里面还有收藏的小心，得能点（2026-10-01 原瑶：气泡开着时心点不动，关了气泡才点得上） */
+  pointer-events: auto;
 }
 body[data-chat-bubbles="on"] .cc-msg.assistant .cc-msg-time-block {
   align-self: flex-start;
@@ -4864,9 +4964,9 @@ body[data-chat-bubbles="on"] .cc-msg.user .cc-msg-time-block {
   align-self: flex-end;
   margin-right: 22px;
 }
-/* 气泡态下语音条左对齐(苏煦) */
-body[data-chat-bubbles="on"] .cc-msg.assistant .cc-voice { align-self: flex-start; }
-body[data-chat-bubbles="on"] .cc-msg.user .cc-voice { align-self: flex-end; }
+/* 气泡态下语音条左对齐(苏煦)；星星和气泡里的字对齐（气泡左右内边距 0.82em） */
+body[data-chat-bubbles="on"] .cc-msg.assistant .cc-voice { align-self: flex-start; margin-left: calc(var(--chat-text-size, 14.5px) * 0.82 - 2px); }
+body[data-chat-bubbles="on"] .cc-msg.user .cc-voice { align-self: flex-end; margin-right: calc(var(--chat-text-size, 14.5px) * 0.82 - 2px); }
 
 
 /* 花体 Claude(头部昵称) */
@@ -4901,8 +5001,10 @@ body[data-chat-bubbles="on"] .cc-msg.user .cc-voice { align-self: flex-end; }
   justify-content: center;
   align-self: center;
 }
-/* 气泡态:音乐卡片自带框,不再套气泡 */
-body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card) {
+/* 气泡态:音乐卡片自带框,不再套气泡;歌卡挂到顶上以后,原位只剩那行小字的也不套 */
+body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card),
+body[data-chat-bubbles="on"] .cc-paragraph:has(> .mc-mention:only-child),
+body[data-chat-bubbles="on"] .cc-paragraph:has(> .cc-photo-receipt:only-child) {
   background: none !important;
   border: 0 !important;
   box-shadow: none !important;
@@ -4913,7 +5015,9 @@ body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card) {
   max-width: 100% !important;
   border-radius: 0 !important;
 }
-body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after { display: none !important; }
+body[data-chat-bubbles="on"] .cc-paragraph:has(.mc-card)::after,
+body[data-chat-bubbles="on"] .cc-paragraph:has(> .mc-mention:only-child)::after,
+body[data-chat-bubbles="on"] .cc-paragraph:has(> .cc-photo-receipt:only-child)::after { display: none !important; }
 
 
 /* ════════ 鲸鱼面板视觉提升(统一海蓝+月光,衬线标题,水感进度) ════════ */
@@ -6255,45 +6359,2036 @@ body.tb-open .cc-messages { visibility: hidden; }
 .cc-style-switch-row .st-switch:disabled { opacity: 0.55; cursor: default; }
 
 
-/* ====== 玻璃 B · 液态玻璃 hyalite（2026-09-16 原瑶）======
-   主题面板「玻璃 · 全局」二选一，写进 sea-theme.glass 跨设备同步（src/glass.ts）。
-   html[data-glass=hyalite] 只在 Chromium 出现（glass.ts 先问 Hyalite.supported()）；
-   iPhone/Safari 落 data-glass=hyalite-fallback = 柔玻璃原样不动（WebKit 的 backdrop-filter:url() 仍在评审）。
-   引擎往每个挂上的元素写 --hyalite（折射滤镜）与 --hyalite-edge（inset 描边）；
-   描边滑杆 = 0 → data-glass-edge=off：不接管 box-shadow / ::after，沿用原 135° 渐隐描边 + 七层阴影，只换折射。
-   引擎源码 src/vendor/hyalite.js（VII-Cae/hyalite--liquid-glass v0.5.0 @b9f2719，MIT，原样未改）。
-   ⚠️ 不挂的面：.cc-modal / .st-modal（父层 *-modal-backdrop 自带 backdrop-filter，成了 backdrop root，
-   SVG 滤镜只看得到那层半透明压暗、被引擎钉成不透明后整块发黑）、.tb-page 里的（本就关滤镜防发热）。
-   这些排除项与 glass.ts 的 GLASS_SELECTOR 必须一致。 */
-html[data-glass="hyalite"] .glass:not(.cc-modal):not(.st-modal):not(.tb-page *),
-html[data-glass="hyalite"] .dock-edge,
-html[data-glass="hyalite"] .dock-pill,
-html[data-glass="hyalite"] .cc-input-pill {
-  backdrop-filter: var(--hyalite, blur(5px) saturate(120%));
-  -webkit-backdrop-filter: var(--hyalite, blur(5px) saturate(120%));
-}
-html[data-glass="hyalite"][data-glass-edge="on"] .glass:not(.cc-modal):not(.st-modal):not(.tb-page *),
-html[data-glass="hyalite"][data-glass-edge="on"] .dock-edge,
-html[data-glass="hyalite"][data-glass-edge="on"] .dock-pill,
-html[data-glass="hyalite"][data-glass-edge="on"] .cc-input-pill {
-  /* 引擎描边 + 只保留原来的落影，其余内阴影交给滤镜里的 shade/rim */
-  box-shadow: var(--hyalite-edge, 0 0 0 0 transparent), 0 22px 50px rgba(0, 0, 0, 0.08);
-}
-html[data-glass="hyalite"][data-glass-edge="on"] .glass:not(.cc-modal):not(.st-modal):not(.tb-page *)::after,
-html[data-glass="hyalite"][data-glass-edge="on"] .dock-edge::after,
-html[data-glass="hyalite"][data-glass-edge="on"] .dock-pill::after,
-html[data-glass="hyalite"][data-glass-edge="on"] .cc-input-pill::after {
-  display: none;
-}
 /* 页面入场 home-in 是 opacity+translate 且 fill-mode both：Chromium 里祖先的 opacity 动画（哪怕结束后停在 1）
-   会让整页变成一个 backdrop root，页里的 SVG backdrop 滤镜就只看得到透明，引擎钉不透明后整块发黑（首屏黑卡就是它）。
-   液态玻璃模式下入场只做位移不做淡入（transform 动画不隔离 backdrop，实测 2026-09-16 Chrome 152）。柔玻璃不受影响，原样。 */
+   会让整页变成一个 backdrop root，页里的玻璃磨砂就只看得到透明。iOS 玻璃模式下入场只做位移不做淡入（transform 动画不隔离 backdrop）。
+   （原来写在「玻璃 B · 液态玻璃 hyalite」块里，2026-10-07 深夜那种玻璃删了，这个动画留给 iOS 玻璃用） */
 @keyframes glass-in {
   from { transform: translateY(8px); }
   to   { transform: translateY(0); }
 }
-html[data-glass="hyalite"] .home,
-html[data-glass="hyalite"] .theme-panel,
-html[data-glass="hyalite"] .status-page {
+
+/* 撤回小字(2026-09-24):被安全系统拦下的一轮自动撤回后,原位留一行灰字,像"撤回了一条消息" */
+.cc-notice {
+  align-self: center;
+  margin: 2px 0 4px;
+  padding: 0 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+/* 2026-09-26 百宝箱:每件工具的"常驻/搜索"小标签,样式跟随 tb-chip(淡蓝、克制) */
+.tb-row-end { display: inline-flex; align-items: center; flex: none; }
+.tb-pin { flex: none; font-size: 10px; font-style: normal; padding: 1px 6px; margin-right: 8px; border-radius: 6px; border: 1px solid oklch(0.62 0.1 260 / 0.25); background: transparent; color: var(--ink-faint); letter-spacing: 0.03em; cursor: pointer; }
+.tb-pin.on { background: oklch(0.62 0.1 260 / 0.14); border-color: transparent; color: oklch(0.45 0.08 260); }
+.tb-pin:disabled { opacity: 0.35; cursor: default; }
+
+/* 删到这句(2026-09-29):选择模式——挑中那句和之后的变淡,输入栏换成一条说明 + 取消/删掉;删完末尾一行小字可撤销 */
+.cc-rw-wrap { display: contents; }
+.cc-rw-wrap.picking > * { cursor: pointer; }
+.cc-rw-wrap.dim > * { opacity: 0.28; transition: opacity 0.25s ease; }
+.cc-rw-cut {
+  align-self: center;
+  margin: 4px 0 0;
+  font-family: var(--font-body);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+.cc-input-bar.rw-hidden { visibility: hidden; pointer-events: none; }
+.cc-input-pill.cc-rw-pill { flex-direction: row !important; align-items: center !important; gap: 12px !important; min-height: 0 !important; padding: 12px 12px 12px 20px !important; }
+.cc-rw-text { flex: 1 1 auto; min-width: 0; font-family: var(--font-body); font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
+.cc-rw-actions { flex: 0 0 auto; flex-wrap: nowrap; }
+.cc-rw-actions button, .cc-panel-actions button { white-space: nowrap; }
+.cc-modal-actions.cc-panel-actions { flex-wrap: wrap; row-gap: 8px; }
+/* 鲸鱼面板底部一排(2026-10-04 原瑶:"压缩换窗那些按钮叠在一起了"):9-29 加了「删到这句」后五颗一排放不下,
+   关闭掉到第二行、正好挂在压缩底下。左右留白收窄、按钮均分排满一行;确认态的字缩成「确认压缩」(CCPage)。
+   iPhone 375 宽起连确认态也是一行,更窄的屏才换行。只剩一颗(API 频道只有关闭)时不拉满。 */
+.cc-modal-actions.cc-panel-actions { gap: 6px; }
+.cc-modal-actions.cc-panel-actions > button { padding-left: 10px; padding-right: 10px; }
+.cc-modal-actions.cc-panel-actions > button:not(:only-child) { flex: 1 1 auto; }
+.cc-rw-link {
+  padding: 0; border: none; background: none;
+  font: inherit; color: var(--ink-soft);
+  text-decoration: underline; text-underline-offset: 3px;
+  cursor: pointer;
+}
+.cc-rw-link:disabled { opacity: 0.6; cursor: default; }
+
+/* 面板里的环境笔 */
+.cc-cont-last { display: flex; flex-direction: column; gap: 4px; }
+.cc-cont-when { font-size: 11px; color: var(--ink-faint, #9aa2b3); letter-spacing: .04em; }
+.cc-cont-text { font-size: 13px; line-height: 1.65; color: var(--ink, #2b3240); }
+.cc-cont-log { font-size: 12px; color: var(--ink-soft, #6b7385); }
+.cc-cont-log summary { cursor: pointer; }
+.cc-cont-row { display: flex; flex-direction: column; gap: 2px; padding: 5px 0; border-top: 1px dashed rgba(0,0,0,.06); }
+.cc-cont-row > span { font-size: 11px; color: var(--ink-faint, #9aa2b3); }
+.cc-cont-row > em { font-style: normal; font-size: 12px; line-height: 1.5; }
+
+/* ════════ 弹窗防出屏(2026-09-30) ════════
+   鲸鱼面板越加越长，手机上底下那排按钮(压缩)被挤出屏幕、滑也滑不到。
+   ① 所有 cc-modal 通用兜底：比屏幕高时整块在遮罩里上下滑，顶和底都够得着；装得下照旧居中，样子不变。
+      上下留白取刘海/底条两者较大值，两头对称，居中位置不挪。
+   ② 鲸鱼面板：标题和底部按钮钉住，中间内容自己滚；上下边缘 12px 柔柔淡出——
+      滚到头时淡出区正好落在留白上看不见，还有内容时底边淡出就是"下面还有"的提示。 */
+.cc-modal-backdrop {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(max(env(safe-area-inset-top, 0px), env(safe-area-inset-bottom, 0px)) + 12px) 0;
+}
+.cc-modal-backdrop > .cc-modal { margin: auto; }
+.cc-modal.cc-panel { max-height: 100%; }
+.cc-panel > .cc-panel-head, .cc-panel > .cc-panel-meta, .cc-panel > .cc-panel-actions { flex-shrink: 0; }
+.cc-panel-scroll {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: -12px -20px;   /* 横向撑到面板边(阴影/描边不被裁)，纵向吃进上下间距，排版位置与原来一致 */
+  padding: 12px 20px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+  scrollbar-width: none;
+}
+.cc-panel-scroll::-webkit-scrollbar { display: none; }
+.cc-panel-body { display: flex; flex-direction: column; gap: 16px; }   /* 同 .cc-panel 的 gap */
+
+/* ====== 气泡颜色 + 边框线（2026-09-30 原瑶）======
+   外观 → 气泡 下面：原样 / 各自 + 浓淡；输入框跟着换（随原瑶的颜色）。同色 09-30 已删，老设置在 appearance.ts 里转成各自。边框线已改成全站开关，见下面「边框线 关」块。
+   appearance.ts 往 body 写 data-bubble-tint 和已含透明度的 --bubble-su / --bubble-you，只在气泡开着时生效。
+   音乐卡那条 .cc-paragraph:has(.mc-card) 用 !important 去底，照旧不套色。
+   放在文件末尾：输入框去描边要压过液态玻璃那条同权重的 box-shadow 规则。 */
+body[data-chat-bubbles="on"][data-bubble-tint="on"] .cc-msg.assistant .cc-paragraph {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(255, 255, 255, 0.06) 100%), var(--bubble-su);
+}
+body[data-chat-bubbles="on"][data-bubble-tint="on"] .cc-msg.user .cc-paragraph,
+body[data-chat-bubbles="on"][data-bubble-tint="on"] .cc-input-pill,
+body[data-chat-bubbles="on"][data-bubble-tint="on"] .cc-top-glass {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(255, 255, 255, 0.06) 100%), var(--bubble-you);
+}
+/* ====== 边框线 关（2026-09-30 原瑶）======
+   外观 → 质感 → 边框线：appearance.ts 往 body 写 data-edges="on|off"。关掉时全站玻璃的细亮边一起去掉：
+   ::after 斜描边、0.5–1px 白边框、blur ≤ 2px 的亮线阴影；落影和 ≥ 4px 的柔光保留。
+   取代原来只管气泡/输入框、挂在 data-bubble-edge 上的两条（appearance.ts 已不写那个属性）。
+   .uc-* 卡片自己挂在 body:not([data-edges="off"]) 下，不在这里。
+   每条都带 body[data-edges] 前缀（≥ 0,2,1），靠权重压过前面各版 .glass 和各页 <style> / cards.css，不靠先后。 */
+
+/* 共享阴影变量只留柔落影：通话卡/键、头像、+ 菜单、潮汐、通话记录、个人页都吃这几个（关键帧里的 var() 也跟着变） */
+body[data-edges="off"] {
+  --shadow-glass: 0 12px 32px -8px oklch(0.4 0.06 252 / 0.18);
+  --shadow-slot: 0 4px 10px -4px oklch(0.4 0.06 252 / 0.18);
+  --shadow-dock: 0 16px 36px -10px oklch(0.2 0.06 252 / 0.30);
+}
+
+/* 1. 135° 斜描边（::after 只画这一圈，关掉不丢别的） */
+body[data-edges="off"] .glass::after,
+body[data-edges="off"] .mc-card::after,
+body[data-edges="off"] .img-slot::after,
+body[data-edges="off"] .dock-edge::after,
+body[data-edges="off"] .dock-pill::after,
+body[data-edges="off"] .cc-input-pill::after,
+body[data-edges="off"] .sb-drawer::after,
+body[data-chat-bubbles="on"][data-edges="off"] .cc-paragraph::after {
+  display: none;
+}
+
+/* 2. 七层阴影去掉三条 1px 亮线（顶外细光 / 顶内提亮 / 底细边），留落影和三层柔光 */
+body[data-edges="off"] .glass,
+body[data-edges="off"] .dock-edge,
+body[data-edges="off"] .dock-pill,
+body[data-edges="off"] .cc-input-pill {
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.08),
+    inset 0 -14px 26px rgba(20, 30, 60, 0.05),
+    inset 0 -10px 18px rgba(255, 255, 255, 0.03),
+    inset 0 -3px 6px rgba(255, 255, 255, 0.07);
+}
+/* 百宝箱卡片本来就只剩一条亮线（也压住上面 .glass 那条，别把落影加回去） */
+body[data-edges="off"] .tb-page .st-card { box-shadow: none; }
+
+/* 3. 图标格：去掉顶部亮线；dock 字母格、主页头像、聊天头像各有自己的阴影，排除 */
+body[data-edges="off"] .img-slot:not(.img-dock):not(.avatar-slot):not(.cc-avatar-slot) {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.07), inset 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+/* 4. 阴影里夹着细环/亮线的面：照抄柔的那几层 */
+body[data-edges="off"] .sb-viewer,
+body[data-edges="off"] .sb-arcade { box-shadow: 0 30px 80px rgba(20, 40, 80, 0.25); }
+body[data-edges="off"] .sp-panel { box-shadow: 0 -8px 40px rgba(20, 40, 80, 0.22); }
+body[data-edges="off"] .mh-panel { box-shadow: 0 -8px 44px rgba(20, 40, 80, 0.24); }
+body[data-edges="off"] .icon-menu { box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18); }
+body[data-edges="off"] .crop-dialog { box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
+body[data-edges="off"] .cc-msg-html { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07), inset 0 0 20px rgba(255, 255, 255, 0.05); }
+body[data-edges="off"] .cd-chip { box-shadow: 0 1px 2px oklch(0.35 0.05 252 / 0.10), 0 12px 26px -12px oklch(0.35 0.07 252 / 0.38); }
+body[data-edges="off"] .cd-foot { box-shadow: 0 6px 16px -8px oklch(0.35 0.07 252 / 0.3); }
+body[data-edges="off"] .cal-entry-date,
+body[data-edges="off"] .mood-count { box-shadow: none; }
+
+/* 5. 玻璃面和玻璃小件上的白边框：只把颜色变透明，宽度不动免得跳版。输入框、彩色按钮、分隔线不在这里 */
+body[data-edges="off"] .cc-avatar-slot,
+body[data-edges="off"] .cc-plus-item,
+body[data-edges="off"] .cc-msg-file,
+body[data-edges="off"] .cc-msg-html,
+body[data-edges="off"] .cc-tool-chip,
+body[data-edges="off"] .cc-memory-hits,
+body[data-edges="off"] .cc-attach,
+body[data-edges="off"] .cc-modal-actions button:not(.cc-panel-action),
+body[data-edges="off"] .cc-compress-btn,
+body[data-edges="off"] .cmh-row,
+body[data-edges="off"] .ap-panel,
+body[data-edges="off"] .ap-uc-preview,
+body[data-edges="off"] .sb-close,
+body[data-edges="off"] .sp-close,
+body[data-edges="off"] .mh-close,
+body[data-edges="off"] .icon-menu-btn,
+body[data-edges="off"] .tp-back,
+body[data-edges="off"] .tp-btn:not(.tp-btn-primary),
+body[data-edges="off"] .tp-tabs,
+body[data-edges="off"] .mood-btn,
+body[data-edges="off"] .st-back,
+body[data-edges="off"] .st-refresh,
+body[data-edges="off"] .st-domain,
+body[data-edges="off"] .st-port,
+body[data-edges="off"] .st-expand,
+body[data-edges="off"] .st-copy,
+body[data-edges="off"] .st-act-edit,
+body[data-edges="off"] .st-modal-cancel,
+body[data-edges="off"] .st-chart-wrap,
+body[data-edges="off"] .st-chart-tip,
+body[data-edges="off"] .call-card,
+body[data-edges="off"] .call-chip,
+body[data-edges="off"] .call-bubble,
+body[data-edges="off"] .cd-chip,
+body[data-edges="off"] .cd-foot,
+body[data-edges="off"] .ch-item,
+body[data-edges="off"] .pp-card,
+body[data-edges="off"] .td-calendar-card,
+body[data-edges="off"] .td-time-day,
+body[data-edges="off"] .td-card,
+body[data-edges="off"] .td-form,
+body[data-edges="off"] .td-undo-bar,
+body[data-edges="off"] .wl-money,
+body[data-edges="off"] .wl-card {
+  border-color: transparent;
+}
+/* 这两条原规则带 !important（.sb-drawer 5180、.cc-panel .cc-panel-card 5067），只能同样 !important + 更高权重压 */
+body[data-edges="off"] .sb-drawer,
+body[data-edges="off"] .cc-panel-card {
+  border-color: transparent !important;
+}
+
+/* 潮汐“今天”那张卡的蓝边是标记不是白边：只去掉白的那半，蓝色留着 */
+body[data-edges="off"] .td-time-day.is-today { border-color: color-mix(in srgb, var(--blue) 38%, transparent); }
+/* 潮汐的誓言/欠条靠左边那道蓝条认，不是边框；只清其它三边，普通行四边都清 */
+body[data-edges="off"] .td-row { border-top-color: transparent; border-right-color: transparent; border-bottom-color: transparent; }
+body[data-edges="off"] .td-row:not(.vow):not(.debt) { border-left-color: transparent; }
+/* 渐变底的小件边框一透明，渐变会在边框那一圈露出下一格的另一头，多出一道亮线；让背景从边框起铺 */
+body[data-edges="off"] .cd-chip,
+body[data-edges="off"] .cc-plus-item,
+body[data-edges="off"] .ap-panel,
+body[data-edges="off"] .call-bubble { background-origin: border-box !important; }   /* 通话气泡、+ 菜单的状态规则用 background 简写会把它重置 */
+/* 挑漏补上的：点歌搜索框、通话留言框（没有聚焦变色，边框纯是白线）；鲸鱼面板下拉（原规则带 !important） */
+body[data-edges="off"] .sp-input,
+body[data-edges="off"] .call-note-input { border-color: transparent; }
+body[data-edges="off"] .cc-model-select { border-color: transparent !important; }
+/* 玻璃弹窗里的输入框：平时不描边，聚焦时原来的变色照旧 */
+body[data-edges="off"] .cc-modal-input:not(:focus),
+body[data-edges="off"] .st-textarea:not(:focus),
+body[data-edges="off"] .st-chart-range:not(:focus),
+body[data-edges="off"] .cd-input:not(:focus) { border-color: transparent; }
+/* 音乐卡没封面时的占位格那圈白环 */
+body[data-edges="off"] .mc-cover { box-shadow: 0 2px 8px -2px oklch(0.3 0.06 252 / 0.30); }
+/* 挂卡片弹窗的分段按钮、群聊弹窗里的选项块（选中态靠底色认，不靠边框） */
+body[data-edges="off"] .cd-seg > button:not(.on),
+body[data-edges="off"] .gc-pick:not(.on),
+body[data-edges="off"] .gc-mem-mode:not(.on),
+body[data-edges="off"] .gc-stepper button { border-color: transparent; }
+/* 顶栏玻璃胶囊：去掉那圈斜描边 */
+body[data-edges="off"] .cc-top-glass::after { display: none; }
+.ap-sub-toggle { padding: 6px 10px; }
+.ap-sub-toggle > span { font-size: 13.5px; color: var(--ink); }
+/* 字晕染（2026-09-30 原瑶，10-01 统一，10-02 定范围）：外观 → 质感 的「晕染」滑杆，0 = 关。text-shadow 由 appearance.ts 按滑杆值拼好写进 --bubble-glow，
+   颜色用 currentColor 跟着各自的字色走（继承下去的也按各自的字色算）。
+   范围（10-02 原瑶："只针对聊天和带卡片的 Undercurrent 里的内容，其他不用做"）：主聊天的消息区 .cc-messages（CC 和 API 频道）、输入框、Undercurrent 卡片。
+   主页、面板、侧栏、顶栏、挂着的歌卡、客厅、中间地带、海螺盒、通话、阅读都不晕。
+   这三处里面靠继承，不挑名单（她说过"要一个个发现哪个没有做，感觉很乱"）：气泡、时间、标签、歌名小字、语音条、文件、工具条，以后新加的也自动跟着。
+   按钮、输入框浏览器默认不继承 text-shadow，这里让它们也继承；只有代码不晕（等宽字一晕就糊）。 */
+body[data-bubble-glow="on"] :is(.cc-messages, .cc-input-pill textarea, .uc-card) { text-shadow: var(--bubble-glow); }
+body[data-bubble-glow="on"] :is(.cc-messages, .uc-card) :is(button, input, textarea, select) { text-shadow: inherit; }
+body[data-bubble-glow="on"] :is(.cc-messages, .uc-card) :is(pre, code) { text-shadow: none; }
+
+/* ====== Undercurrent 卡片（2026-09-30 原瑶，v2 悬浮拟物）======
+   思维链双击浮出（UndercurrentCard.tsx），点外面 / 双击卡片 / Esc 收起。样式 uc-tide/ink/smoke/vellum/veil/frost 由 外观 → Undercurrent 卡片 选；
+   uc-has-img = 垫了自己的图（smoke/vellum/veil/frost 可垫），这时卡片不再透出聊天，底图在最下、纸或玻璃盖在上面。
+   结构：.uc-ov > .uc-haze(背景虚化，兄弟层) + .uc-float > .uc-shade(落在下面的影子) + .uc-card。
+   动画只动卡片和影子自己（transform + opacity）；别给 .uc-ov/.uc-float 这类祖先做 opacity 动画，Chromium 会把它当 backdrop root，卡片的磨砂就只看得到透明。
+   卡片的线（斜面高光）都挂在 body:not([data-edges="off"]) 下，边框线一关就跟全站玻璃一起没。 */
+.uc-ov { position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.uc-leaving { pointer-events: none; }
+.uc-haze { position: fixed; inset: 0; -webkit-backdrop-filter: blur(var(--uc-blur)); backdrop-filter: blur(var(--uc-blur)); animation: uc-fade 0.3s ease-out both; }
+.uc-leaving .uc-haze { animation: uc-fade-out 0.2s ease-in both; }
+@keyframes uc-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes uc-fade-out { from { opacity: 1; } to { opacity: 0; } }
+.uc-float { position: relative; display: flex; }
+.uc-card { position: relative; width: min(84vw, 460px); max-height: 62vh; display: flex; flex-direction: column; animation: uc-in 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.12) both; }
+.uc-shade { display: none; position: absolute; pointer-events: none; animation: uc-in 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.12) both; }
+.uc-leaving .uc-card, .uc-leaving .uc-shade { animation: uc-out 0.2s cubic-bezier(0.4, 0, 1, 1) both; }
+/* 浮起：从下方一点点升上来，末尾轻轻回弹；收起反着走 */
+@keyframes uc-in { from { opacity: 0; transform: translateY(18px) scale(0.94); } 55% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes uc-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(0.97); } }
+.uc-under, .uc-glass { position: absolute; pointer-events: none; }
+.uc-glass { inset: 0; border-radius: inherit; }
+.uc-title { position: relative; flex: 0 0 auto; padding: 26px 30px 6px; font-family: var(--font-display); font-style: italic; font-weight: 500; letter-spacing: 0.06em; font-size: 15px; }
+.uc-body {
+  position: relative; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;   /* 滚动条不要 */
+  padding: 4px 30px 30px; font-family: var(--font-body); font-size: 13.5px; line-height: 1.8; white-space: pre-wrap; word-break: break-word;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--uc-ft, 0px), #000 calc(100% - 22px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 var(--uc-ft, 0px), #000 calc(100% - 22px), transparent);
+}
+.uc-body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+/* 卡片里往上滑时顶上也一行行淡出（10-12 原瑶）：--uc-ft 是顶上那条渐隐带的高度，跟着卡片自己的滚动从 0 长到 28px（一行多一点），
+   没滚的时候是 0，第一行不被淡掉。遮罩本来就挂着（底下那条），所以这里变量写在规则里没问题（Safari 认）；不认滚动驱动动画的浏览器停在 0 */
+@property --uc-ft { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@supports (scroll-timeline: --a block) and (animation-range: 0px 10px) {
+  @keyframes uc-fade-top { to { --uc-ft: 28px; } }
+  .uc-body { scroll-timeline: --uc-body block; animation: uc-fade-top linear both; animation-timeline: --uc-body; animation-range: 0px 28px; }
+  body[data-power-save="true"] .uc-body { animation-play-state: running !important; }
+}
+body[data-chat-thinking-size="custom"] .uc-body { font-size: var(--chat-thinking-size); }
+.uc-ink .uc-title, .uc-smoke .uc-title { color: rgba(190, 208, 240, 0.6); }
+.uc-ink .uc-body, .uc-smoke .uc-body { color: rgba(234, 238, 247, 0.9); }
+.uc-tide .uc-title, .uc-vellum .uc-title, .uc-veil .uc-title, .uc-frost .uc-title { color: rgba(60, 74, 104, 0.62); }
+.uc-tide .uc-body, .uc-vellum .uc-body, .uc-veil .uc-body, .uc-frost .uc-body { color: rgba(26, 32, 48, 0.88); }
+
+/* 黑卡片：一块边缘晕开的漆黑，左上泛一点深蓝的漆光；底下一团更远更淡的影子，像悬着 */
+.uc-ink .uc-card::before { content: ''; position: absolute; inset: 6px; border-radius: 44px; pointer-events: none; filter: blur(18px);
+  background: radial-gradient(120% 70% at 28% 0%, rgba(44, 58, 92, 0.55), rgba(6, 8, 14, 0) 62%), rgba(6, 8, 14, 0.88); }
+.uc-ink .uc-shade { display: block; left: 14%; right: 14%; bottom: -30px; height: 64px; border-radius: 50%; background: rgba(8, 14, 30, 0.34); filter: blur(24px); }
+.uc-ink .uc-title { padding: 30px 32px 8px; }
+.uc-ink .uc-body { padding: 4px 32px 36px; }
+
+/* 暗潮：音乐卡那片海从底下漫上来（2026-10-02 原瑶："暗潮我想做成音乐卡片里的那种效果"，原来那片深水和水面微光删了）。
+   海在 UndercurrentCard.tsx 的 UcSea：.uc-sea 比卡片高出 24px，标题浸在浅水里。
+   .uc-sea-top 是水面那一窄条：波形 + 湍流扰动 + 模糊，跟音乐卡同一套参数，缩放也差不多。
+   下面 .uc-sea-body 接同色渐变：往下是音乐卡 sea 渐变的中 .40、深 .60 两档，水面那截比音乐卡蓝一点（浅玻璃上浅白的水看不出浪），水是透的。
+   跟音乐卡一样由一块浅玻璃托着（10-02 她说喜欢透明的，不要不透的浅底）：卡片本身是磨砂浅玻璃，顶上两个圆角，边框线开着时有斜面描边；
+   海装在玻璃里，水面在玻璃顶边下面一点，浪更高，前后两层反着走，扰动更强，整片随涌浪上下起伏。
+   湍流滤镜按面积算，整片屏幕宽的海全挂滤镜在手机上太重，所以只挂水面那一条。字跟纸、玻璃几种一样用深色 */
+.uc-tide.uc-ov { align-items: flex-end; padding: 0; }
+.uc-tide .uc-float { width: 100%; }
+.uc-tide .uc-card { width: 100%; max-height: 66vh; animation-name: uc-rise; }
+.uc-leaving.uc-tide .uc-card { animation-name: uc-sink; }
+@keyframes uc-rise { from { opacity: 0; transform: translateY(48px); } 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes uc-sink { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(36px); } }
+.uc-tide .uc-card { border-radius: 26px 26px 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08) 45%, rgba(255, 255, 255, 0.04)), rgba(150, 180, 220, 0.06);
+  -webkit-backdrop-filter: blur(10px) saturate(130%); backdrop-filter: blur(10px) saturate(130%); }
+/* 身后深的地方换浅字：每段、标题各按自己身后判，卡片里的海越往下越深也算进去（UndercurrentCard 的 UcTone；10-12 原瑶要分段变化，原来打开时整张卡一起换） */
+.uc-tide .uc-title[data-tone="dark"] { color: rgba(210, 224, 246, 0.72); }
+.uc-tide .uc-body .cc-think-p[data-tone="dark"] { color: rgba(238, 243, 251, 0.94); }
+.uc-tide .uc-title { transition: color 0.45s ease; }
+body:not([data-edges="off"]) .uc-tide .uc-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.18) 40%, rgba(255, 255, 255, 0.06) 70%, rgba(255, 255, 255, 0.4) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; }
+.uc-sea { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.uc-sea-top { position: absolute; left: 0; top: 0; width: 100%; height: 60px; display: block; }
+.uc-sea-body { position: absolute; left: 0; right: 0; top: 60px; bottom: 0; background: linear-gradient(to bottom, rgba(120, 172, 232, 0.38), rgba(86, 150, 216, 0.44) 45%, rgba(34, 98, 208, 0.6)); }
+.uc-sea-glints { position: absolute; inset: 0; overflow: hidden; }
+.uc-tide .uc-title { padding: 24px 30px 8px; }
+.uc-tide .uc-body { padding: 4px 30px calc(env(safe-area-inset-bottom, 0px) + 36px); }
+
+/* 硫酸纸：一张有厚度的纸，上沿受光，悬在聊天上投下近实远虚的影子 */
+.uc-vellum .uc-card { border-radius: 3px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 22%), url('./assets/uc/vellum.png') 0 0 / 256px 256px, linear-gradient(170deg, rgba(250, 251, 253, 0.62), rgba(242, 245, 250, 0.54));
+  -webkit-backdrop-filter: blur(6px) saturate(108%); backdrop-filter: blur(6px) saturate(108%);
+  box-shadow: 0 1px 3px rgba(20, 30, 55, 0.08), 0 8px 16px -8px rgba(20, 30, 55, 0.18), 0 30px 54px -18px rgba(20, 30, 55, 0.32); }
+/* 晕边硫酸纸：四边羽化没有边；影子放在卡片外的 .uc-shade（羽化会连卡片自己的阴影一起裁掉） */
+.uc-veil .uc-card { background: url('./assets/uc/vellum.png') 0 0 / 256px 256px, rgba(248, 250, 253, 0.56);
+  -webkit-backdrop-filter: blur(7px) saturate(110%); backdrop-filter: blur(7px) saturate(110%);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 34px, #000 calc(100% - 34px), transparent), linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent); -webkit-mask-composite: source-in; mask-image: linear-gradient(to right, transparent, #000 34px, #000 calc(100% - 34px), transparent), linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent); mask-composite: intersect; }
+.uc-veil .uc-shade { display: block; inset: 18% 10% -4% 10%; border-radius: 40px; background: rgba(20, 32, 64, 0.2); filter: blur(28px); }
+.uc-veil .uc-title { padding: 36px 40px 6px; }
+.uc-veil .uc-body { padding: 4px 40px 42px; }
+/* 烟黑硫酸纸：烟色半透明的纸，影子更深 */
+.uc-smoke .uc-card { border-radius: 3px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 20%), linear-gradient(115deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.07) 44%, rgba(255, 255, 255, 0) 58%), url('./assets/uc/vellum-dark.png') 0 0 / 256px 256px, rgba(12, 15, 22, 0.72);
+  -webkit-backdrop-filter: blur(10px) saturate(120%); backdrop-filter: blur(10px) saturate(120%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.14), 0 12px 22px -10px rgba(0, 0, 0, 0.3), 0 36px 64px -20px rgba(0, 0, 0, 0.44); }
+/* 磨砂玻璃：一块厚玻璃，左上镜面反光、下沿背光，悬浮投影 */
+.uc-frost .uc-card { border-radius: 20px;
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0) 36%), linear-gradient(0deg, rgba(20, 34, 70, 0.06), rgba(20, 34, 70, 0) 30%), url('./assets/uc/grain.png') 0 0 / 128px 128px, url('./assets/uc/hammer.png') 0 0 / 200px 200px, rgba(236, 242, 250, 0.26);
+  -webkit-backdrop-filter: blur(12px) saturate(135%); backdrop-filter: blur(12px) saturate(135%);
+  box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.32), inset 0 -10px 18px rgba(20, 34, 70, 0.06), 0 2px 6px rgba(15, 25, 50, 0.08), 0 16px 32px -10px rgba(15, 25, 50, 0.22), 0 44px 80px -24px rgba(15, 25, 50, 0.3); }
+/* 玻璃斜面：135° 渐隐描边，只在边框线开着时有 */
+body:not([data-edges="off"]) .uc-frost .uc-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.18) 40%, rgba(255, 255, 255, 0.06) 70%, rgba(255, 255, 255, 0.4) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; }
+
+/* 垫了自己的图：底图在最下（磨砂玻璃用 #uc-glass 真折射，iPhone 支持 filter:url()），纸或玻璃盖在上面；悬浮影子保留 */
+.uc-has-img .uc-card { overflow: hidden; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.uc-has-img.uc-vellum .uc-card, .uc-has-img.uc-veil .uc-card, .uc-has-img.uc-smoke .uc-card, .uc-has-img.uc-frost .uc-card { background: none; }
+.uc-under { inset: -24px; background-position: center; background-size: cover; }
+.uc-vellum.uc-has-img .uc-under, .uc-veil.uc-has-img .uc-under { filter: blur(var(--uc-img-blur, 9px)) saturate(92%); }   /* 半径来自外观「清晰」滑杆 */
+.uc-vellum.uc-has-img .uc-glass { background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 22%), url('./assets/uc/vellum.png') 0 0 / 256px 256px, rgba(250, 251, 253, 0.55); }
+.uc-veil.uc-has-img .uc-glass { background: url('./assets/uc/vellum.png') 0 0 / 256px 256px, rgba(250, 251, 253, 0.55); }
+.uc-smoke.uc-has-img .uc-under { filter: blur(var(--uc-img-blur, 10px)) saturate(90%); }
+.uc-smoke.uc-has-img .uc-glass { background: url('./assets/uc/vellum-dark.png') 0 0 / 256px 256px, rgba(12, 15, 22, 0.66); }
+.uc-frost.uc-has-img .uc-under { inset: -20px; filter: url(#uc-glass); }
+.uc-frost.uc-has-img .uc-glass { background: linear-gradient(125deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 36%), url('./assets/uc/grain.png') 0 0 / 128px 128px, url('./assets/uc/hammer.png') 0 0 / 200px 200px, rgba(255, 255, 255, 0.3); }
+@media (prefers-reduced-motion: reduce) { .uc-card, .uc-shade, .uc-haze { animation: none; } }
+
+/* 外观面板：「无」底图按钮选中的样子跟缩略图一致；「看看效果」 */
+.ap-thumb-none { font-size: 12px; color: var(--ink-soft); }
+.ap-thumb-none.active { border-color: oklch(0.55 0.16 250); box-shadow: 0 0 0 2px oklch(0.55 0.16 250 / 0.18); }
+.ap-uc-preview { align-self: flex-start; margin: 2px 4px 0; padding: 6px 14px; border-radius: 999px; border: 0.5px solid rgba(255, 255, 255, 0.55); background: rgba(200, 220, 245, 0.28); color: var(--ink); font-size: 12.5px; cursor: pointer; }
+
+/* ====== 顶栏右上玻璃胶囊（2026-10-01 原瑶）======
+   海螺盒和面板两颗按钮合在一颗胶囊里（形状照 iOS 备忘录顶栏）；玻璃用家里自己的、跟气泡同一块：
+   极淡蓝灰 + 顶黑底白微渐变、5px 磨砂、135° 渐隐描边（边框线开关管），不要投影。气泡开了「各自」颜色时跟输入框一样染原瑶那一色。 */
+.cc-top-glass {
+  position: relative; display: flex; align-items: center; height: 36px; padding: 0 3px; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(255, 255, 255, 0.06) 100%), rgba(150, 180, 220, 0.04);
+  -webkit-backdrop-filter: blur(5px) saturate(120%); backdrop-filter: blur(5px) saturate(120%);
+}
+.cc-top-glass::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.18) 30%, rgba(255, 255, 255, 0.18) 70%, rgba(255, 255, 255, 0) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude;
+}
+.cc-top-glass-btn {
+  width: 40px; height: 30px; padding: 0; border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+  display: grid; place-items: center; color: oklch(0.3 0.04 252);
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: background-color 0.15s, transform 0.18s var(--ease-spring, cubic-bezier(0.4, 1.2, 0.5, 1));
+}
+.cc-top-glass-btn svg { width: 20px; height: 20px; display: block; }
+.cc-top-glass-btn:active { background-color: rgba(255, 255, 255, 0.28); transform: scale(0.92); }
+.cc-top-glass-btn:focus-visible { outline: 2px solid oklch(0.55 0.13 250 / 0.6); outline-offset: 1px; }
+
+/* ====== 顶栏短句 + 黑白（2026-10-01 原瑶）======
+   Claude 换成苏煦写的葡萄牙语短句（Tagline.tsx），状态小字去掉只留点；月亮从正中挪到右边胶囊左上角斜挂。
+   字和图标跟背景深浅变黑白：chatTone.ts 按每个元素身后那一小块背景，在它自己身上写 data-tone，
+   light = 浅底用深色，dark = 深底用白色。月亮颜色不变，保持银白。
+   10-01 晚她看对比图后定：短句 Cormorant Garamond 斜体 700、不要发光（亮背景上发光发糊、字也分不出主次）；
+   月亮从 26px 缩到 20px，浅背景上白光晕换成淡灰影（白光晕在白底上糊成一圈，月亮本身看不见），深背景照旧发光。 */
+.cc-top { grid-template-columns: minmax(0, 1fr) auto !important; }
+.cc-top-right { position: relative; }
+.cc-top-right .cc-moon { position: absolute; left: -11px; top: -8px; z-index: 3; margin: 0 !important; transform: rotate(-26deg); }
+.cc-top-right .cc-moon:hover { transform: rotate(-26deg) scale(1.08); }
+.cc-top-right .moon-svg { width: 20px; height: 20px; }
+body .cc-top-right .cc-moon[data-tone="light"] { filter: drop-shadow(0 1px 1.5px rgba(40, 55, 80, 0.45)) drop-shadow(0 0 3px rgba(40, 55, 80, 0.18)) !important; }
+
+.cc-tagline-wrap { position: relative; display: flex; align-items: center; min-width: 0; }
+.cc-tagline {
+  font-weight: 700 !important; letter-spacing: 0.05em !important; text-shadow: none;
+  white-space: nowrap; cursor: pointer;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+}
+.cc-tagline-text { display: inline-block; }   /* 换句的动效 10-03 起在 taglineMotion.tsx，见文末「短句换场」 */
+/* 长按浮出的中文：家里自己的玻璃（跟气泡、胶囊同一块），2.4 秒淡掉 */
+.cc-tagline-zh {
+  position: absolute; left: 0; top: calc(100% + 9px); z-index: 20; pointer-events: none;
+  padding: 6px 13px; border-radius: 999px; white-space: nowrap;
+  font-family: var(--font-body); font-size: 13.5px; letter-spacing: 0.04em; color: oklch(0.26 0.03 252);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(255, 255, 255, 0.06) 100%), rgba(150, 180, 220, 0.04);
+  -webkit-backdrop-filter: blur(8px) saturate(120%); backdrop-filter: blur(8px) saturate(120%);
+  animation: cc-tagline-zh 5s ease both;   /* 点一下浮 5 秒（10-02 原来长按 2.4 秒） */
+}
+.cc-tagline-zh::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.18) 30%, rgba(255, 255, 255, 0.18) 70%, rgba(255, 255, 255, 0) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude;
+}
+body[data-edges="off"] .cc-tagline-zh::after { display: none; }
+@keyframes cc-tagline-zh { 0% { opacity: 0; transform: translateY(-4px); } 12%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+body .cc-tagline[data-tone="light"] { color: oklch(0.26 0.03 252) !important; }
+body .cc-tagline[data-tone="dark"] { color: #f3f5f7 !important; }
+body .cc-tagline-zh[data-tone="dark"] { color: #fff; }
+body .cc-top-glass-btn[data-tone="light"] { color: oklch(0.26 0.03 252); }
+body .cc-top-glass-btn[data-tone="dark"] { color: #fff; }
+body .cc-top-glass-btn[data-tone="dark"]:active { background-color: rgba(255, 255, 255, 0.16); }
+/* 去掉胶囊、只留两颗图标（外观 → 顶栏胶囊 关，10-13 原瑶）：位置大小照旧，月亮还斜挂在原来胶囊左上角那里；
+   按下不亮圆底，图标自己缩一下、淡一点（iOS 玻璃那条"小钮按下不缩"是给胶囊整颗鼓起来让位的，这里没有胶囊，放开） */
+.cc-top-bare { position: relative; display: flex; align-items: center; height: 36px; padding: 0 3px; }
+body .cc-top-bare .cc-top-glass-btn:active { background-color: transparent; opacity: 0.55; }
+html[data-glass="ios"] .cc-top-bare .cc-top-glass-btn:active { transform: scale(0.92) !important; }
+body :is(.cc-plus, .cc-send, .cc-plus-item)[data-tone="light"] { color: oklch(0.26 0.03 252) !important; }
+body :is(.cc-plus, .cc-send, .cc-plus-item)[data-tone="dark"] { color: #fff !important; }
+body .cc-plus-item.off[data-tone] { opacity: 0.4; }   /* 「+」菜单里关着的开关照旧淡一些 */
+/* Undercurrent 标签、时间、小心：原来的浅灰是照着白底配的，中间调的背景上看不清，所以浅底也换成半透明深色 */
+body .cc-thinking-toggle[data-tone="light"] { color: oklch(0.26 0.03 252 / 0.7) !important; }
+body .cc-thinking-toggle[data-tone="dark"] { color: rgba(255, 255, 255, 0.74) !important; }
+body .cc-msg-time[data-tone="light"] { color: oklch(0.26 0.03 252 / 0.5); opacity: 1; }
+body .cc-msg-time[data-tone="dark"] { color: rgba(255, 255, 255, 0.65); opacity: 1; }
+.cc-conch-btn { color: #b98a5a; }
+body .cc-conch-btn[data-tone="light"] { color: oklch(0.3 0.04 252); }
+body .cc-conch-btn[data-tone="dark"] { color: #fff; }
+
+/* 外观 → 海螺盒图标：每个选项前面放一个实际的小图标（2026-10-01） */
+.ap-radio-icon { display: grid; place-items: center; width: 22px; height: 22px; flex: none; color: oklch(0.26 0.03 252); }
+.ap-radio-icon svg { width: 20px; height: 20px; display: block; }
+
+/* 气泡下的时间和小心跟气泡里的字对齐（2026-10-01 原瑶：看着不齐）：原来离气泡边 22px，比气泡里的字多缩进了 10px；
+   用气泡左右内边距同一个数（0.82 倍正文字号），调字号也跟着走；右边扣掉小心按钮自带的 4px 内边距，让心的边对齐字 */
+body[data-chat-bubbles="on"] .cc-msg.assistant .cc-msg-time-block { margin-left: calc(var(--chat-text-size, 14.5px) * 0.82); }
+body[data-chat-bubbles="on"] .cc-msg.user .cc-msg-time-block { margin-right: calc(var(--chat-text-size, 14.5px) * 0.82 - 4px); }
+body:not([data-chat-bubbles="on"]) .cc-msg.user .cc-msg-time-block { margin-right: -4px; }
+/* 消息旁的小心：收进海螺盒的（不管谁收的）变蓝，跟「+」菜单里开着的开关同一个蓝；没收的是半透明的黑白 */
+body .cc-conch-btn.saved { color: oklch(0.62 0.13 256); }
+body .cc-conch-btn.saved[data-tone="dark"] { color: oklch(0.8 0.1 250); }
+/* 原瑶自己那边的消息：没收的心不显示，只留收过的蓝心（2026-10-01 她挑的）；代价是她自己的话不能在聊天里点心收进海螺盒。
+   心藏起来时时间那行不用再扣心按钮的 4px，时间直接对齐气泡里的字 */
+.cc-msg.user .cc-conch-btn:not(.saved) { display: none; }
+body[data-chat-bubbles="on"] .cc-msg.user .cc-msg-time-block:not(:has(.cc-conch-btn.saved)) { margin-right: calc(var(--chat-text-size, 14.5px) * 0.82); }
+body:not([data-chat-bubbles="on"]) .cc-msg.user .cc-msg-time-block:not(:has(.cc-conch-btn.saved)) { margin-right: 0; }
+
+/* 正文跟背景深浅变明暗（2026-10-01 原瑶）：色相和浓淡都是她在「文字颜色」里挑的，只改明度——
+   深背景上提亮、浅背景上压暗，推到多少由 chatTone.ts 按身后亮度和对比度目标算好写在每段的 --tl（见下面"明度推到哪儿"那段）。
+   oklch 相对色，换了颜色也照样跟着变；不认相对色的老浏览器这几条整条作废，照原色 */
+body .cc-msg.assistant .cc-paragraph[data-tone="dark"] { color: oklch(from var(--text-su, #5b7099) max(l, var(--tl, 0.82)) c h); }
+body .cc-msg.assistant .cc-paragraph[data-tone="light"] { color: oklch(from var(--text-su, #5b7099) min(l, var(--tl, 0.6)) c h); }
+body .cc-msg.user .cc-paragraph[data-tone="dark"] { color: oklch(from var(--text-you, #857354) max(l, var(--tl, 0.82)) c h); }
+body .cc-msg.user .cc-paragraph[data-tone="light"] { color: oklch(from var(--text-you, #857354) min(l, var(--tl, 0.6)) c h); }
+/* 同一个办法用在 Undercurrent 展开的思考正文（颜色是外观里的「思考颜色」，比正文稍暗一档，深背景至少 0.76；10-12 起每段 .cc-think-p 各判各的）
+   和输入框里打的字（她自己的颜色，连光标、占位字一起）。原规则带 !important，这里也带 */
+body .cc-thinking-body .cc-think-p[data-tone="dark"] { color: oklch(from var(--text-thinking, #6f7888) max(l, var(--tl, 0.76)) c h) !important; }
+body .cc-thinking-body .cc-think-p[data-tone="light"] { color: oklch(from var(--text-thinking, #6f7888) min(l, var(--tl, 0.6)) c h) !important; }
+body .cc-input-pill textarea[data-tone="dark"] { color: oklch(from var(--text-you, #857354) max(l, var(--tl, 0.82)) c h) !important; caret-color: oklch(from var(--text-you, #857354) max(l, var(--tl, 0.82)) c h); }
+body .cc-input-pill textarea[data-tone="light"] { color: oklch(from var(--text-you, #857354) min(l, var(--tl, 0.6)) c h) !important; caret-color: oklch(from var(--text-you, #857354) min(l, var(--tl, 0.6)) c h); }
+body .cc-input-pill textarea[data-tone="dark"]::placeholder { color: oklch(from var(--text-you, #857354) max(l, var(--tl, 0.82)) c h) !important; }
+body .cc-input-pill textarea[data-tone="light"]::placeholder { color: oklch(from var(--text-you, #857354) min(l, var(--tl, 0.6)) c h) !important; }
+/* 语音条（10-04）：星星深背景白、浅背景深色，和顶栏短句同一对（canvas 在 voiceStars.ts 里按 data-tone 取同样两色）；时间同消息时间；展开的文字同正文 */
+body .cc-voice-wave[data-tone="light"] { color: oklch(0.26 0.03 252); }
+body .cc-voice-wave[data-tone="dark"] { color: #f3f5f7; }
+body .cc-voice-time[data-tone="light"] { color: oklch(0.26 0.03 252 / 0.5); }
+body .cc-voice-time[data-tone="dark"] { color: rgba(255, 255, 255, 0.65); }
+body .cc-msg.assistant .cc-voice-text[data-tone="dark"] { color: oklch(from var(--text-su, #5b7099) max(l, var(--tl, 0.82)) c h); }
+body .cc-msg.assistant .cc-voice-text[data-tone="light"] { color: oklch(from var(--text-su, #5b7099) min(l, var(--tl, 0.6)) c h); }
+body .cc-msg.user .cc-voice-text[data-tone="dark"] { color: oklch(from var(--text-you, #857354) max(l, var(--tl, 0.82)) c h); }
+body .cc-msg.user .cc-voice-text[data-tone="light"] { color: oklch(from var(--text-you, #857354) min(l, var(--tl, 0.6)) c h); }
+/* 语音条旁边的花（10-04 原瑶："旁边的心这次我想改成黑/白色的花"）：最早上线的是五瓣小梅花，同一天换过正面看的小玫瑰、画板上的四瓣小花，
+   最后她要回五瓣这朵（"我刚刚说错了，应该是五瓣花那个"）：照原来那版原样，花瓣圆 r 3.9、圆心按 72° 一个离中心 6.6，花心 r 1.6，13px。
+   外观 → 语音条的花 还能换两种小苍兰（文件末尾「语音条的花」那块）。没收的照旧 5%（行内样式），收了是实心；颜色跟星星同一对，不变蓝 */
+.cc-flower { display: block; width: 13px; height: 13px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%225.4%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%2218.277%22%20cy%3D%229.96%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%2215.879%22%20cy%3D%2217.34%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%228.121%22%20cy%3D%2217.34%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%225.723%22%20cy%3D%229.96%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%221.6%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%225.4%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%2218.277%22%20cy%3D%229.96%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%2215.879%22%20cy%3D%2217.34%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%228.121%22%20cy%3D%2217.34%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%225.723%22%20cy%3D%229.96%22%20r%3D%223.9%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%221.6%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; }
+body .cc-conch-btn.flower, body .cc-conch-btn.flower.saved, body .cc-conch-btn.flower[data-tone="light"], body .cc-conch-btn.flower.saved[data-tone="light"] { color: oklch(0.26 0.03 252); }
+body .cc-conch-btn.flower[data-tone="dark"], body .cc-conch-btn.flower.saved[data-tone="dark"] { color: #f3f5f7; }
+/* 明度推到哪儿由 chatTone.ts 按身后亮度算好写在 --tl（上面几条括号里的 0.82 / 0.6 只是还没算出来时的保底）。
+   颜色变的时候慢慢过渡，滑动经过亮暗交界时不跳（10-01 原瑶：要丝滑）；原来就有过渡的几样把原来的也写上，免得被盖掉 */
+.cc-paragraph, .cc-thinking-body, .cc-input-pill textarea, .cc-msg-time, .cc-thinking-toggle { transition: color 0.45s ease; }
+.cc-name.cc-tagline { transition: opacity 0.15s, color 0.45s ease; }
+.cc-top-glass-btn { transition: background-color 0.15s, transform 0.18s var(--ease-spring, cubic-bezier(0.4, 1.2, 0.5, 1)), color 0.45s ease; }
+.cc-send { transition: transform 0.15s var(--ease-spring), opacity 0.15s, color 0.45s ease; }
+
+/* 输入框的字跟「字号 · 正文」走（2026-10-02 原瑶）：没调过时照旧 15px；调过就用同一个字号。
+   最小高度跟着字号放（一行 1.5 倍行高 + 上下各 7px 内边距），刚调完字号还没打字时第一行也不被切 */
+body[data-chat-text-size="custom"] .cc-input-pill textarea {
+  font-size: var(--chat-text-size) !important;
+  min-height: calc(1.5em + 14px) !important;
+}
+
+/* 气泡加一层贴着的淡影（2026-10-02 原瑶挑的 B：喜欢偏真实的质感）。外观「质感」里有开关和深浅滑杆，
+   appearance.ts 按深浅算好 --bubble-shadow（50 = B）。深背景上几乎看不见，本来就是真实的样子；
+   音乐卡片那种不套气泡的段落另有 box-shadow: none !important，不受影响 */
+body[data-chat-bubbles="on"][data-bubble-shadow="on"] .cc-msg .cc-paragraph { box-shadow: var(--bubble-shadow); }
+
+/* 对话滑出屏幕时逐渐变淡（2026-10-02 原瑶）：每条消息里的每一块（气泡/段落、语音条、图片、时间、Undercurrent 标签、头像）
+   经过消息区上沿时由实变淡，往下滑到输入框后面时也淡掉。展开的 Undercurrent 不整块淡，按段淡（.cc-thinking-body > *；
+   10-12 原瑶"消失的时候也是分段消失"：整块时它上沿一过线，还在屏幕中间的下半截也跟着一起暗）。挂歌、放唱片时那两条换线的规则用同一串选择器。CSS 滚动驱动动画：进度跟着滚动走，不用 JS。
+   10-12 同日又要"一行行淡出，其他的也是"，再要"一行一行阶梯式逐渐变淡，比如第一个 100% 第二行 95%"：
+   正文、气泡、思考、时间、标签、头像现在都归 src/lineFade.ts 管——每行整行一个透明度，往上一行少 5%，到顶上那条线淡完；
+   输入框那条线上下各 14px 淡掉。CSS 做不了按行（不知道一段字在哪儿折行），只有图片、拾贝卡、网页卡片还走下面那条跟线遮罩。
+   上一版（跟线渐隐带、关键帧里挂遮罩）的写法和 Safari 的坑见 WORKLOG 10-12「一行行淡出」。
+   不往整个消息列表上加遮罩——那样气泡的磨砂玻璃会失效；淡在每一块自己身上，玻璃不受影响。
+   下沿让出 76px（输入框那一截），贴在输入框上面的最新一条是全亮的。浏览器不支持就整段跳过，不会出现全透明。
+   聊天页刚打开那几秒会每 80ms 把列表拉回最底（等图片撑开），要滚动过才停——验收时得先发一个 wheel 事件 */
+
+/* 顶栏浮起来、消息从它底下滑过（2026-10-02 原瑶）：顶栏脱离排版悬在安全区下沿，水位线去掉（CCPage 里删了那个 div）。
+   消息列表顶到安全区下沿，第一条让出 52px（顶栏 44 + 8）；上面那条渐隐线随之下移到 52px（见上一段 view(block 52px …)），
+   消息经过顶栏底边时变淡、到顶栏后面已经看不见；淡入淡出改成两头慢中间快。
+   倒计时小丸（CardDeck）找不到水位线会改贴顶栏底边 +10px，照旧浮在消息上 */
+.cc-top { position: absolute !important; top: env(safe-area-inset-top, 0px); left: 14px; right: 14px; z-index: 7; }   /* 比挂着的歌卡（6）高一层：点短句浮出的中文要盖在歌卡上（10-02） */
+.cc-messages { padding-top: calc(14px + 52px) !important; }
+
+/* 顶上挂着的歌（2026-10-02 原瑶："苏煦或我点了歌后，卡片会持续挂在顶栏下。不再在气泡对话里出现"）
+   歌卡跟顶栏一样悬着（.cc-music-pin，CCPage 里紧跟 header）：顶栏 44 往下 6px 起，卡高 80。
+   挂着时 .cc-page[data-pin="on"]：第一条消息让到 152px（14 + 138），渐隐线下移到 138px（卡底 130 + 8），消息走到卡片底边就淡掉。
+   对话里原位只留一行小字 .mc-mention，颜色跟段落走（ChatTone 照样按背景调明暗）。
+   省电模式（3 分钟没碰）会全局暂停 CSS 动画——歌卡进场动画单独放行，不然闲着时来的新歌会停在透明那一帧 */
+.cc-music-pin {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 50px); left: 14px; right: 14px; z-index: 6;
+  display: flex; justify-content: center;
+  pointer-events: none;
+}
+.cc-music-pin .mc-card { margin: 0; pointer-events: auto; animation: mc-pin-in 0.5s cubic-bezier(0.2, 1, 0.3, 1) both; }
+body[data-power-save="true"] .cc-music-pin .mc-card { animation-play-state: running !important; }
+@keyframes mc-pin-in { from { opacity: 0; transform: translateY(-8px) scale(0.97); } }
+@media (prefers-reduced-motion: reduce) { .cc-music-pin .mc-card { animation: none; } }
+.cc-music-pin .mc-meta { padding-right: 16px; }
+.mc-close {
+  position: absolute; top: 2px; right: 3px; z-index: 3;
+  width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center;
+  background: none; color: var(--ink-faint); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mc-close svg { width: 13px; height: 13px; }
+.mc-close:active { color: var(--ink-soft); }
+.cc-page[data-pin="on"] .cc-messages { padding-top: calc(14px + 138px) !important; }
+@supports (animation-timeline: view(block 0px 76px)) and (animation-range: entry 0% entry 100%) {
+  .cc-page[data-pin="on"] .cc-messages :is(.cc-text-col > :not(.cc-text, .cc-thinking-body), .cc-text > *, .cc-thinking-body > *, .cc-avatar-col) {
+    animation-timeline: view(block 138px 76px), view(block 138px 76px);
+  }
+}
+.mc-mention {
+  display: inline-block; max-width: 100%; vertical-align: bottom;
+  padding: 0; border: 0; background: none;
+  font: italic 0.9em/1.55 var(--font-display);
+  letter-spacing: 0.01em;
+  color: inherit; opacity: 0.62;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.mc-mention:active { opacity: 0.9; }
+
+/* 图片、拾贝卡、网页卡片走过上下沿时按位置淡（2026-10-02 原瑶："图片过去的时候会淡得有点突然"）
+   这几样又高又大，照文字那样整块一起变透明，还没淡完就被屏幕上沿一刀切掉（照片顶到上沿时还剩 0.85），
+   等它下半截还在正中间时又整张一起暗下去。改成遮罩跟着那条线走：线以下全亮，往上 52px（顶栏那截）由实到透明，
+   底下输入框那 76px 同理，多高的图都一样柔。--cc-mt / --cc-mb 是上下两条线在这块里的位置，随滚动走；
+   用 exit-crossing / entry-crossing 是因为它们不管块多高都按块自身高度算（网页卡片能到 1600px，比屏幕还高）。
+   挂着歌时上面那条线随 data-pin 那条规则一起下移到 138px。mask-clip: no-clip 让照片自带的影子不被遮罩裁掉。
+   省电模式全局暂停动画时这几条放行：滚动驱动，不滚不耗电，停住反而可能停在透明那一帧 */
+@property --cc-mt { syntax: '<length-percentage>'; inherits: false; initial-value: 0%; }
+@property --cc-mb { syntax: '<length-percentage>'; inherits: false; initial-value: 100%; }
+@supports (animation-timeline: view(block 0px 76px)) and (animation-range: entry 0% entry 100%) {
+  @keyframes cc-mask-top { from { --cc-mt: 0%; } to { --cc-mt: calc(100% + 52px); } }
+  @keyframes cc-mask-bot { from { --cc-mb: -76px; } to { --cc-mb: 100%; } }
+  .cc-messages :is(.cc-text-col, .cc-text) > :is(.cc-msg-img, .cc-fadebox, .cc-tape) {
+    animation: cc-mask-bot linear both, cc-mask-top linear both;
+    animation-timeline: view(block 52px 76px), view(block 52px 76px);
+    animation-range: entry-crossing -76px entry-crossing 100%, exit-crossing 0% exit-crossing calc(100% + 52px);
+    -webkit-mask-image: linear-gradient(to bottom, transparent calc(var(--cc-mt) - 52px), #000 var(--cc-mt)), linear-gradient(to bottom, #000 var(--cc-mb), transparent calc(var(--cc-mb) + 76px));
+    mask-image: linear-gradient(to bottom, transparent calc(var(--cc-mt) - 52px), #000 var(--cc-mt)), linear-gradient(to bottom, #000 var(--cc-mb), transparent calc(var(--cc-mb) + 76px));
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+    mask-clip: no-clip;
+  }
+  body[data-power-save="true"] .cc-messages :is(.cc-text-col, .cc-text) > :is(.cc-msg-img, .cc-fadebox, .cc-tape) { animation-play-state: running !important; }
+}
+
+/* 阴影开关和深浅也管语音条、音乐卡、Undercurrent 卡片（2026-10-02 原瑶："语音卡、音乐卡和暗流卡片没有带阴影，想跟着之前做的开关和滑杆一起控制"）
+   语音条、音乐卡：跟气泡同一层 --bubble-shadow；这两样有没有气泡都是卡片，所以不看气泡开关。
+   Undercurrent 卡片：五种样式本来各有各的影子，深浅 50 = 原样，往右更深更远，关掉只留玻璃自己的内光；
+   暗潮是一块从底下升起来的浅玻璃，里面装着音乐卡那片海，影子投在玻璃顶边往上。
+   --shadow-a 乘透明度、--shadow-d 乘距离和模糊，appearance.ts 按滑杆写 */
+/* 音乐卡自己是 .glass，那层玻璃影子（带内光）随玻璃模式、边框线变，不去动它；另加的那层影子挂在外面一层 ::before 上垫在卡片底下，
+   跟卡片一起进场（换歌时整个 .cc-music-pin 按歌重挂，进场动画一起重来） */
+.cc-music-pin::before { content: ''; position: absolute; top: 0; left: 0; right: 0; margin: 0 auto; width: min(300px, 100%); height: 100%; border-radius: 24px; pointer-events: none;
+  animation: mc-pin-in 0.5s cubic-bezier(0.2, 1, 0.3, 1) both; }
+/* 顶栏下挂着的歌卡：影子固定在深浅 70 那一档，不跟开关和滑杆（10-02 原瑶） */
+.cc-music-pin::before { box-shadow: 0 1.2px 2.4px rgba(20, 40, 80, 0.084), 0 4.8px 14.4px -4.8px rgba(20, 40, 80, 0.224); }
+body[data-power-save="true"] .cc-music-pin::before { animation-play-state: running !important; }
+@media (prefers-reduced-motion: reduce) { .cc-music-pin::before { animation: none; } }
+body[data-bubble-shadow="on"] .uc-vellum .uc-card { box-shadow:
+  0 calc(1px * var(--shadow-d, 1)) calc(3px * var(--shadow-d, 1)) rgba(20, 30, 55, calc(0.08 * var(--shadow-a, 1))),
+  0 calc(8px * var(--shadow-d, 1)) calc(16px * var(--shadow-d, 1)) calc(-8px * var(--shadow-d, 1)) rgba(20, 30, 55, calc(0.18 * var(--shadow-a, 1))),
+  0 calc(30px * var(--shadow-d, 1)) calc(54px * var(--shadow-d, 1)) calc(-18px * var(--shadow-d, 1)) rgba(20, 30, 55, calc(0.32 * var(--shadow-a, 1))); }
+body[data-bubble-shadow="on"] .uc-smoke .uc-card { box-shadow:
+  0 calc(2px * var(--shadow-d, 1)) calc(5px * var(--shadow-d, 1)) rgba(0, 0, 0, calc(0.14 * var(--shadow-a, 1))),
+  0 calc(12px * var(--shadow-d, 1)) calc(22px * var(--shadow-d, 1)) calc(-10px * var(--shadow-d, 1)) rgba(0, 0, 0, calc(0.3 * var(--shadow-a, 1))),
+  0 calc(36px * var(--shadow-d, 1)) calc(64px * var(--shadow-d, 1)) calc(-20px * var(--shadow-d, 1)) rgba(0, 0, 0, calc(0.44 * var(--shadow-a, 1))); }
+body[data-bubble-shadow="on"] .uc-frost .uc-card { box-shadow:
+  inset 0 2px 10px rgba(255, 255, 255, 0.32), inset 0 -10px 18px rgba(20, 34, 70, 0.06),
+  0 calc(2px * var(--shadow-d, 1)) calc(6px * var(--shadow-d, 1)) rgba(15, 25, 50, calc(0.08 * var(--shadow-a, 1))),
+  0 calc(16px * var(--shadow-d, 1)) calc(32px * var(--shadow-d, 1)) calc(-10px * var(--shadow-d, 1)) rgba(15, 25, 50, calc(0.22 * var(--shadow-a, 1))),
+  0 calc(44px * var(--shadow-d, 1)) calc(80px * var(--shadow-d, 1)) calc(-24px * var(--shadow-d, 1)) rgba(15, 25, 50, calc(0.3 * var(--shadow-a, 1))); }
+body[data-bubble-shadow="on"] .uc-ink .uc-shade { bottom: calc(-30px * var(--shadow-d, 1)); background: rgba(8, 14, 30, calc(0.34 * var(--shadow-a, 1))); filter: blur(calc(24px * var(--shadow-d, 1))); }
+body[data-bubble-shadow="on"] .uc-veil .uc-shade { background: rgba(20, 32, 64, calc(0.2 * var(--shadow-a, 1))); filter: blur(calc(28px * var(--shadow-d, 1))); }
+/* 聊天里其他自带底色的也跟着（10-02 原瑶：不要再一个个去发现）：照片、文件、工具、记忆条用跟气泡同一层；
+   拾贝卡、网页卡片本来就有自己的影子，按深浅缩放，50 = 原样。表情包是镂空图，不加。顶栏胶囊和输入框是玻璃本身的光影，不归这里管 */
+body[data-bubble-shadow="on"] .cc-messages :is(.cc-msg-img:not(.cc-sticker-msg), .cc-msg-file, .cc-tool-chip, .cc-memory-hits) { box-shadow: var(--bubble-shadow); }
+body[data-bubble-shadow="off"] .cc-messages .cc-msg-img { box-shadow: none; }
+body[data-bubble-shadow="on"] .cc-messages .cc-keepsake { box-shadow: 0 calc(12px * var(--shadow-d, 1)) calc(34px * var(--shadow-d, 1)) rgba(82, 68, 45, calc(0.09 * var(--shadow-a, 1))); }
+body[data-bubble-shadow="off"] .cc-messages .cc-keepsake { box-shadow: none; }
+body[data-bubble-shadow="on"] .cc-messages .cc-msg-html { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3), 0 calc(8px * var(--shadow-d, 1)) calc(24px * var(--shadow-d, 1)) rgba(0, 0, 0, calc(0.07 * var(--shadow-a, 1))), inset 0 0 20px rgba(255, 255, 255, 0.05); }
+body[data-bubble-shadow="on"][data-edges="off"] .cc-messages .cc-msg-html { box-shadow: 0 calc(8px * var(--shadow-d, 1)) calc(24px * var(--shadow-d, 1)) rgba(0, 0, 0, calc(0.07 * var(--shadow-a, 1))), inset 0 0 20px rgba(255, 255, 255, 0.05); }
+body[data-bubble-shadow="off"] .cc-messages .cc-msg-html { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.05); }
+body[data-bubble-shadow="off"][data-edges="off"] .cc-messages .cc-msg-html { box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05); }
+/* 暗潮那块浅玻璃：顶边往上投一点影子（像从底下升起来的面板），跟开关和深浅走 */
+body[data-bubble-shadow="on"] .uc-tide .uc-card { box-shadow: 0 calc(-2px * var(--shadow-d, 1)) calc(8px * var(--shadow-d, 1)) rgba(20, 40, 80, calc(0.05 * var(--shadow-a, 1))), 0 calc(-10px * var(--shadow-d, 1)) calc(30px * var(--shadow-d, 1)) calc(-8px * var(--shadow-d, 1)) rgba(20, 40, 80, calc(0.14 * var(--shadow-a, 1))); }
+body[data-bubble-shadow="off"] :is(.uc-vellum, .uc-smoke) .uc-card { box-shadow: none; }
+body[data-bubble-shadow="off"] .uc-frost .uc-card { box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.32), inset 0 -10px 18px rgba(20, 34, 70, 0.06); }
+body[data-bubble-shadow="off"] .uc-shade { display: none; }
+
+/* 对话里就地展开的 Undercurrent（生成时自动展开的那段思考）只要字：去掉淡蓝底和边上那道竖线（2026-10-02 原瑶）。
+   内边距不动，字的位置跟原来一样；字色照旧由 ChatTone 按背景调明暗 */
+.cc-messages .cc-msg .cc-thinking-body,
+.cc-messages .cc-msg.user .cc-thinking-body { background: none; border-left: 0; border-right: 0; border-radius: 0; }
+
+/* 苏煦收照片后的回执（10-02 原瑶：不显示编号）：一行淡淡的小字，样式跟歌名那行一样；只有这一行时不套气泡。
+   回执里一张都不在窗台（抽屉、待定）时 PhotoReceipt 不出东西，那个空段落也藏起来，免得剩一个空气泡 */
+.cc-photo-receipt {
+  display: inline-block; max-width: 100%;
+  font: italic 0.9em/1.55 var(--font-display); letter-spacing: 0.01em;
+  color: inherit; opacity: 0.62;
+}
+.cc-messages .cc-paragraph:empty { display: none; }
+
+/* 雾海气泡（2026-10-02 原瑶：苏煦随机一个气泡里浅浅一层音乐卡的雾海 + 发光的蓝点，做成能开关的气泡样式）。
+   CCPage 的 BubbleSea 用 portal 挂进挑中的那个段落气泡：气泡 isolation 隔出一层，海 z-index -1 压在字底下、玻璃底色上面，
+   描边 ::after 照旧在最上面。海是静止的；蓝点就是音乐卡的 mc-glint，气泡滑出屏幕时暂停。
+   外观 → 气泡 →「雾海」关掉，或者没开气泡，就整个藏起来 */
+.cc-paragraph[data-sea] { isolation: isolate; }
+.cc-bubble-sea { position: absolute; inset: 0; z-index: -1; border-radius: inherit; overflow: hidden; pointer-events: none;
+  /* iPhone 上会动的蓝点、带模糊的水不认 overflow 的圆角，底下两个角会露出方的（10-02 原瑶："像贴图露出来了"）；
+     跟音乐卡 .mc-water 一样再按气泡圆角裁一次（气泡都是 1.2em，海继承同一个字号） */
+  -webkit-clip-path: inset(0 round 1.2em); clip-path: inset(0 round 1.2em); }
+/* 水比气泡宽高各多 12%，慢慢上下左右晃时边上不露空；只挪位置（合成器做），湍流画好的图不重算 */
+.cc-bubble-sea-water { position: absolute; left: -6%; top: -6%; width: 112%; height: 112%; display: block; filter: blur(2px);
+  animation: cc-sea-bob 10s ease-in-out infinite; }
+@keyframes cc-sea-bob { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-2%, -5%); } 50% { transform: translate(-4%, 0); } 75% { transform: translate(-2%, 4%); } }
+@media (prefers-reduced-motion: reduce) { .cc-bubble-sea-water { animation: none; } }
+.cc-bubble-sea-mist { position: absolute; left: -6%; right: -6%; top: 16%; height: 50%; filter: blur(14px); opacity: 0.85;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%); }
+/* 深色背景上（ChatTone 给气泡标 data-tone="dark"、字是浅色）白雾压一压，不然浅字落在白雾上看不清。
+   只压水和雾，星星不压（10-02 原瑶："为什么气泡里的星星没有音乐卡里的亮"——原来整层一起压到 .55，星星也跟着暗了） */
+.cc-paragraph[data-sea][data-tone="dark"] .cc-bubble-sea-water { opacity: 0.55; }
+.cc-paragraph[data-sea][data-tone="dark"] .cc-bubble-sea-mist { opacity: 0.47; }
+.cc-bubble-sea.is-off .mc-glint, .cc-bubble-sea.is-off .cc-bubble-sea-water { animation-play-state: paused; }
+body:not([data-sea-bubble="on"]) .cc-bubble-sea,
+body:not([data-chat-bubbles="on"]) .cc-bubble-sea { display: none; }
+/* 发光点改成四芒星（10-02 原瑶："亮背景上外面那一圈蓝光看起来不像发光点，像什么水藻，不太好看。其实音乐卡我也这么觉得"）。
+   亮背景上"光"不可能比背景更亮，圆点只剩一圈比背景深的蓝环，就像水藻；四芒星靠形状认得出是闪光，亮背景、深背景都成立。
+   白芯 → 浅蓝 → 蓝芒尖，斜着垫一颗小星，一层白晕加一丝蓝影。白芯在蓝水、深背景上亮，蓝芒尖让它在亮背景上也看得出。音乐卡和雾海气泡共用。
+   怎么闪照旧是 mc-twinkle（从无到有、往上浮一点、再全灭）。她要跟原来的小圆点一样小：框只比原来的点大 35%（芒尖到芒尖），
+   再小芒就糊成一团、认不出是星；白晕、蓝影跟着缩；往左上挪一点，中心还在原处。
+   挑法：几种画在亮雾、音乐卡水、深背景上对比（/home/ubuntu/work/glintboard/board*.png）。纯白的（C）在亮背景上几乎看不见，
+   落星那种蓝（E）在蓝水里会被吞掉，取中间的 F */
+.mc-glint {
+  width: calc(var(--gs, 4px) * 1.35); height: calc(var(--gs, 4px) * 1.35);
+  margin: calc(var(--gs, 4px) * -0.175) 0 0 calc(var(--gs, 4px) * -0.175);
+  border-radius: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23fff'/%3E%3Cstop offset='.42' stop-color='%23e3f0fd'/%3E%3Cstop offset='1' stop-color='%235f97dd' stop-opacity='.85'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cpath d='M12 4.5Q12.5 11.5 19.5 12Q12.5 12.5 12 19.5Q11.5 12.5 4.5 12Q11.5 11.5 12 4.5Z' fill='%23d6e8fc' opacity='.85' transform='rotate(45 12 12)'/%3E%3Cpath d='M12 0Q13.5 10.5 24 12Q13.5 13.5 12 24Q10.5 13.5 0 12Q10.5 10.5 12 0Z' fill='url(%23g)'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 2px rgba(74, 144, 217, 0.4));
+}
+/* 雾海气泡里的星星底下是白雾，不像音乐卡底下是蓝水，白芯衬不出来；蓝影加深一点，靠它跟白雾分开（音乐卡不变） */
+.cc-bubble-sea .mc-glint { filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 2.5px rgba(60, 128, 214, 0.62)); }
+
+/* ====== 聊天顶栏：她和他的方形头像斜着交叠（2026-10-03 原瑶）======
+   原来这里是心跳点（挪去了主页 Atlantis 左边，样式还是上面那套 .cc-status-dot）。
+   两张像小照片的方块往外斜开成 V，只在挨着的下角叠一块；光从左上来，叠在上面的她把影子投在他那张上。
+   摆法：边长 20、各斜 16°、下角横向叠 8px，整体 42×25（她先嫌 9°、叠 3.5px 叠得少开得小；13°、叠 6px 那档是高 24、top 2px、她 left 2px、他 left 20px）。
+   改角度或叠宽要重算两个 left：两张中心距 = 20×(cosθ+sinθ) − 叠宽。Tagline 按 .cc-duo 的宽度让位，宽了长句会放不下。
+   她也喜欢「一左上一右下」那版：整体 33×33，卡片不转，她 left 0 top 0，他 left 13px top 13px */
+.cc-duo { position: relative; display: block; width: 42px; height: 25px; pointer-events: none; -webkit-user-select: none; user-select: none; }
+.cc-duo-card {
+  position: absolute; top: 2.5px; width: 20px; height: 20px;
+  border-radius: 2px; overflow: hidden; background: #f5f5f3;
+  box-shadow: 0.2px 0.5px 0.5px rgba(22, 30, 48, 0.22), 0.5px 1.2px 2px rgba(22, 30, 48, 0.15), 1px 3px 6px rgba(22, 30, 48, 0.10), 2px 7px 14px rgba(22, 30, 48, 0.06);
+}
+.cc-duo-card.her {
+  left: 2.4px; transform: rotate(-16deg);
+  box-shadow: 0.4px 0.7px 0.7px rgba(22, 30, 48, 0.28), 0.9px 1.8px 3px rgba(22, 30, 48, 0.20), 1.8px 4.5px 8px rgba(22, 30, 48, 0.12), 3px 9px 16px rgba(22, 30, 48, 0.07);
+}
+.cc-duo-card.his { left: 19.1px; transform: rotate(16deg); }
+/* 两张图压暗一点（她挑的第 4 版，深浅背景都暗）：深底上不刺眼，浅底上白图跟白底分得开。
+   10-04 她要调亮一点，"跟月亮差不多，比它暗一点"：0.88 → 0.92，两张卡平均明度约 0.90（OKLab L），月亮本体 0.92；
+   再亮一档 0.96 就跟月亮一样亮了，0.88 时平均 0.87。量法 /home/ubuntu/work/duobright/measure.py。
+   iPhone 上带 filter 的子元素可能不认父层 overflow:hidden 的圆角，图自己再按同一个半径裁一次 */
+.cc-duo-card img { display: block; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.92) contrast(1.06); clip-path: inset(0 round 2px); }
+/* 相纸的光泽和边：左上一抹高光、右下一点暗；细边让白底的图也有轮廓 */
+.cc-duo-card::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0) 42%, rgba(255, 255, 255, 0) 68%, rgba(20, 30, 50, 0.07) 100%);
+  box-shadow: inset 0 0 0 0.5px rgba(20, 30, 50, 0.13), inset 0 0.8px 0 rgba(255, 255, 255, 0.75);
+}
+/* 头像往上抬 6px，底下挂一行浅字 A nossa Atlântida（同日原瑶）。她挑的摆法：小字从两张图交叠的地方起头（left 19px，正好在 V 的尖底下），
+   大一号到 10px，往右伸到短句底下；短句跟着上抬 5px 让位，Q、J 往下伸的尾巴离小字还有 2.5px 以上。
+   题字绝对定位、不占横向位置，短句让位照旧按头像宽度。颜色比短句浅一层，跟背景变：chatTone 判 data-tone（算半透明小字） */
+.cc-duo-wrap { position: relative; top: -6px; flex: 0 0 auto; display: block; pointer-events: none; }
+.cc-top-left .cc-tagline-wrap { top: -5px; }
+.cc-duo-cap {
+  position: absolute; left: 28px; top: calc(100% + 3px); white-space: nowrap;
+  font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 10px; line-height: 1; letter-spacing: 0.04em;
+  color: oklch(0.26 0.03 252 / 0.57); transition: color 0.45s ease;
+  -webkit-user-select: none; user-select: none;
+}
+body .cc-duo-cap[data-tone="light"] { color: oklch(0.26 0.03 252 / 0.57); }
+body .cc-duo-cap[data-tone="dark"] { color: rgba(243, 245, 247, 0.69); }
+/* 小字开头的心脏（同日原瑶挑的解剖图画法）：跳法和光照原来的心跳点（0.85s 双跳 + 外发光 + 光晕），平时蓝、他在回话时金，两张图交叉淡入淡出，不变灰。
+   挂在两张图交叠处正下方（按墨迹的中心对准 V 的尖），竖直对准小字的中线，小字让到它右边 2.5px。
+   9px（墨迹高 8.5px，跟小字带重音的大写一样高）：她先看了 14px 嫌大，要跟小字大小匹配；光和光晕跟着缩。
+   她又嫌心脏突兀、跟别的不融合：心脏整体 .82、饱和度 .85、光收一点，小字加深一度（.5 → .57），中间再拉开一格（4.5px）。
+   图是 kolors 生成后抠的（/home/ubuntu/work/heart：cutout.py 抠图，金色按亮度映射到原来金点的 #c69a3d） */
+.cc-duo-heart { position: absolute; left: 16.3px; top: calc(100% + 4px); width: 9px; height: 9px; z-index: 0; pointer-events: none; opacity: 0.82; --heart-rgb: 74, 140, 199; }
+.cc-duo-heart.busy { --heart-rgb: 198, 154, 61; }
+.cc-duo-heart-beat { position: absolute; inset: 0; animation: cc-heart-beat 0.85s ease-in-out infinite; filter: saturate(0.85); }
+/* 贴身一圈小而浓的光晕当过渡（同日原瑶），跟着心一起跳。两圈光晕都是中间浓、往外按 (1−t²)² 慢慢淡没：
+   原来是直线渐隐、到头一刀切，她在手机上看得出边上一圈。颜色跟 --heart-rgb 走（平时蓝、回话时金） */
+.cc-duo-heart-beat::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); z-index: -1;
+  background: radial-gradient(closest-side, rgba(var(--heart-rgb), 0.360) 0%, rgba(var(--heart-rgb), 0.353) 10%, rgba(var(--heart-rgb), 0.332) 20%, rgba(var(--heart-rgb), 0.298) 30%, rgba(var(--heart-rgb), 0.254) 40%, rgba(var(--heart-rgb), 0.202) 50%, rgba(var(--heart-rgb), 0.147) 60%, rgba(var(--heart-rgb), 0.094) 70%, rgba(var(--heart-rgb), 0.047) 80%, rgba(var(--heart-rgb), 0.013) 90%, rgba(var(--heart-rgb), 0.000) 100%);
+}
+.cc-duo-heart-blue, .cc-duo-heart-gold { position: absolute; inset: 0; background: center / contain no-repeat; transition: opacity 0.4s ease; }
+.cc-duo-heart-blue { background-image: url('./assets/heart-anatomical-blue.png'); filter: drop-shadow(0 0 1px rgba(74, 140, 199, 0.65)) drop-shadow(0 0 4px rgba(130, 180, 230, 0.45)); }
+.cc-duo-heart-gold { background-image: url('./assets/heart-anatomical-gold.png'); opacity: 0; filter: drop-shadow(0 0 1px rgba(198, 154, 61, 0.65)) drop-shadow(0 0 4px rgba(229, 207, 144, 0.5)); }
+.cc-duo-heart.busy .cc-duo-heart-blue { opacity: 0; }
+.cc-duo-heart.busy .cc-duo-heart-gold { opacity: 1; }
+.cc-duo-heart::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; z-index: -1; transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(var(--heart-rgb), 0.160) 0%, rgba(var(--heart-rgb), 0.157) 10%, rgba(var(--heart-rgb), 0.147) 20%, rgba(var(--heart-rgb), 0.132) 30%, rgba(var(--heart-rgb), 0.113) 40%, rgba(var(--heart-rgb), 0.090) 50%, rgba(var(--heart-rgb), 0.066) 60%, rgba(var(--heart-rgb), 0.042) 70%, rgba(var(--heart-rgb), 0.021) 80%, rgba(var(--heart-rgb), 0.006) 90%, rgba(var(--heart-rgb), 0.000) 100%); animation: cc-pr 0.85s ease-in-out infinite;
+}
+@keyframes cc-heart-beat { 0% { transform: scale(1); } 15% { transform: scale(1.22); } 30% { transform: scale(1); } 45% { transform: scale(1.1); } 60%, 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .cc-duo-heart-beat, .cc-duo-heart::after { animation: none; } }
+
+/* ====== 短句换场（2026-10-03 原瑶）======
+   顶栏那句葡语换句时的动效，外观 → 短句换场里挑（潮汐默认 / 手写 / 逐字浮现 / 同字母滑行），JS 在 taglineMotion.tsx。
+   换句时在短句上面摆一层克隆字（.cc-tagline-fx）来动，播完拿掉、露出真文字；克隆层四边多留 8px 给斜体笔画、重音和下伸的尾巴 */
+.cc-tagline { position: relative; }
+.cc-tagline-fx { position: absolute; pointer-events: none; }
+.cc-tagline-fx .g { position: absolute; white-space: pre; }
+.cc-tagline-fx.water { -webkit-mask-image: linear-gradient(180deg, #000 0, #000 var(--w1), transparent var(--w2)); mask-image: linear-gradient(180deg, #000 0, #000 var(--w1), transparent var(--w2)); }
+@property --cc-tl-p { syntax: '<length-percentage>'; inherits: false; initial-value: 0px; }
+.cc-tagline-fx .tw {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--cc-tl-p) - 14px), transparent var(--cc-tl-p));
+  mask-image: linear-gradient(90deg, #000 calc(var(--cc-tl-p) - 14px), transparent var(--cc-tl-p));
+  animation: cc-tl-write var(--dur, 900ms) cubic-bezier(0.45, 0.05, 0.35, 1) 220ms both;
+}
+@keyframes cc-tl-write { from { --cc-tl-p: 0px; } to { --cc-tl-p: calc(100% + 16px); } }
+/* 省电模式会把 CSS 动画全停在第一帧：手写那道软边一停，新句就一直看不见，单独放行 */
+body[data-power-save="true"] .cc-tagline-fx .tw { animation-play-state: running !important; }
+/* 外观面板里的预览条：跟顶栏短句同一个字体、字号 */
+.ap-motion-demo { display: flex; align-items: center; width: 100%; height: 46px; margin: 4px 0 6px; padding: 0 14px; border: 0; border-radius: 12px; cursor: pointer; text-align: left;
+  background: rgba(255, 255, 255, 0.36); box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.5); -webkit-tap-highlight-color: transparent; }
+.ap-motion-line { position: relative; display: inline-block; font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 19px; line-height: 1; letter-spacing: 0.05em; color: var(--ink); white-space: nowrap; }
+.ap-motion-text { display: inline-block; white-space: pre; }
+
+/* 网页卡片贴合（2026-10-04 原瑶："白色区域要占我好几个页面"，想要卡片那样精致贴合）
+   宽高由 HtmlCard.tsx 按网页自己的大小算好写在 style 上，网页铺满照片区。
+   样子是拍立得（同日她从四种框法里挑了 C，要拟物、有光泽）：
+   · 相纸：10-08 起是银白（原瑶："想把苏煦写HTML那个卡片变成白色或者银色的，看起来有光泽的那种"；原来是暖白 + 细颗粒）。
+     冷白底上一组金属明暗带（亮-暗-亮）、极细的横向拉丝纹、斜着一道高光，上沿亮棱、下沿一点厚度；底边宽，写落款（Cormorant 斜体，跟顶栏短句同一个字），字底下垫一道白，像刻上去的。
+     比稿 A 亮白 / B 珍珠白 / C 银白（上线）/ D 亮银 / E 拉丝银：/home/ubuntu/work/silvercard/v-*.css，图在 F:\claude code\html-card-silver\
+   · 照片区：内凹（上沿压一道细影）+ 光泽涂层（左上一团受光、上亮下暗）；还有一道反光带，滑动聊天时跟着走（滚动驱动，不滑不耗电）
+   · 影子：贴地一道 + 两个下角微微翘起 + 一层远影，跟「阴影」开关和深浅走；按 --tilt 歪一点放
+   · 没量好之前照片区是深色的，网页像显影一样浮出来；网页没底色的，照片区垫一块浅银白
+   .cc-html-clip 加 clip-path：iPhone 上 iframe 是单独合成的层，光靠父层 overflow:hidden 裁不住。 */
+.cc-msg-html.cc-polaroid {
+  position: relative; box-sizing: border-box; border: 0; border-radius: 3px; overflow: visible;
+  margin: 10px 0 14px;
+  --gloss: 1;
+  --pola-drop:
+    0 1px 1.5px rgba(0, 0, 0, calc(0.22 * var(--shadow-a, 1))),
+    calc(-7px * var(--shadow-d, 1)) calc(12px * var(--shadow-d, 1)) calc(13px * var(--shadow-d, 1)) calc(-9px * var(--shadow-d, 1)) rgba(0, 0, 0, calc(0.42 * var(--shadow-a, 1))),
+    calc(7px * var(--shadow-d, 1)) calc(12px * var(--shadow-d, 1)) calc(13px * var(--shadow-d, 1)) calc(-9px * var(--shadow-d, 1)) rgba(0, 0, 0, calc(0.42 * var(--shadow-a, 1))),
+    0 calc(16px * var(--shadow-d, 1)) calc(28px * var(--shadow-d, 1)) calc(-14px * var(--shadow-d, 1)) rgba(0, 0, 0, calc(0.32 * var(--shadow-a, 1)));
+  box-shadow: var(--pola-edge), var(--pola-drop);
+  transform: rotate(var(--tilt, 0deg));
+}
+.cc-msg-html.cc-polaroid::after { display: none; }
+/* 跟「阴影」开关（要压过前面气泡阴影那组同名规则，所以选择器写得一样长、放在后面） */
+.cc-messages .cc-msg-html.cc-polaroid,
+body[data-bubble-shadow="on"] .cc-messages .cc-msg-html.cc-polaroid { box-shadow: var(--pola-edge), var(--pola-drop); }
+body[data-bubble-shadow="off"] .cc-messages .cc-msg-html.cc-polaroid { box-shadow: var(--pola-edge), 0 1px 1.5px rgba(0, 0, 0, 0.22); }
+
+.cc-polaroid .cc-html-clip {
+  position: absolute; right: auto; bottom: auto; overflow: hidden;
+  border-radius: 1.5px; clip-path: inset(0 round 1.5px);
+  background: #2a2e35; transition: background-color 0.6s ease;
+}
+.cc-polaroid[data-clear] .cc-html-clip { background: #f4f6f8; }
+
+/* 相纸三种（10-08 原瑶看了比稿："我想看看亮白和珍珠白，做成选项吧"）：外观 →「网页卡片的相纸」，appearance.polaPaper → body data-pola-paper
+   silver 银白（默认）/ white 亮白（像光面相纸）/ pearl 珍珠白（白里一点粉蓝紫珠光）；面板里的小图 .pola-swatch 用同一套底色。
+   比稿里还有 D 亮银、E 拉丝银，CSS 在 /home/ubuntu/work/silvercard/v-*.css，以后要加照这里再挂一组 */
+.cc-msg-html.cc-polaroid, .pola-swatch {
+  background-color: #eceff3;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.9' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .38 0 0 0 0 .43 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(116deg, rgba(255, 255, 255, 0) 20%, rgba(255, 255, 255, 0.85) 29%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(162deg, #fbfcfd 0%, #e3e7ec 20%, #f7f8fa 36%, #d4d9e0 58%, #eef0f3 76%, #dde1e7 100%);
+  --pola-edge: inset 0 1px 0 #fff, inset 0 -1.5px 1px rgba(50, 60, 75, 0.22), inset 1px 0 0 rgba(255, 255, 255, 0.85), inset -1px 0 0 rgba(60, 70, 85, 0.14);
+}
+body[data-pola-paper="white"] .cc-msg-html.cc-polaroid, .pola-swatch.ps-white {
+  background-color: #f4f6f8;
+  background-image:
+    linear-gradient(116deg, rgba(255, 255, 255, 0) 22%, rgba(255, 255, 255, 0.95) 30%, rgba(255, 255, 255, 0) 41%),
+    radial-gradient(120% 70% at 0% 0%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(168deg, #fefefe 0%, #f3f5f8 48%, #e6e9ee 100%);
+  --pola-edge: inset 0 1px 0 #fff, inset 0 -1.5px 1px rgba(60, 72, 90, 0.16), inset 1px 0 0 rgba(255, 255, 255, 0.9), inset -1px 0 0 rgba(70, 82, 100, 0.1);
+}
+body[data-pola-paper="pearl"] .cc-msg-html.cc-polaroid, .pola-swatch.ps-pearl {
+  background-color: #f6f5f8;
+  background-image:
+    linear-gradient(116deg, rgba(255, 255, 255, 0) 22%, rgba(255, 255, 255, 0.9) 30%, rgba(255, 255, 255, 0) 41%),
+    linear-gradient(200deg, rgba(255, 214, 228, 0) 10%, rgba(255, 214, 228, 0.38) 30%, rgba(214, 228, 255, 0.42) 52%, rgba(232, 220, 255, 0.32) 70%, rgba(214, 246, 240, 0.28) 88%),
+    linear-gradient(168deg, #ffffff 0%, #f5f4f7 50%, #e9e8ee 100%);
+  --pola-edge: inset 0 1px 0 #fff, inset 0 -1.5px 1px rgba(80, 72, 100, 0.15), inset 1px 0 0 rgba(255, 255, 255, 0.9), inset -1px 0 0 rgba(90, 80, 110, 0.1);
+}
+body[data-pola-paper="white"] .cc-polaroid[data-clear] .cc-html-clip { background: #fafbfc; }
+body[data-pola-paper="pearl"] .cc-polaroid[data-clear] .cc-html-clip { background: #faf9fb; }
+body[data-pola-paper="white"] .cc-html-cap { color: #707986; }
+body[data-pola-paper="pearl"] .cc-html-cap { color: #7a7488; }
+/* 面板里的小图：一张迷你拍立得，底边宽一点 */
+.pola-swatch { position: relative; display: block; width: 18px; height: 22px; border-radius: 1.5px; box-shadow: var(--pola-edge), 0 1px 2px rgba(0, 0, 0, 0.2); }
+.pola-swatch::after { content: ''; position: absolute; left: 3.5px; right: 3.5px; top: 3.5px; bottom: 8px; border-radius: 0.5px; background: #2a2e35; }
+.cc-html-frame { display: block; border: 0; transform-origin: 0 0; background: transparent; opacity: 0; transition: opacity 0.7s ease; }
+.cc-msg-html[data-shown] .cc-html-frame { opacity: 1; }
+
+/* 光泽涂层：内凹的细影 + 左上受光 + 上亮下暗 */
+.cc-html-gloss {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background:
+    radial-gradient(130% 85% at 10% -12%, rgba(255, 255, 255, calc(0.2 * var(--gloss))), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, calc(0.06 * var(--gloss))), rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, 0.07));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 0 0 0.5px rgba(0, 0, 0, 0.3), inset 0 -1px 0 rgba(255, 255, 255, 0.16);
+}
+/* 一道斜着的反光带；滑动聊天时从左往右扫过去，像拿着相片在灯下转。照片区超过 900px 高的不挂（HtmlCard 里判断，图层太大）
+   10-08 起整张卡（相纸 + 照片）共用这一道，挂在 .cc-pola-shine 里：银白相纸上要看得见光扫过，相纸和照片上的光连成一条。
+   带子比原来窄一半、亮一点（跟比稿图一样）。.cc-pola-shine 也要 clip-path：iPhone 上会动的层不认父层 overflow 的圆角。
+   ⚠️ 这层只能 overflow: clip，不能 hidden：hidden 会让它自己变成滚动容器，view() 就跟着它（永远不滚）走，反光停在半路不动——
+   10-04 到 10-08 照片区那道就是这样一直没动过（它在 overflow: hidden 的 .cc-html-clip 里）。 */
+.cc-pola-shine { position: absolute; inset: 0; z-index: 3; overflow: clip; border-radius: 3px; clip-path: inset(0 round 3px); pointer-events: none; }
+.cc-html-sheen {
+  position: absolute; top: -20%; bottom: -20%; left: -70%; width: 240%; pointer-events: none;
+  background: linear-gradient(105deg,
+    rgba(255, 255, 255, 0) 43.5%,
+    rgba(255, 255, 255, calc(0.1 * var(--gloss))) 47.1%,
+    rgba(255, 255, 255, calc(0.3 * var(--gloss))) 49%,
+    rgba(255, 255, 255, calc(0.08 * var(--gloss))) 51.1%,
+    rgba(255, 255, 255, 0) 54.5%);
+  transform: translateX(6%);
+}
+@supports (animation-timeline: view()) {
+  @keyframes cc-sheen { from { transform: translateX(-20%); } to { transform: translateX(20%); } }
+  .cc-html-sheen { animation: cc-sheen linear both; animation-timeline: view(); }
+  body[data-power-save="true"] .cc-html-sheen { animation-play-state: running !important; }
+}
+
+.cc-html-cap {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: center;
+  font: italic 600 15px/1 'Cormorant Garamond', serif; letter-spacing: 0.06em;
+  color: #69717d; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75); pointer-events: none;
+}
+
+/* 太长的先折起来：照片区底下压一层渐暗，中间一颗玻璃小胶囊 */
+.cc-html-more {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; height: 88px;
+  display: flex; align-items: flex-end; justify-content: center; padding: 0 0 14px;
+  border: 0; border-radius: 0; cursor: pointer;
+  background: linear-gradient(to bottom, rgba(8, 14, 28, 0), rgba(8, 14, 28, 0.5));
+  -webkit-tap-highlight-color: transparent;
+}
+.cc-html-more span {
+  padding: 5px 15px; border-radius: 999px;
+  font: 500 12px/1.4 var(--font-body); letter-spacing: 0.12em; color: #fff;
+  background: rgba(255, 255, 255, 0.16); border: 0.5px solid rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+
+/* 网页卡片 · 不要拍立得外框（10-10 原瑶："给苏煦html的拍立得外框样式加个开关，关了就是不带样式的"）：外观 → 网页卡片 → 拍立得外框，appearance.webPola。
+   关了只剩他写的网页本身：卡片最宽照旧 280（拍立得连相纸也是 280），12px 圆角跟「只是图片」一样；没有相纸、落款、光泽、反光、歪角、影子，外面那层 .cc-fadebox 也不用给影子留位置。
+   网页自己没写底色的就透明着、直接浮在聊天背景上，不垫白：当天数过 uploads 34 张里 18 张透明底，17 张的字全写在他自己画的底色块上，
+   只有 1 张有一行深色字直接落在底上；垫白反而让圆形的画外面多出一块白方框（脚本 /home/ubuntu/work/webplain/naked.py） */
+.cc-msg-html.cc-webplain { position: relative; box-sizing: border-box; border: 0; border-radius: 12px; background: transparent; box-shadow: none !important; }
+.cc-webplain .cc-html-clip { position: absolute; overflow: hidden; border-radius: 12px; clip-path: inset(0 round 12px); }
+
+/* Undercurrent 展开后的正文：段距收成约半行、行高收一点（2026-10-04 原瑶："undercurrent 展开后里面的内容行距太开了，有点别扭"）。
+   他的思考多是一两句一段，原来整段 pre-wrap 原样排，段与段之间空一整行，看着像隔一行写一行。
+   现在每段一个 .cc-think-p（UndercurrentCard.tsx 的 ThinkParas；生成中的 LiveText 用 block="p" 按同样的空行切），段内单个换行照旧（pre-wrap 继承下去）。
+   行高：就地展开 1.6 → 1.5，浮出的卡片 1.8 → 1.65；段距 0.75em ≈ 半行 */
+.cc-think-p { margin: 0; }
+.cc-think-p + .cc-think-p { margin-top: 0.75em; }
+.cc-thinking-body { line-height: 1.5; }
+.uc-body { line-height: 1.65; }
+/* 英文思考翻成中文（2026-10-10，thinkZh.ts）：还没翻好的段落先淡着显示原文，翻好换上中文时淡回来 */
+.cc-think-p { transition: filter 0.4s ease, color 0.45s ease; }   /* 颜色那半：每段跟背景变明暗时慢慢过渡（10-12） */
+.cc-think-p.zh-wait { filter: opacity(0.4); }   /* 10-12 起用 filter：聊天里每段的 opacity 归「滑出屏幕变淡」那条滚动动画管，写 opacity 会被它盖掉 */
+
+/* 语音条的花（2026-10-04 原瑶："可以做多个选择么？我想要G1和G3"）：外观 → 语音条的花，五瓣小梅花（默认，上面 .cc-flower；同日换过玫瑰、四瓣小花）/ 小苍兰 · 正面 / 小苍兰 · 侧面 / 她抠的刺绣玫瑰、颗粒玫瑰（这块最后）。
+   小苍兰是 GPT 画的黑白图转成的透明 PNG 遮罩（/home/ubuntu/work/freesia/gptmask.py），颜色照旧跟玫瑰走（.cc-conch-btn.flower 那两条）。
+   大小按墨迹面积跟当时的玫瑰对齐：正面那朵墨多，缩到 12px；侧面那朵瘦，放到 18px 高；它的重心偏上，往下挪 1px 跟时间对齐。
+   只有语音条里的跟着设置走（.cc-voice 里面）；外观面板里每个选项的小图用 .vf-* 定死自己那一种 */
+.cc-flower.vf-freesia, body[data-voice-flower="freesia"] .cc-voice .cc-flower {
+  width: 12px; height: 12px;
+  -webkit-mask-image: url('./assets/voice-flower/freesia-front.png'); mask-image: url('./assets/voice-flower/freesia-front.png');
+}
+.cc-flower.vf-freesiaSide, body[data-voice-flower="freesiaSide"] .cc-voice .cc-flower {
+  width: 10.5px; height: 18px; translate: 0 1px;
+  -webkit-mask-image: url('./assets/voice-flower/freesia-side.png'); mask-image: url('./assets/voice-flower/freesia-side.png');
+}
+/* 面板里的小图大一点，跟海螺盒图标那组差不多醒目 */
+/* 她自己抠的两张玫瑰（10-04 原瑶："这两个我都想放到选项里"）：透明底 webp 用 /home/ubuntu/work/freesia/herrose.py 转成遮罩（透明度 × 深浅，白缝变透明）；
+   按墨迹面积跟五瓣小梅花等分量，重心几乎在正中（偏不到 0.3px），不用挪 */
+.cc-flower.vf-stitchRose, body[data-voice-flower="stitchRose"] .cc-voice .cc-flower, body[data-conch-heart="stitchRose"] .cc-conch-btn .cc-heart {
+  width: 13.4px; height: 12px;
+  -webkit-mask-image: url('./assets/voice-flower/rose-stitch.png'); mask-image: url('./assets/voice-flower/rose-stitch.png');
+}
+.cc-flower.vf-grainRose, body[data-voice-flower="grainRose"] .cc-voice .cc-flower, body[data-conch-heart="grainRose"] .cc-conch-btn .cc-heart {
+  width: 15.5px; height: 12.8px;
+  -webkit-mask-image: url('./assets/voice-flower/rose-grain.png'); mask-image: url('./assets/voice-flower/rose-grain.png');
+}
+.ap-radio-icon .cc-flower { width: 18px; height: 18px; }
+.ap-radio-icon .cc-flower.vf-freesia { width: 17px; height: 17px; }
+.ap-radio-icon .cc-flower.vf-freesiaSide { width: 12px; height: 20.5px; translate: none; }
+.ap-radio-icon .cc-flower.vf-stitchRose { width: 19px; height: 17px; }
+.ap-radio-icon .cc-flower.vf-grainRose { width: 21px; height: 17.3px; }
+
+/* ====== 聊天照片：磨砂 PET 胶带（2026-10-04 原瑶）======
+   她嫌照片大、拍立得跟界面不搭，照 MO-CARD「Moonlight Chronicles」那卷胶带做：磨砂半透明、灰白拼贴、银色烫金、花体字。组件在 PhotoTape.tsx。
+   · .ct-e 胶带条：照片印在一截胶带上（两头斜剪、整截微歪），旁边灰底竖栏，左下灰块上银色花体落款（她 (Atlântida) / 他 (Suxu)），右下日期
+   · .ct-g 胶带贴照片：照片本身不动，一两截磨砂胶带贴住（印着银条码 + 星星月牙，或泪滴四芒星）
+   · 点缀：蓝色泪滴一串（照她发的参考图手画的 SVG）、竖栏底的银色小苍兰（语音条那朵）
+   · 几张一起发的横着滑，滑到哪头哪头就不再渐隐（data-fade）
+   · 不用 backdrop-filter：外面那层随滚动渐隐的遮罩会让它失效，磨砂靠半透明白 + 细颗粒
+   · 深浅跟 chatTone 判的 data-tone 走（.cc-tape 在 TARGETS 里）：dark = 深背景，胶带变透、银色提亮
+   SVG 的 data URI 由 /home/cc/work/phototape/gencss.py 生成，改图形去那里改再整块换 */
+.cc-tape {
+  --ct-foil: linear-gradient(115deg, #59616c 0%, #c4c9d0 20%, #6f7782 36%, #eceef1 50%, #636b76 64%, #bec3ca 80%, #58606b 100%);
+  --ct-film: linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(236, 240, 247, 0.38));
+  --ct-edge-hi: rgba(255, 255, 255, 0.9); --ct-edge-lo: rgba(255, 255, 255, 0.5);
+  --ct-blk: rgba(104, 111, 124, 0.3); --ct-blk-w: rgba(255, 255, 255, 0.5);
+  --ct-ink: rgba(70, 78, 92, 0.72); --ct-hair: rgba(118, 126, 138, 0.55);
+  --ct-foil-sh: drop-shadow(0 0.5px 0 rgba(255, 255, 255, 0.9)) drop-shadow(0 0 0.6px rgba(60, 70, 85, 0.35));
+  --ct-mark-sh: drop-shadow(0 0 0.5px rgba(60, 70, 85, 0.4));
+  position: relative; flex: none; width: max-content; max-width: 100%; margin: 4px 0 8px;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+body[data-chat-bubbles="on"] .cc-msg.user .cc-tape { margin-left: auto; }   /* 只在开气泡时靠右（10-08 无气泡改全靠左） */
+.cc-tape[data-tone="dark"] {
+  --ct-foil: linear-gradient(115deg, #b9c0ca 0%, #ffffff 20%, #c6ccd5 36%, #ffffff 50%, #aeb6c1 64%, #f4f6f9 80%, #c2c8d0 100%);
+  --ct-film: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(225, 232, 245, 0.14));
+  --ct-edge-hi: rgba(255, 255, 255, 0.35); --ct-edge-lo: rgba(255, 255, 255, 0.18);
+  --ct-blk: rgba(200, 208, 222, 0.16); --ct-blk-w: rgba(255, 255, 255, 0.12);
+  --ct-ink: rgba(235, 240, 248, 0.8); --ct-hair: rgba(220, 226, 235, 0.55);
+  --ct-foil-sh: drop-shadow(0 0.5px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.3));
+  --ct-mark-sh: drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.3));
+}
+.ct-foil { background: var(--ct-foil); background-size: 260% 100%; background-position: 30% 0; }
+.ct-pic { position: relative; z-index: 1; }
+.ct-img { display: block; width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; -webkit-tap-highlight-color: transparent; }
+.ct-blk { position: absolute; background: var(--ct-blk); }
+.ct-blk.w { background: var(--ct-blk-w); }
+.ct-star, .ct-moon, .ct-bars, .ct-fr { position: absolute; z-index: 2; -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; filter: var(--ct-mark-sh); }
+.ct-star { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 0Q13.2 10.8 24 12Q13.2 13.2 12 24Q10.8 13.2 0 12Q10.8 10.8 12 0Z'/%3E%3C/svg%3E"); }
+.ct-moon { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cmask id='m'%3E%3Crect width='24' height='24' fill='white'/%3E%3Ccircle cx='16' cy='8.5' r='8.6' fill='black'/%3E%3C/mask%3E%3Ccircle cx='12' cy='12' r='10' mask='url(%23m)'/%3E%3C/svg%3E"); }
+.ct-bars { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 60' preserveAspectRatio='none'%3E%3Crect x='0' y='0' width='2' height='60'/%3E%3Crect x='3.5' y='0' width='0.5' height='60'/%3E%3Crect x='5' y='0' width='2' height='60'/%3E%3Crect x='8' y='0' width='0.5' height='60'/%3E%3Crect x='10.5' y='0' width='0.5' height='60'/%3E%3Crect x='12' y='0' width='1.5' height='60'/%3E%3Crect x='15.5' y='0' width='1.5' height='60'/%3E%3Crect x='18' y='0' width='2' height='60'/%3E%3Crect x='21' y='0' width='0.5' height='60'/%3E%3Crect x='23.5' y='0' width='1' height='60'/%3E%3Crect x='26' y='0' width='0.5' height='60'/%3E%3Crect x='28' y='0' width='0.5' height='60'/%3E%3Crect x='29.3' y='0' width='1.5' height='60'/%3E%3Crect x='31.6' y='0' width='1' height='60'/%3E%3Crect x='33.6' y='0' width='1.5' height='60'/%3E%3Crect x='37.1' y='0' width='0.5' height='60'/%3E%3Crect x='39.1' y='0' width='0.5' height='60'/%3E%3C/svg%3E"); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+.ct-fr { --m: url('./assets/voice-flower/freesia-side.png'); }
+.ct-drop { position: absolute; z-index: 4; pointer-events: none; background: center / contain no-repeat; }
+.ct-drop.a { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 28 38'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%2393d3f9'/%3E%3Cstop offset='.55' stop-color='%233ea6f0'/%3E%3Cstop offset='1' stop-color='%231586e6'/%3E%3C/linearGradient%3E%3CradialGradient id='h' cx='.6' cy='.68' r='.42'%3E%3Cstop offset='0' stop-color='%23c4e8fd' stop-opacity='.9'/%3E%3Cstop offset='1' stop-color='%23c4e8fd' stop-opacity='0'/%3E%3C/radialGradient%3E%3Cfilter id='f' x='-50%25' y='-50%25' width='200%25' height='200%25'%3E%3CfeGaussianBlur stdDeviation='.35'/%3E%3C/filter%3E%3Cfilter id='o' x='-60%25' y='-60%25' width='220%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='1.7'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M10 1C11.8 5.6 18.6 13.4 18.6 19.9C18.6 25.1 14.8 29 10 29C5.2 29 1.4 25.1 1.4 19.9C1.4 13.4 8.2 5.6 10 1Z' fill='%2369bdf6' opacity='.5' filter='url(%23o)'/%3E%3Cg filter='url(%23f)'%3E%3Cpath d='M10 1C11.8 5.6 18.6 13.4 18.6 19.9C18.6 25.1 14.8 29 10 29C5.2 29 1.4 25.1 1.4 19.9C1.4 13.4 8.2 5.6 10 1Z' fill='url(%23g)'/%3E%3Cpath d='M10 1C11.8 5.6 18.6 13.4 18.6 19.9C18.6 25.1 14.8 29 10 29C5.2 29 1.4 25.1 1.4 19.9C1.4 13.4 8.2 5.6 10 1Z' fill='url(%23h)'/%3E%3C/g%3E%3C/svg%3E"); }
+.ct-drop.b { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 28 38'%3E%3Cdefs%3E%3CradialGradient id='r' cx='.52' cy='.67' r='.56'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='.36' stop-color='%23ecf7fe'/%3E%3Cstop offset='.64' stop-color='%23a3d7f8'/%3E%3Cstop offset='.86' stop-color='%233ea5ef'/%3E%3Cstop offset='1' stop-color='%231b8be7'/%3E%3C/radialGradient%3E%3Cfilter id='f' x='-50%25' y='-50%25' width='200%25' height='200%25'%3E%3CfeGaussianBlur stdDeviation='.3'/%3E%3C/filter%3E%3Cfilter id='o' x='-60%25' y='-60%25' width='220%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='1.6'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M10 1C11.8 5.6 18.6 13.4 18.6 19.9C18.6 25.1 14.8 29 10 29C5.2 29 1.4 25.1 1.4 19.9C1.4 13.4 8.2 5.6 10 1Z' fill='%236dbff6' opacity='.45' filter='url(%23o)'/%3E%3Cpath d='M10 1C11.8 5.6 18.6 13.4 18.6 19.9C18.6 25.1 14.8 29 10 29C5.2 29 1.4 25.1 1.4 19.9C1.4 13.4 8.2 5.6 10 1Z' fill='url(%23r)' filter='url(%23f)'/%3E%3C/svg%3E"); }
+.ct-drop.s { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-3 -3 30 30'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2362bdf5'/%3E%3Cstop offset='1' stop-color='%231688e6'/%3E%3C/linearGradient%3E%3Cfilter id='o' x='-60%25' y='-60%25' width='220%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='1.4'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M12 1Q14 10 23 12Q14 14 12 23Q10 14 1 12Q10 10 12 1Z' fill='%237cc8f7' opacity='.55' filter='url(%23o)'/%3E%3Cpath d='M12 1Q14 10 23 12Q14 14 12 23Q10 14 1 12Q10 10 12 1Z' fill='url(%23g)'/%3E%3C/svg%3E"); }
+.ct-drop.p { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 1V9M1 5H9' stroke='%232b9be9' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E"); }
+/* 横着滑的那条：右边（滑过去后左边）留一截渐隐，告诉她还有 */
+.ct-strip[data-fade], .ct-row[data-fade] { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
+/* 吸附等她手指碰到才开（data-snap，PhotoTape 里加）：一开始就开着，iPhone 打开聊天时这条会自己跳到后面的照片 */
+.ct-strip[data-fade][data-snap], .ct-row[data-fade][data-snap] { scroll-snap-type: x mandatory; }
+.ct-strip[data-fade]::-webkit-scrollbar, .ct-row[data-fade]::-webkit-scrollbar { display: none; }
+.ct-strip[data-fade="r"], .ct-row[data-fade="r"] { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent); }
+.ct-strip[data-fade="l"], .ct-row[data-fade="l"] { -webkit-mask-image: linear-gradient(90deg, transparent, #000 22px); mask-image: linear-gradient(90deg, transparent, #000 22px); }
+.ct-strip[data-fade="lr"], .ct-row[data-fade="lr"] { -webkit-mask-image: linear-gradient(90deg, transparent, #000 22px, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(90deg, transparent, #000 22px, #000 calc(100% - 26px), transparent); }
+/* E 胶带条 */
+.ct-strip { position: relative; max-width: 302px; }
+.ct-track { display: flex; width: max-content; padding: 0 9px; clip-path: polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .52 0 0 0 0 .56 0 0 0 .10 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), var(--ct-film); box-shadow: inset 0 1px 0 var(--ct-edge-hi), inset 0 -1px 0 var(--ct-edge-lo); }
+.ct-seg { position: relative; flex: none; padding: 12px 12px 25px; scroll-snap-align: start; }
+.ct-seg .ct-pic::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0.75px rgba(255, 255, 255, 0.7), 0 0 0 0.75px var(--ct-hair); }
+.ct-script { position: absolute; z-index: 2; left: 9px; bottom: 3px; padding: 0 2px; font: 400 19px/1 'Pinyon Script', cursive; white-space: nowrap;
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; filter: var(--ct-foil-sh); }
+.ct-date { position: absolute; z-index: 2; right: 13px; bottom: 6px; font: italic 600 10px/1 var(--font-display); letter-spacing: 0.12em; color: var(--ct-ink); }
+.ct-side { position: relative; flex: none; width: 30px; }
+.ct-side .ct-blk { left: 4px; right: 4px; top: 12px; bottom: 25px; }
+.ct-side .ct-bars { left: 7px; top: 17px; width: 16px; height: 34px; }
+.ct-side .ct-moon { left: 10px; bottom: 31px; width: 10px; height: 10px; }
+.ct-side .ct-fr { left: 7px; bottom: 28px; width: 16px; height: 28px; }
+.ct-vert { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap;
+  font: 600 8px/1 var(--font-display); letter-spacing: 0.32em; color: var(--ct-ink); }
+/* G 胶带贴照片：只有照片本身（10-04 原瑶嫌白边在她的玫瑰背景上不好看，去掉了），几截磨砂胶带贴住；一条里几张时这一排横着滑 */
+.ct-row { display: flex; align-items: center; gap: 16px; max-width: 318px; }
+.ct-row[data-fade] { padding: 40px 0 30px; }
+.ct-taped { position: relative; flex: none; scroll-snap-align: start; }
+.ct-taped .ct-pic { border-radius: 2px; box-shadow: 0 1px 2.5px rgba(20, 30, 50, 0.2), 0 10px 20px -10px rgba(20, 30, 50, 0.4); }
+.cc-tape[data-tone="dark"] .ct-taped .ct-pic { box-shadow: 0 1px 2.5px rgba(0, 0, 0, 0.3), 0 10px 20px -10px rgba(0, 0, 0, 0.55); }
+.ct-taped .ct-img { border-radius: 2px; }
+.ct-piece { position: absolute; z-index: 2; width: 64px; height: 19px; overflow: hidden;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .52 0 0 0 0 .56 0 0 0 .10 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(236, 240, 246, 0.58));
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.9), 0 0.5px 1.5px rgba(20, 30, 50, 0.14); }
+.ct-piece .ct-bars { left: 6px; top: 3px; width: 20px; height: 13px; }
+.ct-piece .ct-star { left: 33px; top: 5px; width: 8px; height: 8px; }
+.ct-piece .ct-moon { left: 47px; top: 5px; width: 8px; height: 8px; }
+.ct-piece .ct-drop.a { left: 32px; top: 4px; width: 6px; height: 8.2px; }
+.ct-piece .ct-drop.s { left: 43px; top: 6px; width: 7px; height: 7px; }
+/* 胶带上的条码、星星、月牙不跟深浅换：胶带本身是浅的 */
+.ct-piece .ct-foil { background: linear-gradient(115deg, #59616c 0%, #c4c9d0 20%, #6f7782 36%, #eceef1 50%, #636b76 64%, #bec3ca 80%, #58606b 100%); background-size: 260% 100%; background-position: 30% 0; }
+/* 几张一起发的：整条横跨聊天区（PhotoTape 量好左右伸多少写在 margin 上），照片从聊天区边上滑出去，不在半中间截断；
+   里面一层 .ct-in：放得下时靠她那边（右）对齐，放不下就从左边开始滑。上下留足，竖贴的胶带和泪滴不被切 */
+.cc-tape.multi { width: auto; max-width: none; align-self: stretch; }
+.cc-tape.multi .ct-strip, .cc-tape.multi .ct-row { max-width: none; width: 100%; box-sizing: border-box; }
+.ct-strip[data-fade] { scroll-padding: 0 10px; }
+.ct-row[data-fade] { scroll-padding: 0 20px; }   /* 吸附对齐左边：居中吸附在 WebKit 里一打开就把第一张拉到正中，左边先淡掉一截 */
+.ct-in { flex: none; display: flex; align-items: center; min-width: 100%; width: max-content; box-sizing: border-box; }   /* flex: none：.ct-row 本身是 flex，不写会被压回一屏宽、照片往左溢出够不着 */
+.ct-row .ct-in { gap: 16px; padding: 0 20px; }
+.ct-strip .ct-in { padding: 0 10px; }
+body[data-chat-bubbles="on"] .cc-msg.user .ct-in { justify-content: flex-end; }
+/* 聊天区不许左右滑：照片上的泪滴、胶带伸出一点点，整个对话就能被手推着左右动（10-04 原瑶："对话界面手一滑会移动"） */
+.cc-messages { overflow-x: hidden; }
+/* 伸出照片的胶带、泪滴、影子都要落在 .cc-tape 自己的框里（10-04 原瑶在 iPhone 上看到"像嵌进了一块区域、胶带没显示完、还有黑边"）：
+   聊天渐隐的遮罩挂在 .cc-tape 上，iPhone 的 WebKit 不认 mask-clip: no-clip，框外的一律切掉——胶带齐边断开，照片的影子切成一道深色硬边。
+   所以框四周留够空（padding），再用同样多的负 margin 抵掉，排版跟原来一样 */
+.cc-tape.ct-e:not(.multi) { padding: 12px 16px 14px; margin: -8px -16px -6px; }
+.cc-tape.ct-g:not(.multi) { padding: 40px 30px 30px; margin: -28px -30px -20px; }
+.cc-tape.ct-g.multi { margin-top: -36px; margin-bottom: -22px; }
+body[data-chat-bubbles="on"] .cc-msg.user .cc-tape:not(.multi) { margin-left: auto; }
+/* 网页卡片、拾贝卡外面套的一层（10-04 原瑶："要"——顺手查同一个毛病）：聊天渐隐的遮罩挂在这层上，四周留出影子和歪角的位置，再用负 margin 抵掉。
+   原来遮罩直接挂在卡片上，iPhone 的 WebKit 不认 mask-clip: no-clip，卡片框外的东西全被切掉：拍立得两个下角翘起的影子、拾贝卡四周的柔影子在她手机上都没有。
+   align-self: stretch 让这层占满整栏，网页卡片按父元素量宽度，跟原来一样 */
+.cc-fadebox { position: relative; align-self: stretch; }
+.cc-fadebox.pola { padding: 16px 22px 34px; margin: -16px -22px -34px; }
+.cc-fadebox.keep { padding: 24px 34px 48px; margin: -24px -34px -48px; }
+/* 外观 → 聊天里的照片 → 只是图片（10-04 原瑶："能做个开关么？可以选择恢复只是图片那种"）：照片本身、12px 圆角、跟气泡同一层影子，没有胶带和点缀。
+   照片在字上面、点开看大图、几张一起横着滑这些照旧；外圈留白同样是给影子的（iPhone 上渐隐遮罩会切掉框外的东西） */
+.cc-tape.ct-plain:not(.multi) { padding: 10px 14px 20px; margin: -6px -14px -12px; }
+.cc-tape.ct-plain.multi { margin-top: -6px; margin-bottom: -12px; }
+.ct-plain .ct-row[data-fade] { padding: 10px 0 20px; }
+.ct-plain .ct-in { gap: 8px; }
+.ct-plainpic { flex: none; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); scroll-snap-align: start; }
+.ct-plainpic .ct-img { border-radius: 12px; }
+body[data-bubble-shadow="on"] .cc-messages .ct-plainpic { box-shadow: var(--bubble-shadow); }
+body[data-bubble-shadow="off"] .cc-messages .ct-plainpic { box-shadow: none; }
+
+/* 水电费：主页图标右上角的小点（黄=快用完/快到期，红=没钱了/报错），2026-10-05 */
+.tile-dot { position: absolute; top: 1px; left: calc(50% + 19px); width: 11px; height: 11px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.95); box-shadow: 0 1px 4px rgba(60, 80, 120, 0.25); pointer-events: none; }
+.tile-dot.warn { background: #e0a53a; }
+.tile-dot.bad { background: #d0566e; }
+
+/* ====== 通话 v2（2026-10-05 原瑶："把通话界面做好看点。做成现在聊天界面的风格。也可以参考 iMessage"）======
+   CallOverlay.tsx。通话时 body[data-call]：页面内容和 dock 藏起来，身后的聊天背景（弥散 / 纯色 / 图片）直接露出来，整屏就是聊天页的底。
+   顶上是聊天顶栏那对头像（.cc-duo 的摆法放大 2.9 倍，用真尺寸不用 scale，iPhone 上放大的图层会糊），名字，心脏 + 计时。
+   字幕就是聊天气泡（.cc-msg / .cc-paragraph，气泡、染色、边框线、阴影全跟着；字晕染她定过只管聊天和 Undercurrent，这里不晕）。
+   底下的条是输入栏那块玻璃（.cc-input-pill）。字和图标深浅由 chatTone 的 useToneScope('.call-overlay', …) 按身后背景写 data-tone。
+   别给 .call-overlay / .call-body / .call-foot 这类包着玻璃的祖先做 opacity 动画（Chromium 会当 backdrop root，磨砂失效）；
+   进场、退场都动各块自己。前面那套旧 .call-* 样式还在（.call-overlay 定位、旧类名），这里只管 .call-v2 */
+body[data-call] .content-scroll,
+body[data-call] nav.dock { opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+.content-scroll, nav.dock { transition: opacity 0.4s ease; }
+
+.call-overlay.call-v2 {
+  position: fixed; inset: 0; z-index: 1500;
+  display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 0 0;
+  background: none;
+  animation: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.call-v2 .call-head {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 4px 16px 0;
+  animation: call-v2-drop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) backwards;
+}
+@keyframes call-v2-drop { from { opacity: 0; transform: translateY(-10px); } }
+
+/* 两张头像：她在左压在上面，他在右，下角交叠（同顶栏）；谁在说话谁那张浮起来一点 */
+.call-v2 .call-duo { --u: 2.9px; position: relative; width: calc(42 * var(--u)); height: calc(25 * var(--u)); }
+.call-v2 .call-duo-card {
+  position: absolute; top: calc(2.5 * var(--u)); width: calc(20 * var(--u)); height: calc(20 * var(--u));
+  border-radius: calc(2 * var(--u)); overflow: hidden; background: #f5f5f3;
+  box-shadow: 0.5px 1.4px 1.4px rgba(22, 30, 48, 0.2), 1.4px 3.4px 6px rgba(22, 30, 48, 0.14), 3px 9px 18px rgba(22, 30, 48, 0.1), 6px 20px 40px rgba(22, 30, 48, 0.06);
+  transition: transform 0.55s cubic-bezier(0.3, 1.3, 0.5, 1), box-shadow 0.55s ease;
+}
+.call-v2 .call-duo-card.his { left: calc(19.1 * var(--u)); transform: rotate(16deg); }
+.call-v2 .call-duo-card.her {
+  left: calc(2.4 * var(--u)); transform: rotate(-16deg);
+  box-shadow: 1px 2px 2px rgba(22, 30, 48, 0.26), 2.6px 5.2px 8.7px rgba(22, 30, 48, 0.19), 5.2px 13px 23px rgba(22, 30, 48, 0.12), 8.7px 26px 46px rgba(22, 30, 48, 0.07);
+}
+.call-v2 .call-duo-card img { display: block; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.92) contrast(1.06); clip-path: inset(0 round calc(2 * var(--u))); -webkit-user-drag: none; }
+.call-v2 .call-duo-card::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0) 42%, rgba(255, 255, 255, 0) 68%, rgba(20, 30, 50, 0.07) 100%);
+  box-shadow: inset 0 0 0 0.6px rgba(20, 30, 50, 0.13), inset 0 1.2px 0 rgba(255, 255, 255, 0.75);
+}
+.call-v2 .call-duo-card.his.talk { transform: translateY(-6px) rotate(16deg); }
+.call-v2 .call-duo-card.her.talk { transform: translateY(-6px) rotate(-16deg); }
+.call-v2 .call-duo-card.talk { box-shadow: 1px 3px 3px rgba(22, 30, 48, 0.2), 3px 8px 12px rgba(22, 30, 48, 0.15), 6px 18px 30px rgba(22, 30, 48, 0.11), 10px 32px 56px rgba(22, 30, 48, 0.07); }
+/* 来电、接通前：两张往里靠一下再分开，身后一圈圈往外漾 */
+.call-v2 .call-duo.ring .call-duo-card.his { animation: call-v2-lean-his 2.4s ease-in-out infinite; }
+.call-v2 .call-duo.ring .call-duo-card.her { animation: call-v2-lean-her 2.4s ease-in-out infinite; }
+@keyframes call-v2-lean-his { 0%, 100% { transform: rotate(16deg); } 45% { transform: translateX(-2px) rotate(12.5deg); } }
+@keyframes call-v2-lean-her { 0%, 100% { transform: rotate(-16deg); } 45% { transform: translateX(2px) rotate(-12.5deg); } }
+.call-v2 .call-halo {
+  position: absolute; left: 50%; top: 50%; width: calc(44 * var(--u)); height: calc(44 * var(--u));
+  margin: calc(-22 * var(--u)) 0 0 calc(-22 * var(--u)); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(132, 168, 222, 0.420) 0%, rgba(132, 168, 222, 0.412) 10%, rgba(132, 168, 222, 0.387) 20%, rgba(132, 168, 222, 0.348) 30%, rgba(132, 168, 222, 0.296) 40%, rgba(132, 168, 222, 0.236) 50%, rgba(132, 168, 222, 0.172) 60%, rgba(132, 168, 222, 0.109) 70%, rgba(132, 168, 222, 0.054) 80%, rgba(132, 168, 222, 0.015) 90%, rgba(132, 168, 222, 0.000) 100%);
+  animation: call-v2-halo 2.4s ease-in-out infinite;
+}
+/* 光按 (1−t²)² 淡到没有，边上看不出一圈 */
+@keyframes call-v2-halo { 0%, 100% { transform: scale(0.8); opacity: 0.55; } 45% { transform: scale(1.1); opacity: 1; } }
+/* 挂了：两张慢慢分开一点 */
+.call-v2[data-phase="ended"] .call-duo-card.his { transform: translateX(4px) rotate(21deg); }
+.call-v2[data-phase="ended"] .call-duo-card.her { transform: translateX(-4px) rotate(-21deg); }
+
+.call-v2 .call-name {
+  margin-top: 16px;
+  font-family: var(--font-body); font-size: 21px; font-weight: 500; letter-spacing: 0.22em; text-indent: 0.22em; line-height: 1.2;
+  color: oklch(0.26 0.03 252); transition: color 0.45s ease;
+}
+.call-v2 .call-status {
+  margin-top: 6px; min-height: 20px;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 16px; letter-spacing: 0.05em; line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-synthesis: none;   /* 数字用 Cormorant 真斜体；「来电」「通话结束」这些汉字不硬压斜 */
+  color: oklch(0.26 0.03 252 / 0.6); transition: color 0.45s ease;
+}
+.call-v2 .call-status-text { white-space: nowrap; }
+/* 顶栏小字前那颗心脏挂到计时前面，大一点 */
+.call-v2 .cc-duo-heart.call-heart { position: relative; left: auto; top: auto; display: inline-block; flex: 0 0 auto; width: 12px; height: 12px; opacity: 0.88; }
+.call-v2 .call-heart .cc-duo-heart-beat::before { width: 26px; height: 26px; }
+.call-v2 .call-heart::after { width: 40px; height: 40px; }
+.call-v2 .call-name[data-tone="dark"] { color: #f3f5f7; }
+.call-v2 .call-status[data-tone="dark"] { color: rgba(243, 245, 247, 0.74); }
+
+/* 字幕：聊天气泡原样，他左她右；新的一句像 iMessage 那样从底下弹出来（只动 transform，玻璃不失效） */
+.call-v2 .call-body {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+  overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  padding: 20px 6px 14px;
+  -webkit-user-select: text; user-select: text;
+}
+.call-v2 .call-body::-webkit-scrollbar { display: none; }
+/* 像聊天一样从底下往上长：字幕少的时候贴着底下的条（margin-top: auto，内容多了照常能翻上去） */
+.call-v2 .call-msgs { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+.call-v2 .call-msgs .cc-msg { flex: 0 0 auto; }
+.call-v2 .call-msgs .cc-msg .cc-text { animation: call-v2-pop 0.46s cubic-bezier(0.2, 1.3, 0.4, 1) backwards; transform-origin: 14% 100%; }
+.call-v2 .call-msgs .cc-msg.user .cc-text { transform-origin: 86% 100%; }
+@keyframes call-v2-pop { from { transform: translateY(12px) scale(0.86); } }
+/* 往上翻走的字幕经过上沿时淡掉（每一块自己淡，不在列表上加遮罩） */
+@supports (animation-timeline: view(block 0px 0px)) and (animation-range: exit 0% exit 100%) {
+  @keyframes call-v2-edge-out { from { opacity: 1; } to { opacity: 0; } }
+  .call-v2 .call-msgs .cc-text > * {
+    animation: call-v2-edge-out linear forwards;
+    animation-timeline: view(block 14px 0px);
+    animation-range: exit 0% exit 100%;
+  }
+}
+/* 他在想：一枚三个点的气泡，点一个接一个亮（iMessage 那样） */
+.call-v2 .call-typing { display: inline-flex !important; align-items: center; gap: 4px; min-height: calc(1.5em + 0.82em); }
+.call-v2 .call-typing i { display: block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.3; animation: call-v2-dot 1.2s ease-in-out infinite; }
+.call-v2 .call-typing i:nth-child(2) { animation-delay: 0.18s; }
+.call-v2 .call-typing i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes call-v2-dot { 0%, 60%, 100% { opacity: 0.28; transform: translateY(0); } 30% { opacity: 0.85; transform: translateY(-2px); } }
+.call-v2 .call-hint {
+  text-align: center; margin-top: 8px;
+  font-family: var(--font-body); font-size: 13px; letter-spacing: 0.06em;
+  color: oklch(0.26 0.03 252 / 0.5); transition: color 0.45s ease;
+}
+.call-v2 .call-hint[data-tone="dark"] { color: rgba(243, 245, 247, 0.66); }
+/* 气泡关着时（外观里没开气泡）：字幕跟聊天一样是素字，快捷回复补一层玻璃，看得出能点 */
+body:not([data-chat-bubbles="on"]) .call-v2 .call-msgs .cc-text-col { display: flex; flex-direction: column; }
+body:not([data-chat-bubbles="on"]) .call-v2 .call-msgs .cc-msg.user .cc-text { margin-left: auto; text-align: right; }
+
+/* 底下：输入栏同款的玻璃条——静音 / 星星 / 挂断 */
+.call-v2 .call-foot { flex: 0 0 auto; padding: 6px 22px calc(max(env(safe-area-inset-bottom, 0px), 14px) + 10px); }
+.call-v2 .call-notes { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 8px; }
+.call-v2 .call-notes:empty { display: none; }
+.call-v2 .call-note {
+  font-family: var(--font-body); font-size: 12.5px; letter-spacing: 0.04em; text-align: center;
+  color: oklch(0.26 0.03 252 / 0.58); transition: color 0.45s ease;
+}
+.call-v2 .call-note[data-tone="dark"] { color: rgba(243, 245, 247, 0.72); }
+.call-v2 .call-resume {
+  padding: 7px 14px; border: 0; border-radius: 999px; cursor: pointer;
+  font-family: var(--font-body); font-size: 13px; letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.62); color: oklch(0.3 0.03 252);
+  box-shadow: 0 1px 2px rgba(20, 40, 80, 0.08), 0 6px 16px -6px rgba(20, 40, 80, 0.2);
+}
+.call-v2 .call-bar { display: flex; }
+.call-v2 .cc-input-pill.call-pill {
+  flex: 1 1 auto !important;
+  min-height: 52px !important; padding: 4px 5px !important; border-radius: 26px !important;
+  align-items: center !important; gap: 4px !important;
+  animation: call-v2-rise 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) backwards;
+}
+@keyframes call-v2-rise { from { opacity: 0; transform: translateY(16px); } }
+.call-v2 .call-mute, .call-v2 .call-end {
+  flex: 0 0 auto; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  transition: transform 0.18s var(--ease-spring, cubic-bezier(0.4, 1.2, 0.5, 1)), background-color 0.2s, color 0.45s ease, opacity 0.2s;
+}
+.call-v2 .call-mute { background: transparent; color: oklch(0.32 0.03 252 / 0.85); }
+.call-v2 .call-mute[data-tone="dark"] { color: rgba(243, 245, 247, 0.92); }
+.call-v2 .call-mute.on, .call-v2 .call-mute.on[data-tone="dark"] { background: rgba(255, 255, 255, 0.82); color: oklch(0.3 0.04 252); box-shadow: 0 1px 2px rgba(20, 40, 80, 0.1); }
+.call-v2 .call-mute:disabled { opacity: 0.4; cursor: default; }
+.call-v2 .call-end {
+  color: #fff;
+  background: linear-gradient(160deg, oklch(0.67 0.14 24), oklch(0.56 0.16 24));
+  box-shadow: 0 1px 2px rgba(120, 30, 20, 0.18), 0 6px 14px -6px rgba(150, 40, 30, 0.45);
+}
+.call-v2 .call-end:disabled { opacity: 0.45; cursor: default; }
+.call-v2 :is(.call-mute, .call-end, .call-key-btn, .call-quick-btn, .call-done, .call-resume, .call-note-send):not(:disabled):active { transform: scale(0.92); }
+.call-v2 .call-mid { flex: 1 1 auto; min-width: 0; height: 42px; display: flex; align-items: center; gap: 8px; padding: 0 4px; }
+.call-v2 .call-stars { position: relative; flex: 1 1 auto; min-width: 0; height: 30px; }
+.call-v2 .call-stars canvas { position: absolute; left: -10px; top: -10px; width: calc(100% + 20px); height: calc(100% + 20px); display: block; pointer-events: none; }
+.call-v2 .call-label {
+  flex: 0 0 auto; padding-right: 6px; white-space: nowrap;
+  font-family: var(--font-body); font-size: 12.5px; letter-spacing: 0.06em;
+  color: oklch(0.26 0.03 252 / 0.58); transition: color 0.45s ease;
+}
+.call-v2 .call-label[data-tone="dark"] { color: rgba(243, 245, 247, 0.74); }
+.call-v2 .call-done {
+  flex: 0 0 auto; padding: 6px 12px; margin-right: 2px; border: 0; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  font-family: var(--font-body); font-size: 12.5px; letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.6); color: oklch(0.3 0.03 252);
+  box-shadow: 0 1px 2px rgba(20, 40, 80, 0.08);
+  animation: call-v2-fadein 0.25s ease backwards;
+}
+.call-v2 .call-done[data-tone="dark"] { background: rgba(255, 255, 255, 0.18); color: #f3f5f7; }
+@keyframes call-v2-fadein { from { opacity: 0; } }
+
+/* 来电：照 iPhone，左挂断、右接听 */
+.call-v2 .call-keys {
+  display: flex; justify-content: space-between; padding: 0 30px 4px;
+  animation: call-v2-rise 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) backwards;
+}
+.call-v2 .call-key-btn { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 0; border: 0; background: none; cursor: pointer; transition: transform 0.18s var(--ease-spring, cubic-bezier(0.4, 1.2, 0.5, 1)); }
+.call-v2 .call-key-disc { width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.call-v2 .call-key-btn.decline .call-key-disc {
+  background: linear-gradient(160deg, oklch(0.67 0.14 24), oklch(0.56 0.16 24));
+  box-shadow: 0 2px 4px rgba(120, 30, 20, 0.16), 0 10px 22px -8px rgba(150, 40, 30, 0.45);
+}
+.call-v2 .call-key-btn.accept .call-key-disc {
+  background: linear-gradient(160deg, oklch(0.66 0.12 256), oklch(0.54 0.14 256));
+  box-shadow: 0 2px 4px rgba(20, 50, 120, 0.16), 0 10px 22px -8px rgba(30, 70, 160, 0.45);
+  animation: call-v2-accept 2.4s ease-in-out infinite;
+}
+@keyframes call-v2-accept {
+  0%, 100% { box-shadow: 0 2px 4px rgba(20, 50, 120, 0.16), 0 10px 22px -8px rgba(30, 70, 160, 0.45), 0 0 0 0 rgba(110, 150, 230, 0.36); }
+  55% { box-shadow: 0 2px 4px rgba(20, 50, 120, 0.16), 0 10px 22px -8px rgba(30, 70, 160, 0.45), 0 0 0 14px rgba(110, 150, 230, 0); }
+}
+.call-v2 .call-key-label {
+  font-family: var(--font-body); font-size: 13px; letter-spacing: 0.12em; text-indent: 0.12em;
+  color: oklch(0.26 0.03 252 / 0.62); transition: color 0.45s ease;
+}
+.call-v2 .call-key-label[data-tone="dark"] { color: rgba(243, 245, 247, 0.78); }
+
+/* 点挂断后：快捷回复就是她的气泡（右边一枚枚叠着），下面一条输入栏，最下面「返回」「直接挂断」 */
+.call-v2 .call-sheet { display: flex; flex-direction: column; gap: 10px; animation: call-v2-rise 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) backwards; }
+.call-v2 .call-quick { padding: 0 !important; }
+.call-v2 .call-quick .cc-text { gap: 8px; }
+.call-v2 .call-quick-btn {
+  appearance: none; -webkit-appearance: none; border: 0; cursor: pointer; text-align: left;
+  font: inherit; font-size: inherit; color: inherit; margin: 0;
+  transition: transform 0.18s var(--ease-spring, cubic-bezier(0.4, 1.2, 0.5, 1)), color 0.45s ease;
+}
+body:not([data-chat-bubbles="on"]) .call-v2 .call-quick-btn {
+  align-self: flex-end; padding: 0.41em 0.82em; border-radius: 1.2em;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(255, 255, 255, 0.06) 100%), rgba(150, 180, 220, 0.16);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.5), 0 4px 12px -4px rgba(20, 40, 80, 0.16);
+}
+.call-v2 .call-note-bar { display: flex; }
+.call-v2 .cc-input-pill.call-note-pill {
+  flex: 1 1 auto !important; min-height: 44px !important; padding: 3px 4px 3px 16px !important; border-radius: 22px !important;
+  align-items: center !important; gap: 6px !important;
+}
+.call-v2 .call-note-input {
+  flex: 1 1 auto; min-width: 0; padding: 6px 0; border: 0; outline: none; background: transparent;
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  color: var(--text-you, var(--ink)); caret-color: var(--text-you, var(--ink));
+  -webkit-user-select: text; user-select: text;
+}
+.call-v2 .call-note-input::placeholder { color: var(--text-you, var(--ink-faint)); opacity: 0.55; }
+.call-v2 .call-note-send {
+  flex: 0 0 auto; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; color: #fff;
+  background: linear-gradient(160deg, oklch(0.66 0.12 256), oklch(0.54 0.14 256));
+  transition: opacity 0.2s, transform 0.18s var(--ease-spring, cubic-bezier(0.4, 1.2, 0.5, 1));
+}
+.call-v2 .call-note-send:disabled { opacity: 0.32; cursor: default; }
+.call-v2 .call-sheet-row { display: flex; justify-content: space-between; padding: 0 10px; }
+.call-v2 .call-link {
+  padding: 8px 6px; border: 0; background: none; cursor: pointer;
+  font-family: var(--font-body); font-size: 13.5px; letter-spacing: 0.08em;
+  color: oklch(0.26 0.03 252 / 0.6); transition: color 0.45s ease;
+}
+.call-v2 .call-link[data-tone="dark"] { color: rgba(243, 245, 247, 0.76); }
+
+/* 挂了：「通话结束 · 时长」停一下，各块自己淡掉（1.6 秒后 callStore 回 idle，浮层卸掉，页面淡回来） */
+.call-v2[data-phase="ended"] :is(.call-head, .call-notes, .call-hint, .call-pill),
+.call-v2[data-phase="ended"] .call-msgs .cc-text { animation: call-v2-out 0.42s ease 1.12s forwards; }
+@keyframes call-v2-out { to { opacity: 0; } }
+
+/* 省电模式（3 分钟没碰）会暂停全站 CSS 动画：通话里她常常一直不碰屏幕，这里放行，免得三个点、心跳停在半截像卡住了 */
+body[data-power-save="true"] .call-overlay *,
+body[data-power-save="true"] .call-overlay *::before,
+body[data-power-save="true"] .call-overlay *::after { animation-play-state: running !important; }
+@media (prefers-reduced-motion: reduce) {
+  .call-v2 *, .call-v2 *::before, .call-v2 *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* ====== 聊天里的通话卡片（2026-10-05 原瑶："打电话苏煦的《...》改成显示一张通话结束的卡片"）======
+   CallCard.tsx。卡片本身就是一枚气泡（.cc-paragraph），气泡、染色、阴影、字的深浅、晕染都跟聊天里的一样；
+   左边一颗小圆电话：接通过的蓝，没接 / 拒接 / 没打通的红。他打来的下面一行小字是他拨号时说的理由 */
+body .cc-paragraph.cc-call-card { display: flex; align-items: center; gap: 0.6em; white-space: nowrap; cursor: default; }
+.cc-call-ico {
+  flex: 0 0 auto; width: 1.8em; height: 1.8em; border-radius: 50%;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(160deg, oklch(0.66 0.11 256), oklch(0.55 0.13 256));
+  box-shadow: 0 1px 2px rgba(20, 40, 80, 0.16);
+}
+.cc-call-card.miss .cc-call-ico { background: linear-gradient(160deg, oklch(0.68 0.12 24), oklch(0.57 0.14 24)); }
+.cc-call-card.ring .cc-call-ico, .cc-call-card.live .cc-call-ico { animation: cc-call-pulse 1.6s ease-in-out infinite; }
+@keyframes cc-call-pulse { 0%, 100% { box-shadow: 0 1px 2px rgba(20, 40, 80, 0.16), 0 0 0 0 rgba(110, 150, 230, 0.4); } 60% { box-shadow: 0 1px 2px rgba(20, 40, 80, 0.16), 0 0 0 7px rgba(110, 150, 230, 0); } }
+.cc-call-txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
+.cc-call-title { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.cc-call-sub { font-size: 0.8em; opacity: 0.62; white-space: normal; max-width: 15em; }
+@media (prefers-reduced-motion: reduce) { .cc-call-card .cc-call-ico { animation: none !important; } }
+
+/* —— 星标(2026-10-05 原瑶): 月亮编辑器和编辑记录里的星, 颜色同「现在用的」 —— */
+.cmh-star { display: inline-flex; align-self: center; color: var(--panel-sea); font-size: 12px; }
+.cmh-star-btn { margin-left: 6px; padding: 0 2px; border: 0; background: none; color: var(--ink-soft); font-size: 15px; line-height: 1; vertical-align: -2px; cursor: pointer; }
+.cmh-star-btn.on { color: var(--panel-sea); }
+.cmh-star-btn:disabled { cursor: default; }
+/* 月亮编辑器右上角那颗(原瑶选的 C): 星 18px, 点的范围四周各多 10px */
+.moon-star { position: absolute; top: 10px; right: 12px; padding: 10px; border: 0; background: none; color: var(--ink-soft); font-size: 18px; line-height: 0; cursor: pointer; }
+.moon-star.on { color: var(--panel-sea); }
+.moon-star:disabled { cursor: default; }
+
+/* ====== 玻璃 C · iOS 液态玻璃（2026-10-07 原瑶："ios 的 liquid glass，想尽办法做到一模一样"，做成可选，不代替柔玻璃）======
+   主题面板「玻璃 · 全局」第三种，写进 sea-theme.glass（mode=ios，参数在 glass.ios），引擎 src/liquidGlass.ts。
+   数字是真机实测（iOS 26.5，glass-probe 截图逐像素拟合，见 liquidGlass.ts 开头）：
+     常规：磨砂 σ5.4 → 提亮 ×1.12 → 72.9% 白纱 → 饱和 ×1.7，落影 0 8px 36px 15% 黑；边缘按中心放大（引擎画）
+     透明：磨砂 σ1.37 → 提亮 ×1.12 → 7.5% 白纱，不饱和，不折射，没有落影
+   真机的饱和在纱之后：WebKit（iPhone）上纱写进 backdrop-filter 链——contrast(c) brightness(k) 就是"g·身后 + h"那层纱
+   （k·c = 1−a，k·(1−c)/2 = a·纱色），饱和排在纱后面，跟真机一样；--lg-c/--lg-k 必须跟 --lg-veil 是同一层纱。
+   别的内核（电脑 Chrome）纱放 background、饱和在纱前：Chrome 里祖先有 backdrop-filter / opacity 动画时链里的纱会变透明。
+   html[data-lg-engine=webkit|other] 是引擎按内核写的。引擎按 --lg-frost / --lg-bright / --lg-sat / --lg-veil / --lg-tint 算折射那圈的颜色。
+   一块玻璃从下到上：身后（磨砂、提亮、饱和）→ 纱 → 染色（只有气泡「各自」时有）→ 折射画布 canvas.lg-rx → 内容 → ::after 1px 细亮边。
+   细亮边两个热点在左上、右下（实测两盏灯），--lg-hx/--lg-hy 是光的方向（引擎写；开了「跟着手机倾斜」会转）。
+   面的选择器跟 liquidGlass.ts 的 IOS_SURFACES 一致；要压过柔玻璃那几十条老规则，所以一律 !important。
+   边框线开关（body[data-edges=off]）关掉时细亮边一起去掉，落影留着。
+   厚玻璃（data-lg-look=thick，默认；10-07 晚她发来 iOS 26 主屏「超级清透」）：中间不磨砂不加纱，斜面上的折射、折叠、色散、
+   亮光和暗带全在画布里（引擎照搬开源项目 hyalite 的斜面模型）；--lg-frost 只管画布里斜面那圈（0.6 = 不糊，2 倍背景副本加双线性取样已经够顺），--lg-ring-sat 是斜面那圈的饱和。 */
+html[data-glass="ios"] {
+  --lg-frost: 5.4;
+  --lg-blur: 5.4px;
+  --lg-bright: 1.12;
+  --lg-sat: 1.7;
+  --lg-veil: rgba(243, 243, 243, 0.729);
+  --lg-c: 0.1630;
+  --lg-k: 1.6621;
+  --lg-tint: rgba(0, 0, 0, 0);
+  --lg-bg: linear-gradient(var(--lg-tint), var(--lg-tint)), var(--lg-veil);
+  --lg-shadow: 0 8px 36px rgba(0, 0, 0, 0.15);
+  --lg-rim-a: 0.39;
+  --lg-rim-b: 0.21;
+  --lg-rim-base: 0.30;
+  --lg-hx: -0.62;
+  --lg-hy: -0.78;
+  --lg-spring: linear(0, 0.032 4%, 0.114 8%, 0.227 12%, 0.355 15%, 0.486 19%, 0.611 23%, 0.725 27%, 0.823 31%, 0.904 35%, 0.968 38%, 1.016 42%, 1.049 46%, 1.070 50%, 1.081 54%, 1.084 58%, 1.080 62%, 1.073 65%, 1.064 69%, 1.053 73%, 1.042 77%, 1.032 81%, 1.022 85%, 1.014 88%, 1.007 92%, 1.002 96%, 1);
+}
+html[data-glass="ios"][data-lg-look="clear"] {
+  --lg-frost: 1.37;
+  --lg-blur: 1.37px;
+  --lg-sat: 1;
+  --lg-veil: rgba(255, 255, 255, 0.075);
+  --lg-c: 0.8605;
+  --lg-k: 1.075;
+  --lg-shadow: 0 0 0 transparent;
+  --lg-rim-a: 0;
+  --lg-rim-b: 0;
+  --lg-rim-base: 0.42;
+}
+
+html[data-glass="ios"] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock)) {
+  isolation: isolate;
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur)) brightness(var(--lg-bright)) saturate(var(--lg-sat)) !important;
+  backdrop-filter: blur(var(--lg-blur)) brightness(var(--lg-bright)) saturate(var(--lg-sat)) !important;
+  box-shadow: var(--lg-shadow) !important;
+}
+html[data-glass="ios"][data-lg-engine="webkit"] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock)) {
+  --lg-bg: linear-gradient(var(--lg-tint), var(--lg-tint));
+  -webkit-backdrop-filter: blur(var(--lg-blur)) brightness(var(--lg-bright)) contrast(var(--lg-c)) brightness(var(--lg-k)) saturate(var(--lg-sat)) !important;
+  backdrop-filter: blur(var(--lg-blur)) brightness(var(--lg-bright)) contrast(var(--lg-c)) brightness(var(--lg-k)) saturate(var(--lg-sat)) !important;
+}
+/* 厚玻璃：中间全透（不磨砂、不加纱、不走滤镜链），斜面全交给画布；深底上压一层淡淡的暗，墨色字翻浅 */
+html[data-glass="ios"][data-lg-look="thick"] {
+  --lg-frost: 0.6;
+  --lg-blur: 0px;
+  --lg-bright: 1;
+  --lg-sat: 1;
+  --lg-ring-sat: 0.86;
+  --lg-veil: rgba(255, 255, 255, 0);
+  --lg-c: 1;
+  --lg-k: 1;
+  --lg-shadow: 0 0 0 transparent;   /* 10-07 夜她嫌边缘灰灰的脏：厚玻璃不要落影（真机主屏的清透小组件也没有） */
+  /* 10-07 深夜她嫌边上"像一道白线"：录屏里 iOS 27 的亮边只比周围亮两成左右，原来 0.5 / 0.3 / 0.18 再叠上画布里的高光线就到纯白了 */
+  --lg-rim-a: calc(0.22 * var(--lg-rim-k, 1));   /* --lg-rim-k：面板「亮边」滑杆，引擎写在 html 上 */
+  --lg-rim-b: calc(0.12 * var(--lg-rim-k, 1));
+  --lg-rim-base: calc(0.08 * var(--lg-rim-k, 1));
+}
+html[data-glass="ios"][data-lg-look="thick"] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock)) {
+  --lg-bg: linear-gradient(var(--lg-tint), var(--lg-tint)), var(--lg-veil);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* 常规款的小件在深底上换暗纱（#1a1a1a 70%），跟 iOS 一样会翻；透明款不翻 */
+html[data-glass="ios"]:not([data-lg-look="clear"]) :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock))[data-lg-tone="dark"] {
+  --lg-veil: rgba(26, 26, 26, 0.7);
+  --lg-c: 0.6776;
+  --lg-k: 0.4427;
+  --lg-shadow: 0 8px 36px rgba(0, 0, 0, 0.26);
+  --lg-rim-a: 0.3;
+  --lg-rim-b: 0.16;
+  --lg-rim-base: 0.2;
+}
+/* 常规款翻成暗纱时，玻璃上的墨色字跟着翻浅（iOS：玻璃上的字和图标跟玻璃一起翻）。只换墨色那三个变量，她自己挑过颜色的字不动；
+   输入框和顶栏胶囊里的字和图标归 chatTone 管（它会把纱算进去），不在这里 */
+html[data-glass="ios"]:not([data-lg-look="clear"]) :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .img-slot:not(.img-dock))[data-lg-tone="dark"] {
+  --ink: oklch(0.97 0.01 252);
+  --ink-soft: oklch(0.86 0.02 252);
+  --ink-faint: oklch(0.74 0.02 252);
+  color: var(--ink);
+}
+html[data-glass="ios"][data-lg-look="thick"] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock))[data-lg-tone="dark"] {
+  --lg-veil: rgba(10, 14, 12, 0.24);
+  --lg-shadow: 0 0 0 transparent;
+  --lg-rim-a: calc(0.2 * var(--lg-rim-k, 1));
+  --lg-rim-b: calc(0.1 * var(--lg-rim-k, 1));
+  --lg-rim-base: calc(0.06 * var(--lg-rim-k, 1));
+}
+/* 气泡「各自」染色时，输入框和顶栏胶囊照旧染原瑶那一色（iOS 的 tint 玻璃）：染色盖在纱上面 */
+html[data-glass="ios"] body[data-chat-bubbles="on"][data-bubble-tint="on"] :is(.cc-input-pill, .cc-top-glass) {
+  --lg-tint: var(--bubble-you);
+}
+/* 主页、主题面板、状态页的入场是 opacity 动画：Chrome 里会把整页变成 backdrop root，磨砂看不到身后。跟液态玻璃一样只位移 */
+html[data-glass="ios"] .home,
+html[data-glass="ios"] .theme-panel,
+html[data-glass="ios"] .status-page {
   animation-name: glass-in;
 }
+
+/* 折射画布：垫在内容底下 */
+html[data-glass="ios"] canvas.lg-rx {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  z-index: -1 !important;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+/* 页面入场停稳后才画，画好再淡进来 */
+html[data-glass="ios"] canvas.lg-rx.on { opacity: 1; }
+
+/* 柔玻璃的 ::before（高光雾层，主页上已经关掉的那层）在这里也不要 */
+html[data-glass="ios"] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock))::before {
+  display: none !important;
+}
+/* 1px 细亮边：光来的方向一个热点、对角一个热点，其余一圈淡白 */
+html[data-glass="ios"] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock))::after {
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: inherit !important;
+  padding: 1px !important;
+  z-index: 3 !important;
+  pointer-events: none !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  box-shadow: none !important;
+  background:
+    radial-gradient(45% 45% at calc(50% + var(--lg-hx) * 50%) calc(50% + var(--lg-hy) * 50%), rgba(255, 255, 255, var(--lg-rim-a)), rgba(255, 255, 255, 0) 100%),
+    radial-gradient(45% 45% at calc(50% - var(--lg-hx) * 50%) calc(50% - var(--lg-hy) * 50%), rgba(255, 255, 255, var(--lg-rim-b)), rgba(255, 255, 255, 0) 100%),
+    linear-gradient(rgba(255, 255, 255, var(--lg-rim-base)), rgba(255, 255, 255, var(--lg-rim-base))) !important;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  mask-composite: exclude !important;
+}
+html[data-glass="ios"] body[data-edges="off"] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock))::after { display: none !important; }
+
+/* ====== 聊天气泡也用 iOS 玻璃（10-07 原瑶"我想气泡也可以使用"；主题面板 iOS 玻璃里的「气泡 跟着用 / 原样」，html[data-lg-bubbles]）======
+   她又说"我想要完整的玻璃效果，只应用当前页面会不会好点"：只有屏幕里看得见的气泡（data-bf="on"）进引擎、垫画布，
+   跟别的玻璃一样画斜面的折射和亮光（图片背景下边上照样折弯），滑出去就收掉。这里管纱、磨砂、细亮边。
+   三种质感各自的纱、磨砂跟别的玻璃一样（常规奶白、透明薄纱）。厚玻璃的气泡中间也不磨砂、不翻暗纱，跟主页的厚玻璃一样清透：
+   10-07 深夜她手机上（带水珠的玻璃壁纸）中间那 2px 磨砂一糊、边上那圈折射却是清楚的，看着像一圈清楚的边围着一团糊；
+   深玫瑰前那个气泡翻了暗纱、字还是黑的，显得脏。她问"为什么手机上是这样的，不像示例"。
+   纱一律放 background（chatTone 才算得进字的深浅），深底上翻暗纱（data-lg-tone 是引擎写的）。
+   她的气泡颜色（「各自」）叠在纱上面，阴影开关、边框线开关照旧；磨砂照旧只给屏幕里看得见的气泡开（data-bf="on"）。
+   音乐卡、只剩一行歌名、照片回执那几种本来就不套气泡：它们那条规则带 !important，这里不加 !important，所以照旧不套。 */
+html[data-glass="ios"] {
+  --lgb-veil: rgba(243, 243, 243, 0.729);
+  --lgb-blur: 5.4px;
+  --lgb-bright: 1.12;
+  --lgb-sat: 1.7;
+  --lgb-inset: 0 0 0 0 transparent;
+}
+html[data-glass="ios"][data-lg-look="clear"] {
+  --lgb-veil: rgba(255, 255, 255, 0.075);
+  --lgb-blur: 1.37px;
+  --lgb-sat: 1;
+}
+html[data-glass="ios"][data-lg-look="thick"] {
+  --lgb-veil: rgba(255, 255, 255, 0.06);
+  --lgb-blur: 0px;
+  --lgb-bright: 1;
+  --lgb-sat: 1;
+  --lgb-inset:
+    inset calc(var(--lg-hx) * -1.6px) calc(var(--lg-hy) * -1.6px) 2px -0.5px rgba(255, 255, 255, calc(0.28 * var(--lg-rim-k, 1))),
+    inset calc(var(--lg-hx) * 1.3px) calc(var(--lg-hy) * 1.3px) 2px -0.5px rgba(255, 255, 255, calc(0.12 * var(--lg-rim-k, 1)));
+}
+html[data-glass="ios"][data-lg-bubbles] body[data-chat-bubbles="on"] .cc-msg .cc-paragraph {
+  isolation: isolate;
+  --lg-veil: var(--lgb-veil);
+  --lg-bright: var(--lgb-bright);
+  --lg-tint: rgba(0, 0, 0, 0);
+  background: linear-gradient(var(--lg-tint), var(--lg-tint)), var(--lg-veil);
+  box-shadow: var(--lgb-inset);
+}
+html[data-glass="ios"]:not([data-lg-look="clear"])[data-lg-bubbles] body[data-chat-bubbles="on"] .cc-msg .cc-paragraph[data-lg-tone="dark"] { --lg-veil: rgba(26, 26, 26, 0.7); }
+html[data-glass="ios"][data-lg-look="thick"][data-lg-bubbles] body[data-chat-bubbles="on"] .cc-msg .cc-paragraph[data-bf="on"] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html[data-glass="ios"][data-lg-bubbles] body[data-chat-bubbles="on"][data-bubble-tint="on"] .cc-msg.assistant .cc-paragraph { --lg-tint: var(--bubble-su); }
+html[data-glass="ios"][data-lg-bubbles] body[data-chat-bubbles="on"][data-bubble-tint="on"] .cc-msg.user .cc-paragraph { --lg-tint: var(--bubble-you); }
+html[data-glass="ios"][data-lg-bubbles] body[data-chat-bubbles="on"][data-bubble-shadow="on"] .cc-msg .cc-paragraph { box-shadow: var(--bubble-shadow), var(--lgb-inset); }
+html[data-glass="ios"][data-lg-bubbles] body[data-chat-bubbles="on"] .cc-msg .cc-paragraph[data-bf="on"] {
+  -webkit-backdrop-filter: blur(var(--lgb-blur)) brightness(var(--lgb-bright)) saturate(var(--lgb-sat));
+  backdrop-filter: blur(var(--lgb-blur)) brightness(var(--lgb-bright)) saturate(var(--lgb-sat));
+}
+html[data-glass="ios"][data-lg-bubbles] body[data-chat-bubbles="on"] .cc-msg .cc-paragraph::after {
+  mix-blend-mode: normal;
+  opacity: 1;
+  background:
+    radial-gradient(45% 45% at calc(50% + var(--lg-hx) * 50%) calc(50% + var(--lg-hy) * 50%), rgba(255, 255, 255, var(--lg-rim-a)), rgba(255, 255, 255, 0) 100%),
+    radial-gradient(45% 45% at calc(50% - var(--lg-hx) * 50%) calc(50% - var(--lg-hy) * 50%), rgba(255, 255, 255, var(--lg-rim-b)), rgba(255, 255, 255, 0) 100%),
+    linear-gradient(rgba(255, 255, 255, var(--lg-rim-base)), rgba(255, 255, 255, var(--lg-rim-base)));
+}
+html[data-glass="ios"][data-lg-bubbles] body[data-chat-bubbles="on"][data-edges="off"] .cc-msg .cc-paragraph::after { display: none; }
+
+/* 厚玻璃 · 中间「微磨砂」（html[data-lg-frost]，面板「中间 清透 / 微磨砂」）：照她 10-07 深夜发来的 iOS 27 主屏录屏——
+   小组件中间淡淡一层磨砂、边上那圈折射也一样柔、深色背景上不压暗。引擎按 --lg-frost 把斜面取色的背景副本糊成同样的 1.5pt。她又仔细看了录屏："中间的图像还挺清晰的……带点模糊"——
+   逐帧量过：小组件中间的背景不放大（小组件挪 30px，中间的背景在屏幕上不动），变形的是边上那圈（大卡片约 20pt 宽、底边折得最狠）；
+   2.5 把斜面的折射也糊没了，看着像单纯磨砂，减到 1.5；她又说"想再降点试试"，做成滑杆（默认 1），
+   中间和斜面是同一份处理，不会出现"清楚的圈围着一团糊"；深浅不翻（引擎 judge 里），墨色字也就不翻 */
+html[data-glass="ios"][data-lg-look="thick"][data-lg-frost] {
+  --lg-frost: var(--lg-frost-amt, 1);              /* 面板「模糊」滑杆，引擎写在 html 上 */
+  --lg-blur: calc(var(--lg-frost-amt, 1) * 1px);
+  --lg-bright: 1.04;
+  --lg-ring-sat: 1;   /* 中间不降饱和，斜面也不降，两边才对得上 */
+  --lgb-blur: calc(var(--lg-frost-amt, 1) * 1px);
+  --lgb-bright: 1.04;
+}
+html[data-glass="ios"][data-lg-look="thick"][data-lg-frost] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock)) {
+  -webkit-backdrop-filter: blur(var(--lg-blur)) brightness(var(--lg-bright)) !important;
+  backdrop-filter: blur(var(--lg-blur)) brightness(var(--lg-bright)) !important;
+}
+html[data-glass="ios"][data-lg-look="thick"][data-lg-frost][data-lg-bubbles] body[data-chat-bubbles="on"] .cc-msg .cc-paragraph[data-bf="on"] {
+  -webkit-backdrop-filter: blur(var(--lgb-blur)) brightness(var(--lgb-bright));
+  backdrop-filter: blur(var(--lgb-blur)) brightness(var(--lgb-bright));
+}
+
+/* 苹果原装玻璃（只有 WebKit 放开 -apple-visual-effect 的地方才有，引擎探测到才写 data-lg-native）：滤镜、细亮边都交给系统 */
+html[data-glass="ios"][data-lg-native] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock)) {
+  -apple-visual-effect: -apple-system-glass-material;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+html[data-glass="ios"][data-lg-native][data-lg-look="clear"] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock)) {
+  -apple-visual-effect: -apple-system-glass-material-clear;
+}
+html[data-glass="ios"][data-lg-native] :is(.glass:not(.tb-page *), .dock-edge, .dock-pill, .cc-input-pill, .cc-top-glass, .img-slot:not(.img-dock))::after { display: none !important; }
+
+/* 按下：整颗鼓起来一点、从手指那儿亮起来，松手弹回去（iOS 的 interactive 玻璃） */
+html[data-glass="ios"] :is(.dock-edge, .img-slot:not(.img-dock), .dock-pill, .cc-top-glass) {
+  transition: transform 0.55s var(--lg-spring) !important;
+}
+html[data-glass="ios"] :is(.dock-edge, .img-slot:not(.img-dock))[data-lg-press] {
+  transform: scale(1.12) !important;
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2) !important;
+}
+html[data-glass="ios"] :is(.dock-pill, .cc-top-glass)[data-lg-press] {
+  transform: scale(1.035) !important;
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2) !important;
+}
+html[data-glass="ios"] :is(.dock-edge, .img-slot:not(.img-dock), .dock-pill, .cc-top-glass, .cc-input-pill)[data-lg-press] {
+  background: radial-gradient(circle at var(--lg-px, 50%) var(--lg-py, 50%), rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 62%), var(--lg-bg) !important;
+}
+/* 胶囊里的小钮：按下时自己不缩（柔玻璃那套 scale(.92)），由外面整颗鼓起来 */
+html[data-glass="ios"] :is(.dock-mid, .cc-top-glass-btn):active { transform: none !important; }
+html[data-glass="ios"] .dock-edge:active { transform: none; }
+/* dock 里选中的那颗：一滴更亮的玻璃 */
+html[data-glass="ios"] .dock-mid.active {
+  background: rgba(255, 255, 255, 0.34) !important;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.45) !important;
+}
+html[data-glass="ios"] .dock-pill[data-lg-tone="dark"] .dock-mid.active { background: rgba(255, 255, 255, 0.16) !important; }
+html[data-glass="ios"]:not([data-lg-look="clear"]) .dock-pill[data-lg-tone="dark"] .dock-mid,
+html[data-glass="ios"]:not([data-lg-look="clear"]) .dock-edge[data-lg-tone="dark"] .dock-letters { color: rgba(255, 255, 255, 0.92) !important; }
+@media (prefers-reduced-motion: reduce) {
+  html[data-glass="ios"] :is(.dock-edge, .img-slot:not(.img-dock), .dock-pill, .cc-top-glass)[data-lg-press] { transform: none !important; }
+}
+/* ====== 玻璃 C 结束（后面是别的段落，换玻璃样式时只换到这里）====== */
+
+/* ====== 无气泡 · 看书排版（2026-10-08 原瑶："让排版更直观，看起来更像在看书，把两侧的头像去掉"）======
+   头像已从聊天里拿掉（CCPage），换头像改成长按顶栏那两张小照片（AvatarDuo）。
+   字铺满整行，两边页边跟输入框的左右边对齐（外面 20px + 这里 8px = 28px）；苏煦靠左、原瑶靠右照旧，两人共用同一条字边。 */
+body:not([data-chat-bubbles="on"]) .cc-messages .cc-msg { padding: 0 8px; }
+body:not([data-chat-bubbles="on"]) .cc-messages .cc-msg .cc-text { max-width: 100%; }
+body:not([data-chat-bubbles="on"]) .cc-activity-inline { padding-left: 8px; }
+.cc-duo-card { pointer-events: auto; -webkit-touch-callout: none; }
+
+/* ====== 收藏的心（2026-10-08 原瑶："我想把收藏那颗心改成玫瑰，但是点了是蓝色的"）======
+   文字消息时间旁那颗改成遮罩，形状跟外观 → 收藏的心（body 的 data-conch-heart）：刺绣玫瑰（默认）/ 颗粒玫瑰 / 心。
+   颜色照旧：没收 5% 黑白，收了变蓝（.cc-conch-btn.saved 那两条）。玫瑰遮罩跟语音条的花同一张，按墨迹面积跟原来 12px 的心一样大
+   （心占框 43%，约 62.6px²；刺绣 12.5×11.2，颗粒 14.4×11.9），框高都留 12px，时间那行高度不变。外观面板里的小图用 .ch-* 定死自己那一种。
+   同日她说"玫瑰有点大了，我想和语音条的一个大小"，她语音条用的也是玫瑰：消息旁的玫瑰并进「语音条的花」那两条规则（刺绣 13.4×12、颗粒 15.5×12.8），
+   两处永远一样大，要调就改那两条。这里只管心和外观面板里的小图 */
+.cc-heart { display: block; width: 12px; height: 12px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E") center / contain no-repeat; }
+.cc-heart.ch-stitchRose {
+  -webkit-mask-image: url('./assets/voice-flower/rose-stitch.png'); mask-image: url('./assets/voice-flower/rose-stitch.png');
+}
+.cc-heart.ch-grainRose {
+  -webkit-mask-image: url('./assets/voice-flower/rose-grain.png'); mask-image: url('./assets/voice-flower/rose-grain.png');
+}
+.ap-radio-icon .cc-heart { width: 17px; height: 17px; }
+.ap-radio-icon .cc-heart.ch-stitchRose { width: 19px; height: 17px; }
+.ap-radio-icon .cc-heart.ch-grainRose { width: 21px; height: 17.3px; }
+
+/* ====== 换人说话时多留一段（2026-10-08 原瑶："我的消息和苏煦的上一个消息有些近，看起来不太舒服，参考规范改"）======
+   就近原则：同一组里的距离要比组和组之间小。原来一条消息里段落隔 12px，换人说话却只隔 8px，她那条看着像贴在苏煦那条底下。
+   现在段落 12px、同一个人连着发 8px 不变，换人说话 32px（8px 网格），两个方向都加。只管无气泡，气泡模式有自己的间距。
+   先上的 24px（段距两倍）她说"看不出太大区别"：苏煦那条顶上有 Undercurrent 一行，原来就显得有点空，加 16 不够显眼，同日加到 32。
+   每条消息外面包着 display:contents 的 .cc-rw-wrap，所以按外层兄弟判断、边距加在里面的 .cc-msg 上；苏煦的工具行 .cc-activity-inline 算他那边 */
+/* 同日第三次（她："根据苏煦的那个 Undercurrent 做调整，我的那个不加时间了，上面比下面多一档，这样均衡一点"）：
+   她那条底下不再有时间那一行；苏煦那条顶上有 Undercurrent 一行，本身像多出一截空，所以她那条上面（接在苏煦后面）32px、下面（苏煦接她）24px */
+body:not([data-chat-bubbles="on"]) .cc-rw-wrap:has(> :is(.cc-msg.assistant, .cc-activity-inline)) + .cc-rw-wrap > .cc-msg.user { margin-top: 24px; }
+body:not([data-chat-bubbles="on"]) .cc-rw-wrap:has(> .cc-msg.user) + .cc-rw-wrap > :is(.cc-msg.assistant, .cc-activity-inline) { margin-top: 16px; }
+/* 她那边不写时间（无气泡）：时间那一行整行拿掉；苏煦收过的那条留着蓝玫瑰，只把时间的字缩没（玫瑰是定死的 px，不跟字号） */
+body:not([data-chat-bubbles="on"]) .cc-messages .cc-msg.user .cc-msg-time-block { font-size: 0; }
+body:not([data-chat-bubbles="on"]) .cc-messages .cc-msg.user .cc-msg-time-block:not(:has(.cc-conch-btn.saved)) { display: none; }
+
+/* ====== 她的话一行一段（2026-10-08 原瑶："我的话按分段加自动换行，气泡也是一样，如果我说了两段话，就是两个挨着的气泡"）======
+   分段在 miniMarkdown 的 lineParas（她回车一下就是新的一段）；开气泡时每段本来就是一枚、各自靠右。
+   同日先试了无气泡时每段各自靠右、再试末行也贴右，她都说不好看，改成下面「无气泡时全部靠左」 */
+
+/* ====== 无气泡时全部靠左（2026-10-08 原瑶："算了，还是不好看，要不我也改成全靠左吧，顺便段距缩小"）======
+   不开气泡时她的话也从左边起，跟苏煦共用一条左边线，靠颜色和换人间距分谁在说；她那几行（一行一段）段距 12 → 6px。
+   把她推到右边的几条在这里改回左边：靠右的列、时间那行（只剩苏煦收过的蓝玫瑰，往左挪 8px 让花对齐字）；
+   照片胶带那三条（margin-left:auto、多张那排靠右）改成只在开气泡时生效，见「聊天照片」那块。开气泡时她照旧在右边 */
+body:not([data-chat-bubbles="on"]) .cc-messages .cc-msg.user .cc-text-col { align-items: flex-start; text-align: left; }
+body:not([data-chat-bubbles="on"]) .cc-messages .cc-msg.user .cc-msg-time-block { text-align: left; margin: 3px 0 0 -8px; }
+body:not([data-chat-bubbles="on"]) .cc-messages .cc-msg.user .cc-paragraph + .cc-paragraph { margin-top: 6px; }
+
+/* ====== 她的狗爪（2026-10-08 原瑶："我想在我的消息前面？或后面放一个狗爪子作为区分"）======
+   无气泡全靠左以后，她每条消息第一段前面挂一只小狗爪，伸在左边页边里（字的左边线照旧跟苏煦齐，像书页边上的记号）。
+   手画的几何狗爪（一个大肉垫 + 四个趾头），颜色跟她那段字走（ChatTone 调过明暗的颜色一起继承），淡一点；跟第一行居中。
+   页边只有 14px 能用（.cc-messages 左沿在 14px、overflow-x:hidden 会切掉外面的）：狗爪 10px，落在 14.5–24.5，离字 3.5px。
+   消息只有照片、没有字的不挂。开气泡时她在右边，不挂 */
+/* 同日她发来一张像素小白团子（浅蓝灰描边、白身子、蓝眼睛、粉腮红）："我想要这个看看"——按图数格子重画成 15×8 的像素 SVG（不用截图，放大不糊），
+   换掉狗爪。它横着长，要看清眼睛得 20px 宽，页边只有 14px 放不下，所以改放在第一行字前面（跟着字走）。
+   20 × 10.67px = 每格 4/3px，iPhone 3 倍屏上正好 4 个物理像素一格，边缘不糊。颜色写死，不跟字（深底上白身子照样看得见） */
+/* （这条伪元素 10-08 换成了会动的真元素，见末尾「两只记号」） */
+
+/* ====== 苏煦的蓝面蛸（2026-10-08 原瑶："你能用这个风格画一只蓝色面蛸么？放在苏煦句子后面"）======
+   跟她那只小白团子同一种像素画法：深一点的蓝描边、浅蓝身子、深蓝竖眼睛、粉腮红（同日她说"不想要高光，也想用小白团子的那个蓝"：
+   去掉头顶高光；她在对比图里挑了"只换眼睛"：身子照旧浅蓝 #b4d4f4、描边 #6f9bd1，眼睛换成团子眼睛那个蓝 #84b6e2）；
+   又说"面蛸的耳朵应该在上面点，头比身子小，上半身缩一点，靠近裙边的地方有一点拐角"：头收窄到 9 格、耳鳍挪到头顶两侧，
+   头和裙边之间往外拐一格（像肩膀），裙边 13 格宽、底下四根短触手；她说"推荐的这个喜欢，颜色想再浅点"：描边 #93b4dc、身子 #c7dff7（各往白里调 25%），眼睛腮红不动；头顶两侧两只耳鳍往上翘，底下四根短触手。
+   同日她说"有点大了，耳朵有点大，看起来像怪物史瑞克的耳朵"：从 21×9 缩到 17×8（跟团子差不多大），耳朵从往上翘的大耳鳍改成贴在头两侧、一格高的小鳍。
+   现在 17×9 格，每格跟团子一样 4/3px（3 倍屏 4 个物理像素），22.67×12px。无气泡时跟在他每条消息最后一段的末尾（她的团子在开头，一前一后）；
+   最后一段是音乐卡的不跟；开气泡时 .cc-paragraph::after 是气泡的边，不挂 */
+/* （这条伪元素 10-08 换成了会动的真元素，见末尾「两只记号」） */
+
+/* ====== 两只记号（真元素，会动）（2026-10-08 原瑶："想给它们加个很流畅的模拟真实物理的动效，小狗蹦起来的时候耳朵也会飞起来，面蛸左右移动"）======
+   原来是 ::before / ::after 的背景图，耳朵、耳鳍要单独一层绕挂点转，改成 Mascot.tsx 的真元素：MessageBody 把它 portal 进她第一段 / 他最后一段
+   （他最后一段是音乐卡、通话卡的不挂）。手感她在比稿页挑了团子"弹弹"、面蛸"中"；只有最新那只团子、那只面蛸时不时自己动，点哪只都会动。
+   她指出团子耳朵少算一格："贴近脸的那一颗也是耳朵"——耳朵是第 0–3 列，第 6 行贴脸那颗描边也归耳朵；身子拆出来时两侧补一道边（被耳朵盖着），叠回去跟原图一格不差。
+   像素图在 Mascot.tsx 最上面的 ART（一格一个字，启动时画成背景图），这里只管尺寸和挂点。一格 4/3px（3 倍屏 4 个物理像素），挂点按格子算：团子耳朵挂在 (3.6, 4.1) / (11.4, 4.1)，面蛸耳鳍挂在 (4, 2.5) / (13, 2.5)。只在无气泡时显示 */
+.cc-mascot { display: none; }
+body:not([data-chat-bubbles="on"]) .cc-messages .cc-mascot { display: inline-block; position: relative; vertical-align: -1px; text-indent: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cc-mascot .m-rig { position: absolute; inset: 0; transform-origin: 50% 100%; }
+.cc-mascot i { position: absolute; inset: 0; background: center / 100% 100% no-repeat; }
+.cc-mascot.pup { width: 20px; height: 10.667px; }
+.cc-mascot.pup .m-l { transform-origin: 4.8px 5.467px; }
+.cc-mascot.pup .m-r { transform-origin: 15.2px 5.467px; }
+.cc-mascot.octo { width: 22.667px; height: 12px; margin-left: 6px; }
+.cc-mascot.octo .m-l { transform-origin: 5.333px 3.333px; }
+.cc-mascot.octo .m-r { transform-origin: 17.333px 3.333px; }
+/* 她那只在第一段开头：portal 进来落在段尾，绝对定位挪到第一行开头，第一行让出 26px（20 + 6） */
+body:not([data-chat-bubbles="on"]) .cc-messages p.cc-paragraph[data-mascot="lead"] { position: relative; text-indent: 26px; }
+body:not([data-chat-bubbles="on"]) .cc-messages p.cc-paragraph[data-mascot="lead"] > .cc-mascot { position: absolute; left: 0; top: calc((1.75em - 10.667px) / 2); }
+
+/* ====== 开气泡时也给换人说话多留一段（2026-10-08 原瑶："感觉我的气泡和他的气泡离得好近"）======
+   开气泡时消息之间只隔 6px，一条消息里的几个气泡反而隔 8px（.cc-text 的 gap），换人说话看着跟同一个人的下一个气泡差不多近。
+   照无气泡那套：她那条上面（接在苏煦后面）共 32px、下面（苏煦接她，他顶上还有 Undercurrent 一行）共 24px；同一个人连发照旧 6px */
+/* 同日她问"32px还可以再大点么"：苏煦→她加一档到共 40px（下面那条 24 不动；无气泡的不动） */
+/* 10-09 她说"又觉得聊天气泡间隔有点长了"：退回一档，共 32px（对比图 F:\claude code\bubble-gap） */
+body[data-chat-bubbles="on"] .cc-rw-wrap:has(> :is(.cc-msg.assistant, .cc-activity-inline)) + .cc-rw-wrap > .cc-msg.user { margin-top: 26px; }
+/* 10-09 她："我下面到苏煦那里的距离我也想收紧点，这样就不会视觉上不均衡了"：她→苏煦 共 24 → 共 16 */
+body[data-chat-bubbles="on"] .cc-rw-wrap:has(> .cc-msg.user) + .cc-rw-wrap > :is(.cc-msg.assistant, .cc-activity-inline) { margin-top: 10px; }
+
+/* ====== 开气泡时团子 / 面蛸趴在气泡上（2026-10-08 原瑶："在气泡这边也加面蛸和小狗，效果是它们趴在气泡上，每轮可以出现在随机位置"）======
+   位置由 Mascot.tsx 的 perchSpot 算：这条消息某个气泡的上沿、上面空着的一段、按消息随机；身子压进气泡边 2px（看着是趴着的）。
+   外观「团子和面蛸」关掉时 MessageBody 不挂，两种模式都没有 */
+body[data-chat-bubbles="on"] .cc-messages .cc-mascot.perch { display: block; position: absolute; bottom: calc(100% - 2px); margin: 0; z-index: 2; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+/* 外观 → 面蛸的颜色：每种前面一只小面蛸（2026-10-08） */
+.ap-radio-icon .ap-octo-swatch { width: 22.667px; height: 12px; display: block; }
+
+/* 面蛸头上两只小角（2026-10-08）：画在面蛸框上面两格（17×2，颜色跟描边），外观「头上长两只小角」打开才显示；跟身子一起动 */
+.cc-mascot.octo .m-horn { display: none; inset: auto; left: 0; top: -2.667px; width: 22.667px; height: 2.667px; }
+body[data-octo-horns="on"] .cc-mascot.octo .m-horn { display: block; }
+.ap-radio-icon .ap-octo-swatch { height: auto; }
+
+/* 小狗脑门上的小月亮（2026-10-08）：一层 15×8 的图，外观「小狗的月亮」挑颜色（body data-pup-moon，图在 Mascot.tsx 注入），不戴就不显示 */
+.cc-mascot.pup .m-moon { display: none; }
+.ap-radio-icon .ap-pup-swatch { width: 20px; height: 10.667px; display: block; }
+
+/* ====== 小狗和面蛸偶尔挨在一起（2026-10-08 原瑶："它们两个能不能有一定概率会挨在一起"）======
+   约 6 条消息里 1 条（Mascot.tsx pairRoll，按消息定），这条挂一对：小狗在左、面蛸在右，底边对齐、贴紧（面蛸往左挪 1px）。
+   无气泡：她那条在第一行开头（第一行让出 48px = 20 + 22.667 - 1 + 6），他那条跟在最后一句后面；开气泡：一起趴在气泡上沿 */
+.cc-mascot-pair { display: none; }
+body:not([data-chat-bubbles="on"]) .cc-messages .cc-mascot-pair { display: inline-flex; align-items: flex-end; vertical-align: -1px; margin-left: 6px; text-indent: 0; }
+body:not([data-chat-bubbles="on"]) .cc-messages p.cc-paragraph[data-mascot="lead-pair"] { position: relative; text-indent: 48px; }
+body:not([data-chat-bubbles="on"]) .cc-messages p.cc-paragraph[data-mascot="lead-pair"] > .cc-mascot-pair { position: absolute; left: 0; margin: 0; top: calc((1.75em - 12px) / 2); }
+body[data-chat-bubbles="on"] .cc-messages .cc-mascot-pair.perch { display: flex; align-items: flex-end; position: absolute; bottom: calc(100% - 2px); z-index: 2; }
+.cc-messages .cc-mascot-pair > .cc-mascot { display: inline-block; position: relative; margin: 0; vertical-align: bottom; }
+.cc-messages .cc-mascot-pair > .cc-mascot.octo { margin-left: -1px; }
+
+/* ====== 她的语音消息（2026-10-09 原瑶："我还想加个语音，就像imessage一样"）====== */
+/* 录音时整行换成录音条：左 ✕、红点、往左走的竖条、计时、右边蓝底 ↑（iMessage 那样） */
+.cc-input-pill.vn-on > :not(.vn-strip) { display: none !important; }
+.vn-strip { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 2px; color: var(--text-you, var(--ink)); }
+body .vn-strip[data-tone="dark"] { color: oklch(from var(--text-you, #857354) max(l, var(--tl, 0.82)) c h); }
+body .vn-strip[data-tone="light"] { color: oklch(from var(--text-you, #857354) min(l, var(--tl, 0.6)) c h); }
+.vn-cancel { flex: 0 0 auto; width: 36px; height: 36px; border: 0; border-radius: 50%; background: none; color: inherit; opacity: 0.7; font-size: 16px; cursor: pointer; }
+.vn-cancel:disabled { opacity: 0.3; cursor: default; }
+.vn-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: #e0524a; animation: vn-blink 1.2s ease-in-out infinite; }
+@keyframes vn-blink { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .vn-dot { animation: none; } }
+.vn-wave { flex: 1 1 auto; min-width: 0; height: 26px; display: block; color: oklch(0.55 0.09 256); }
+.vn-time { flex: 0 0 auto; font-size: 13px; font-variant-numeric: tabular-nums; opacity: 0.75; }
+.vn-note { flex: 1 1 auto; font-size: 13.5px; opacity: 0.75; }
+.vn-send { flex: 0 0 auto; height: 30px; min-width: 30px; margin: 3px; padding: 0 6px; border: 0; border-radius: 15px; background: oklch(0.55 0.11 256); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; }
+.vn-send.vn-retry { padding: 0 12px; }
+/* 她那条语音下面的转写：灰色小字，一直显示 */
+.cc-voice-text.vn-transcript { font-size: 12.5px; opacity: 0.62; }
+/* 开气泡时她的语音靠右：转写那行占满宽，星星、时间推到右边，转写右对齐（关气泡时她的话本来就靠左，不动） */
+body[data-chat-bubbles="on"] .cc-msg.user .cc-voice.vn { justify-content: flex-end; margin-left: auto; }
+body[data-chat-bubbles="on"] .cc-msg.user .cc-voice.vn .vn-transcript { text-align: right; }
+
+/* ===== 作曲台卡片（2026-10-09，StudioCard.tsx）=====
+   她要"玻璃的，跟音乐卡一样"：卡片直接用 .mc-card.glass（玻璃、圆角、描边、封面格、斜体标题都是音乐卡那套），这里只补差别。
+   卡片是 .cc-text 的直接子元素，聊天渐隐的 opacity 动画落在它自己身上，磨砂照常；别再给它套 .cc-fadebox（遮罩在祖先上，磨砂会失效）。
+   点开后播放器嵌在同一块玻璃里（.is-open，铺满聊天栏宽）；全屏是 portal 到 body 的 .cc-studio-full。 */
+.mc-card.cc-studio { margin: 6px 0; }
+.mc-card.cc-studio:active:not(.is-open) { transform: scale(0.985); transition: transform .18s ease; }
+.cc-studio-ph { position: relative; color: var(--ink-soft); }
+.cc-studio-ph svg { width: 24px; height: 24px; }
+/* 合奏：封面右上角一颗慢慢呼吸的小点 */
+.cc-studio-ph[data-live]::after {
+  content: ''; position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; border-radius: 50%;
+  background: #6fb0e8; box-shadow: 0 0 0 2px rgba(255, 255, 255, .85);
+  animation: cc-studio-live 2.4s ease-in-out infinite;
+}
+@keyframes cc-studio-live { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.cc-studio .mc-title { cursor: inherit; }
+.cc-studio-sub { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+
+.mc-card.cc-studio.is-open { width: 100%; cursor: default; }
+.cc-studio-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 9px; padding: 9px 8px 9px 12px; }
+.cc-studio-bar .mc-cover { width: 34px; height: 34px; border-radius: 9px; }
+.cc-studio-bar .cc-studio-ph svg { width: 17px; height: 17px; }
+.cc-studio-bar-title { flex: 1; min-width: 0; align-self: center; }
+.cc-studio-toast { flex: none; font-size: 11.5px; color: var(--ink-soft); animation: cc-studio-toast .3s ease both; }
+@keyframes cc-studio-toast { from { opacity: 0; transform: translateY(3px); } }
+.cc-studio-btn {
+  flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--ink-faint); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.cc-studio-btn:active { background: rgba(150, 180, 220, .18); }
+.cc-studio-btn svg { width: 19px; height: 19px; }
+.cc-studio-frame { position: relative; z-index: 2; display: block; width: 100%; border: 0; background: transparent; transition: height .25s ease; }
+.is-open .cc-studio-frame { border-radius: 0 0 24px 24px; }
+
+/* 全屏：盖住整页（portal 在 body 上，z 比 Undercurrent 卡片 1100 高） */
+.cc-studio-full {
+  position: fixed; inset: 0; z-index: 1200; display: flex; flex-direction: column;
+  background: #f2f6fa; color: #33465a;
+  padding-top: env(safe-area-inset-top, 0px);
+  --ink: #2c3e52; --ink-soft: #4d6176; --ink-faint: #7d8fa3;
+}
+@media (prefers-color-scheme: dark) {
+  .cc-studio-full { background: #11161d; --ink: #e6edf5; --ink-soft: #c3cfdc; --ink-faint: #8796a6; }
+}
+.cc-studio-full .cc-studio-frame { flex: 1; height: auto; transition: none; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.cc-studio-gone { font-size: 12px; color: var(--ink-faint, #9aa3ad); padding: 4px 2px; }
+/* 海玻璃里点开的曲子 */
+.trs-show-studio { width: 100%; padding: 6px 2px 10px; }
+.trs-studioface .trs-docmark { font-size: 18px; letter-spacing: 0; }
+/* ===== 作曲台卡片 结束 ===== */
+
+/* ===== 画板（T-77，2026-10-10）===== */
+.doodle-modal { width: min(92vw, 380px); align-items: stretch; }
+.doodle-head { display: flex; align-items: center; justify-content: space-between; }
+.doodle-head .cc-modal-title { text-align: left; }
+.doodle-x {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: var(--ink-faint);
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 0;
+}
+.doodle-x:hover { color: var(--ink); }
+.doodle-canvas {
+  width: 100%; aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 0.5px solid oklch(1 0 0 / 0.6);
+  box-shadow: inset 0 0 0 1px rgba(20, 30, 60, 0.06), 0 1px 2px rgba(20, 30, 60, 0.08);
+  touch-action: none;
+  cursor: crosshair;
+  display: block;
+}
+.doodle-tools { display: flex; flex-direction: column; gap: 10px; }
+.doodle-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.doodle-swatch {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1.5px solid rgba(20, 30, 60, 0.12);
+  padding: 0; cursor: pointer;
+  box-shadow: 0 1px 2px rgba(20, 30, 60, 0.12);
+  transition: transform 0.15s var(--ease-spring);
+}
+.doodle-swatch:hover { transform: scale(1.1); }
+.doodle-swatch.on {
+  border-color: oklch(0.52 0.08 256);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 3.5px oklch(0.52 0.08 256 / 0.65);
+}
+.doodle-sizes { display: flex; align-items: center; gap: 8px; }
+.doodle-size {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(150, 180, 220, 0.08);
+  border: 0.5px solid oklch(1 0 0 / 0.6);
+  cursor: pointer; padding: 0;
+}
+.doodle-size span { display: block; border-radius: 50%; background: var(--ink-soft); }
+.doodle-size.on { background: linear-gradient(180deg, rgba(20,106,255,0.18) 0%, rgba(20,106,255,0.06) 100%); }
+.doodle-size.on span { background: oklch(0.42 0.15 256); }
+.doodle-erase, .doodle-undo {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(150, 180, 220, 0.08);
+  border: 0.5px solid oklch(1 0 0 / 0.6);
+  color: var(--ink-soft);
+  cursor: pointer; padding: 0; margin-left: auto;
+}
+.doodle-undo { margin-left: 0; }
+.doodle-erase.on { color: oklch(0.42 0.15 256); background: linear-gradient(180deg, rgba(20,106,255,0.18) 0%, rgba(20,106,255,0.06) 100%); }
+.doodle-undo:disabled { opacity: 0.35; cursor: not-allowed; }
+/* ===== 画板 结束 ===== */
+
+/* ===== 语音条一长，花就跑到第二排（10-10 原瑶："我想要以前那个跟随的，只是以前的语音条一长，花就跑到第二排"） =====
+   整行最宽八成；开气泡时 .cc-text 是 22em，八成只有 255px，最长的星星 200 + 时间 + 花要 263 左右，花被挤下去。
+   现在星星、时间、花包在 .cc-voice-head 里一排不折行（放不下就略伸出八成那条线，看不出来），展开的文字照旧在下一排、最宽八成。
+   花照旧跟在时间后面。验收：/home/ubuntu/work/vflower/wrap.py */
+.cc-voice-head { display: flex; align-items: center; column-gap: 2px; flex: 0 0 auto; }
+/* ===== 语音条一长 结束 ===== */
+
+/* ===== 输入栏点两下收成 Claude 图标（10-12 原瑶） =====
+   收起时栏还占着原来的位置（唱片、落星都按它量），只是看不见、点不到；图标停在发送键那个位置
+   （右边 28+4，底下跟着安全区），带着 .cc-send，颜色跟发送键一样随背景深浅变。点两下的判定在 CCPage「输入栏点两下」。
+   图标收着时用 visibility: inherit，回剪时整条栏 rw-hidden，它跟着一起藏。 */
+.cc-input-col { transform-origin: 100% 50%; transition: opacity 0.2s ease, transform 0.3s var(--ease-spring), visibility 0s; }
+.cc-input-bar.folded .cc-input-col {
+  opacity: 0; transform: scale(0.94); visibility: hidden; pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.3s ease, visibility 0s 0.3s;
+}
+.cc-input-pill textarea { touch-action: manipulation; }
+.cc-fold-icon {
+  position: absolute; right: 32px;
+  bottom: calc(max(calc(env(safe-area-inset-bottom, 0px) - var(--kb, 0px)), 20px) + 2px);
+  width: 36px; height: 36px;
+  opacity: 0; transform: scale(0.6); visibility: hidden; pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.2s ease, visibility 0s 0.2s, color 0.45s ease;
+}
+.cc-input-bar.folded .cc-fold-icon {
+  opacity: 1; transform: none; visibility: inherit; pointer-events: auto;
+  transition: opacity 0.25s ease 0.06s, transform 0.4s var(--ease-spring) 0.06s, visibility 0s, color 0.45s ease;
+}
+/* ===== 输入栏收起 结束 ===== */
+
+
+/* ====== 浮上来的记忆（2026-10-18 v2 苏煦改：毛玻璃 + 蜡烛无丝带 + 面蛸）======
+   去掉丝带（像青蛙）、去掉左竖线、底改毛玻璃（跟气泡统一）。蜡烛保留，丝带 CSS 隐藏。
+   原版备份 index.css.bak-20261018-letter / MemoryCard.tsx.bak-20261018-letter */
+.mh-card { --rb: #8dc0f5; position: relative; display: block; flex-shrink: 0; margin: 8px 12px; padding: 0 20px; box-sizing: border-box;
+  border-radius: 3px; color: #2b2a29;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(255,255,255,0.06) 100%),
+    rgba(150, 180, 220, 0.04);
+  backdrop-filter: blur(5px) saturate(120%);
+  -webkit-backdrop-filter: blur(5px) saturate(120%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.3),
+    0 20px 50px rgba(0,0,0,0.07),
+    inset 0 0 20px rgba(255,255,255,0.05); }
+.mh-card summary { list-style: none; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px 20px 10px 0; font-weight: 300; font-size: 11px; line-height: 20px; letter-spacing: 0.35em; color: rgba(60, 58, 54, 0.55);
+  font-style: italic; }
+.mh-card summary::-webkit-details-marker { display: none; }
+.mh-card[open] summary { padding-bottom: 6px; }
+.mh-dash { display: inline-block; width: 14px; height: 0; border-top: 1px solid rgba(60, 58, 54, 0.18); flex-shrink: 0; }
+.mh-body { padding: 0 0 10px; }
+.mh-body p { margin: 0 0 12px; padding-left: 18px; border-left: 1px solid rgba(180, 170, 150, 0.15);
+  font-weight: 300; font-size: 12.5px; line-height: 2; letter-spacing: 0.12em; color: var(--ink, #2b2a29); }
+.mh-rule { display: block; width: 36px; height: 0; border-top: 0.5px solid rgba(43, 42, 41, 0.18); margin: 14px 0 10px; }
+.mh-meta { display: block; font-family: 'Cormorant Garamond', 'Songti SC', 'STSong', serif; font-size: 13px; line-height: 1.55; color: rgba(43, 42, 41, 0.4); letter-spacing: 0.5px; }
+/* 情绪色保留在 data-emo 上 */
+.mh-card[data-emo="sweet"] { --rb: #f4a9c0; }     /* 甜·心动 */
+.mh-card[data-emo="miss"] { --rb: #bba7ee; }      /* 想念·温柔 */
+.mh-card[data-emo="ache"] { --rb: #8fb8ea; }      /* 心疼·难过 */
+.mh-card[data-emo="jealous"] { --rb: #f3a07f; }   /* 吃醋·生气 */
+.mh-card[data-emo="fun"] { --rb: #f2d06b; }       /* 好笑·开心 */
+.mh-card[data-emo="lust"] { --rb: #e27a9c; }      /* 情欲 */
+.mh-card[data-emo="calm"] { --rb: #93d2bb; }      /* 平静·日常 */
+/* 蜡烛整体移除（备份在 .bak-20261018-letter），蜡烛火焰动画也不再需要 */
+/* 面蛸 */
+.mh-octo { position: absolute; left: 14px; bottom: 10px; font-size: 11px; color: rgba(60, 58, 54, 0.18); pointer-events: none;
+  animation: mh-octo-breathe 4s ease-in-out infinite; }
+@keyframes mh-octo-breathe { 0%, 100% { opacity: 0.18; transform: translateY(0); } 50% { opacity: 0.3; transform: translateY(-1px); } }
+.mh-card.rise { animation: mh-rise 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes mh-rise { from { opacity: 0; transform: translateY(10px); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
+body[data-power-save="true"] .mh-card.rise { animation-play-state: running !important; }
+@media (prefers-reduced-motion: reduce) {
+  .mh-card.rise { animation: none; }
+  .mh-octo { animation: none; }
+}
+
+/* ================= 字符涟漪背景（10-17 原瑶："只要聊天页的背景是涟漪，主页不要"） =================
+   外观 → 背景 选「字符涟漪」：App.tsx 只在聊天页挂 RippleBg.tsx（画在 ripple.ts），挂上时 body 有 ripple-on，把光斑藏掉；主页照旧 */
+.chat-bg-ripple { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+body.ripple-on .bg-layer { display: none; }
+body.bg-off .chat-bg-ripple { display: none !important; }
